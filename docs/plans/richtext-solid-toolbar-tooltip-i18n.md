@@ -4,7 +4,7 @@
 
 - 日期：2026-08-11
 - 状态：需求与交互决策已确认，待实施
-- 目标仓库：`teamgaga-richtext`
+- 目标仓库：`flutter_quill_editor`
 - 目标包：`packages/solid-toolbar`
 - 目标运行端：Desktop / PC Web 的 Solid Toolbar
 - 当前阶段：仅完成计划，尚未修改功能代码
@@ -23,7 +23,7 @@ Flutter 原生桌面 Toolbar 已经使用 `TggTooltip` 和 ARB 国际化，不�
 
 ### 修改范围
 
-- 只修改 `teamgaga-richtext` 中的 Solid Desktop Toolbar。
+- 只修改 `flutter_quill_editor` 中的 Solid Desktop Toolbar。
 - 不修改 `teamgaga-client` 的 Flutter 原生 Toolbar。
 - 不修改移动端 editor-only 路径；`toolbarMode: "none"` 的默认行为保持不变。
 - Close 按钮不在本次 11 项范围内。
@@ -234,7 +234,7 @@ Toolbar 根节点默认的 `aria-label="Text formatting"` 不在本次 11 项提
 
 ### 阶段 0：确认干净基线
 
-1. 检查 `teamgaga-richtext` 工作区状态，记录并避开用户已有改动。
+1. 检查 `flutter_quill_editor` 工作区状态，记录并避开用户已有改动。
 2. 按仓库规范确认依赖已安装；需要时执行 frozen/offline 优先的 `vp install`。
 3. 在 `packages/solid-toolbar` 运行现有 `vp test`，确认修改前测试通过。
 

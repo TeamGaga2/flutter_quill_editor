@@ -4,7 +4,7 @@ status: accepted
 
 # Client 构建跟随指定分支的最新 runtime Release
 
-`teamgaga-client` 不再提交从 sibling `teamgaga-richtext` 仓库手工同步的 WebView runtime。client 改为配置一个运行时发布通道，并在显式 pre-build 阶段解析该 richtext 分支最新一次成功发布的 GitLab Release，下载和校验其预制包，再作为 Flutter assets 打进 App。
+`teamgaga-client` 不再提交从 sibling `flutter_quill_editor` 仓库手工同步的 WebView runtime。client 改为配置一个运行时发布通道，并在显式 pre-build 阶段解析该 richtext 分支最新一次成功发布的 GitLab Release，下载和校验其预制包，再作为 Flutter assets 打进 App。
 
 这里的“最新”指目标分支最新一次通过发布检查的制品，不是该分支尚未构建或构建失败的最新 commit。一次 client 构建只解析一次 Release，并在该次构建的所有平台产物中使用同一 commit 和同一内容摘要；App 安装后仍完全离线加载自身 assets。
 

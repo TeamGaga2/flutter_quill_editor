@@ -9,7 +9,7 @@
 ## 目标流程
 
 ```text
-teamgaga-richtext 目标分支
+flutter_quill_editor 目标分支
   commit → 检查/测试/构建 → commit Release
                                   │
                                   ▼
@@ -29,7 +29,7 @@ teamgaga-client
 
 ## 职责边界
 
-### `teamgaga-richtext`
+### `flutter_quill_editor`
 
 - 对允许发布的分支运行 runtime 检查、测试和构建。
 - 每次成功发布都保留准确的 branch、commit、pipeline 和内容摘要。

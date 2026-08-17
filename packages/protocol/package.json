@@ -2,15 +2,15 @@
   "name": "@teamgaga/richtext-protocol",
   "version": "0.0.0",
   "description": "Versioned JSON protocol for TeamGaga Flutter and WebView rich-text integration.",
-  "homepage": "https://git.teamgaga.com/teamgaga/front-end/teamgaga-richtext",
+  "homepage": "https://github.com/TeamGaga2/flutter_quill_editor",
   "bugs": {
-    "url": "https://git.teamgaga.com/teamgaga/front-end/teamgaga-richtext/issues"
+    "url": "https://github.com/TeamGaga2/flutter_quill_editor/issues"
   },
   "license": "MIT",
   "author": "TeamGaga",
   "repository": {
     "type": "git",
-    "url": "https://git.teamgaga.com/teamgaga/front-end/teamgaga-richtext.git"
+    "url": "https://github.com/TeamGaga2/flutter_quill_editor.git"
   },
   "files": [
     "dist",

@@ -10,7 +10,7 @@ status: accepted
 
 WebView 富文本编辑器的稳定视觉规则曾同时存在于两个位置：
 
-- `teamgaga-richtext/apps/webview-runtime/src/style.css`；
+- `flutter_quill_editor/apps/webview-runtime/src/style.css`；
 - `teamgaga-client/app/lib/richtext_webview/bridge/transport_bootstrap.dart` 运行时注入的高优先级 CSS。
 
 Flutter 注入样式后加载，并广泛使用高优先级声明，因此会覆盖 runtime 中的正文、标题、链接、Mention、Channel、段落间距、标题输入框和工具栏样式。这会造成以下问题：
@@ -189,7 +189,7 @@ Quill 会将连续引用行渲染为相邻的多个 `blockquote`。这些相邻�
 
 runtime 源码和 App 内实际运行资产位于两个仓库：
 
-1. 在 `teamgaga-richtext` 修改并验证 runtime 源码；
+1. 在 `flutter_quill_editor` 修改并验证 runtime 源码；
 2. 通过 `vp run webview-runtime#build` 构建 `apps/webview-runtime/dist`；
 3. 在 `teamgaga-client` 使用 `tools/sync-richtext-runtime.sh` 文档化流程同步构建产物；
 4. 提交生成的 `app/assets/richtext_webview_runtime`、runtime version/manifest 以及必要的 Flutter bootstrap 清理；
