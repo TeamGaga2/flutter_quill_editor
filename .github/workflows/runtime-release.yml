@@ -35,7 +35,7 @@ jobs:
           TG_BUILD_AT: ${{ github.event.head_commit.timestamp || github.event.pull_request.updated_at }}
         run: pnpm --filter webview-runtime... run build
       - run: pnpm exec vp check
-      - run: pnpm exec vitest run scripts/runtime-release.test.mjs
+      - run: pnpm exec vp test scripts/runtime-release.test.mjs --run
       - run: node scripts/verify-runtime-dist.mjs
       - uses: actions/upload-artifact@v4
         if: github.event_name == 'push' && github.ref_name == 'dev'
