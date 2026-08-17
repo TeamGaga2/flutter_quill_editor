@@ -1,0 +1,30 @@
+{
+  "name": "teamgaga-richtext",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "ready": "vp run -r build && vp check && vp run -r test",
+    "dev": "vp run webview-runtime#dev",
+    "prepare": "vp config",
+    "runtime:verify": "node scripts/verify-runtime-dist.mjs",
+    "runtime:publish": "node scripts/publish-runtime-release.mjs"
+  },
+  "devDependencies": {
+    "happy-dom": "^20.11.1",
+    "solid-js": "^1.9.14",
+    "vite": "catalog:",
+    "vite-plugin-solid": "^2.11.13",
+    "vite-plus": "catalog:"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "11.16.0",
+      "onFail": "download"
+    }
+  },
+  "engines": {
+    "node": ">=22.18.0"
+  }
+}

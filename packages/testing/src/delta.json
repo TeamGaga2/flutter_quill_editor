@@ -1,0 +1,113 @@
+{
+  "title": "自研 Flutter Delta Renderer 对富文本消息测试",
+  "content": [
+    { "insert": "我是H1" },
+    { "insert": "\n", "attributes": { "header": 1 } },
+    { "insert": "我是H2" },
+    { "insert": "\n", "attributes": { "header": 2 } },
+    { "insert": "我是H3" },
+    { "insert": "\n", "attributes": { "header": 3 } },
+    { "insert": "我是Text\n" },
+    { "insert": "我是Bold", "attributes": { "bold": true } },
+    { "insert": "\n" },
+    { "insert": "我是 Italics", "attributes": { "italic": true } },
+    { "insert": "\n" },
+    { "insert": "我是 Underline", "attributes": { "underline": true } },
+    { "insert": "\n" },
+    {
+      "insert": "我是 Bold + Italics + Underlin",
+      "attributes": { "underline": true, "bold": true, "italic": true }
+    },
+    { "insert": "\n" },
+    {
+      "insert": "我是超链接",
+      "attributes": { "link": "https://teamgaga.com" }
+    },
+    { "insert": "\n" },
+    { "insert": { "divider": "true" } },
+    { "insert": "\n段落向右缩进测试" },
+    { "insert": "\n", "attributes": { "indent": 5 } },
+    { "insert": "段落向右缩进测试" },
+    { "insert": "\n", "attributes": { "indent": 5 } },
+    { "insert": "段落向右缩进测试" },
+    { "insert": "\n", "attributes": { "indent": 5 } },
+    { "insert": "\n有序列表-1" },
+    { "insert": "\n", "attributes": { "list": "ordered" } },
+    { "insert": "有序列表-2" },
+    { "insert": "\n", "attributes": { "list": "ordered" } },
+    { "insert": "\n\n无序列表-1" },
+    { "insert": "\n", "attributes": { "list": "bullet" } },
+    { "insert": "无序列表-2" },
+    { "insert": "\n", "attributes": { "list": "bullet" } },
+    { "insert": "\n我是 Block Quote line 1" },
+    { "insert": "\n", "attributes": { "blockquote": true } },
+    { "insert": "我是 Block Quote line 2" },
+    { "insert": "\n", "attributes": { "blockquote": true } },
+    { "insert": { "divider": "true" } },
+    { "insert": "\n" },
+    { "insert": { "emoji": "ok" } },
+    { "insert": { "emoji": "thumbs_up" } },
+    { "insert": { "emoji": "hand_ok" } },
+    { "insert": "\n" },
+    { "insert": { "divider": "true" } },
+    { "insert": "\n" },
+    {
+      "insert": { "mention": "55014765595987968" },
+      "attributes": { "sign": "!" }
+    },
+    { "insert": " " },
+    {
+      "insert": { "mention": "79518440989134848" },
+      "attributes": { "sign": "&" }
+    },
+    { "insert": " " },
+    {
+      "insert": { "mention": "101699752614801408" },
+      "attributes": { "sign": "&" }
+    },
+    { "insert": " " },
+    {
+      "insert": { "mention": "94809203180310528" },
+      "attributes": { "sign": "!" }
+    },
+    { "insert": " " },
+    {
+      "insert": { "mention": "38935556977070080" },
+      "attributes": { "sign": "!" }
+    },
+    { "insert": " " },
+    { "insert": { "divider": "true" } },
+    { "insert": "\n" },
+    { "insert": { "channel": "157504930709487616" } },
+    { "insert": { "channel": "201635620950482944" } },
+    { "insert": { "channel": "220945050991943680" } },
+    { "insert": { "channel": "227059140385935360" } },
+    { "insert": "\n" },
+    {
+      "insert": {
+        "image": "https://cdn-test.teamgaga.com/attachments/f1p3uesp340-e19b07e9-3d2a-4d1b-8109-d8de11694ddf.webp"
+      },
+      "attributes": {
+        "width": "640",
+        "height": "640",
+        "mimeType": "image/webp",
+        "fileSize": 23492
+      }
+    },
+    { "insert": "\n" },
+    {
+      "insert": {
+        "video": "https://cdn-test.teamgaga.com/attachments/f1p3uesp340-7d3364c8-3924-4b7d-b2bc-24fd154210ea.mp4"
+      },
+      "attributes": {
+        "width": "720",
+        "height": "1280",
+        "poster": "https://cdn-test.teamgaga.com/attachments/f1p3uesp340-8d03a8d2-3118-4ad8-8305-7ff6e728427e.jpg",
+        "mimeType": "video/mp4",
+        "fileSize": 1159417,
+        "duration": 10
+      }
+    },
+    { "insert": "\n" }
+  ]
+}

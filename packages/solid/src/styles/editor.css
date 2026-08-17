@@ -1,0 +1,178 @@
+/*
+ * Lists — IME-safe markers (Safari / WKWebView) + Flutter Quill parity.
+ *
+ * Quill core uses `li { position: relative }` + `.ql-ui { position: absolute }`.
+ * With that combo, CJK composition is inserted into the non-editable `.ql-ui`
+ * span and then discarded (Quill #3875 / #3837). Override to `display: contents`
+ * + inline-block `::before` with negative margin so markers stay in flow.
+ *
+ * Spacing matches AppQuillEditorConfig / flutter_quill:
+ * - no extra `ol` padding (Quill's 1.5em pushes lists too far from the edge)
+ * - leading gutter = fontSize * 2
+ * - marker end gap = fontSize / 2
+ */
+.ql-editor ol {
+  margin: 0;
+  padding-left: 0;
+}
+
+.ql-editor li {
+  position: static;
+  list-style-type: none;
+  padding-left: 2em;
+}
+
+.ql-editor li[data-list="bullet"] > .ql-ui,
+.ql-editor li[data-list="ordered"] > .ql-ui {
+  display: contents;
+  position: static;
+}
+
+.ql-editor li > .ql-ui::before {
+  box-sizing: border-box;
+  display: inline-block;
+  position: static;
+  width: 2em;
+  margin-left: -2em;
+  margin-right: 0;
+  padding-right: 0.5em;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.ql-editor li[data-list="bullet"] > .ql-ui::before {
+  content: "\2022";
+  font-weight: 700;
+}
+
+.ql-editor li[data-list="ordered"] {
+  counter-increment: list-0;
+}
+
+.ql-editor li[data-list="ordered"] > .ql-ui::before {
+  content: counter(list-0, decimal) ".";
+}
+
+/* Indent step = 2em (~two characters); max level 5 (flutter_quill indentSelection).
+   List items keep a 2em marker gutter, then add n * 2em of indent. */
+.ql-editor .ql-indent-1:not(.ql-direction-rtl) {
+  padding-left: 2em;
+}
+.ql-editor li.ql-indent-1:not(.ql-direction-rtl) {
+  padding-left: 4em;
+}
+.ql-editor .ql-indent-2:not(.ql-direction-rtl) {
+  padding-left: 4em;
+}
+.ql-editor li.ql-indent-2:not(.ql-direction-rtl) {
+  padding-left: 6em;
+}
+.ql-editor .ql-indent-3:not(.ql-direction-rtl) {
+  padding-left: 6em;
+}
+.ql-editor li.ql-indent-3:not(.ql-direction-rtl) {
+  padding-left: 8em;
+}
+.ql-editor .ql-indent-4:not(.ql-direction-rtl) {
+  padding-left: 8em;
+}
+.ql-editor li.ql-indent-4:not(.ql-direction-rtl) {
+  padding-left: 10em;
+}
+.ql-editor .ql-indent-5:not(.ql-direction-rtl) {
+  padding-left: 10em;
+}
+.ql-editor li.ql-indent-5:not(.ql-direction-rtl) {
+  padding-left: 12em;
+}
+
+/* Each quote line is its own <blockquote>; collapse margins so the left bar
+   stays continuous across Enter (exit only on a second Enter on an empty line).
+   Use only forward adjacent-sibling selectors — WKWebView often fails to
+   invalidate relational selectors after Enter inserts another quote line.
+   Block spacing contract (ADR 0002): the first blockquote of a group is a
+   top-level block (12px top); the block after the group supplies its own. */
+.ql-editor blockquote {
+  margin: 12px 0 0;
+  padding-inline-start: 0.75em;
+  border-inline-start: 4px solid #cbd5e1;
+}
+.ql-editor blockquote + blockquote {
+  margin-top: 0;
+}
+
+.ql-editor hr.tgg-divider {
+  display: block;
+  width: 100%;
+  height: 0;
+  /* Top-level block spacing (ADR 0002): 12px top, no bottom margin. */
+  margin: 12px 0 0;
+  border: none;
+  border-top: 1px solid #e3e3e3;
+}
+
+.ql-editor img.tgg-image {
+  display: block;
+  /* Top-level block spacing (ADR 0002): 12px top, no bottom margin. */
+  margin: 12px 0 0;
+  max-width: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+  background: #e3e3e3;
+}
+
+/* Video cover + play overlay — matches Flutter ImSingleImage(video: true). */
+.ql-editor div.tgg-video {
+  position: relative;
+  display: block;
+  /* Top-level block spacing (ADR 0002): 12px top, no bottom margin. */
+  margin: 12px 0 0;
+  max-width: 100%;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #e3e3e3;
+}
+
+.ql-editor div.tgg-video .tgg-video__media {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+  background: #e3e3e3;
+}
+
+/* AppIconButton.black60(icon: AppIcons.play, size: 40, iconPadding: 4) → 48×48 */
+.ql-editor div.tgg-video .tgg-video__play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  pointer-events: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  transform: translate(-50%, -50%);
+}
+
+.ql-editor div.tgg-video .tgg-video__play::before {
+  content: "";
+  display: block;
+  width: 0;
+  height: 0;
+  margin-left: 3px;
+  border-style: solid;
+  border-width: 10px 0 10px 16px;
+  border-color: transparent transparent transparent #fff;
+}
+
+.ql-editor img.tgg-image[data-media-missing="true"],
+.ql-editor div.tgg-video[data-media-missing="true"] .tgg-video__media {
+  object-fit: cover;
+  background: #e3e3e3;
+  border-radius: 12px;
+}

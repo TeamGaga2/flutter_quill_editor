@@ -1,0 +1,48 @@
+{
+  "name": "@teamgaga/richtext-protocol",
+  "version": "0.0.0",
+  "description": "Versioned JSON protocol for TeamGaga Flutter and WebView rich-text integration.",
+  "homepage": "https://git.teamgaga.com/teamgaga/front-end/teamgaga-richtext",
+  "bugs": {
+    "url": "https://git.teamgaga.com/teamgaga/front-end/teamgaga-richtext/issues"
+  },
+  "license": "MIT",
+  "author": "TeamGaga",
+  "repository": {
+    "type": "git",
+    "url": "https://git.teamgaga.com/teamgaga/front-end/teamgaga-richtext.git"
+  },
+  "files": [
+    "dist",
+    "fixtures"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    },
+    "./fixtures/v1.json": "./fixtures/v1.json",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "vp pack",
+    "dev": "vp pack --watch",
+    "test": "vp test",
+    "check": "vp check",
+    "prepublishOnly": "vp run build"
+  },
+  "dependencies": {
+    "@teamgaga/richtext-delta": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "bumpp": "^11.1.0",
+    "typescript": "^7.0.2",
+    "vite": "catalog:",
+    "vite-plus": "catalog:"
+  }
+}

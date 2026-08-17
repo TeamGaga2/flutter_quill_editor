@@ -1,0 +1,52 @@
+{
+  "name": "@teamgaga/richtext-host-web",
+  "version": "0.0.0",
+  "description": "WebView host and Protocol-to-Core bridge for TeamGaga rich text.",
+  "homepage": "https://git.teamgaga.com/teamgaga/front-end/teamgaga-richtext",
+  "bugs": {
+    "url": "https://git.teamgaga.com/teamgaga/front-end/teamgaga-richtext/issues"
+  },
+  "license": "MIT",
+  "author": "TeamGaga",
+  "repository": {
+    "type": "git",
+    "url": "https://git.teamgaga.com/teamgaga/front-end/teamgaga-richtext.git"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "vp pack",
+    "dev": "vp pack --watch",
+    "test": "vp test",
+    "check": "vp check",
+    "prepublishOnly": "vp run build"
+  },
+  "dependencies": {
+    "@teamgaga/richtext-core": "workspace:*",
+    "@teamgaga/richtext-protocol": "workspace:*",
+    "@teamgaga/richtext-solid": "workspace:*"
+  },
+  "devDependencies": {
+    "@teamgaga/richtext-testing": "workspace:*",
+    "@types/node": "^26.1.1",
+    "bumpp": "^11.1.0",
+    "happy-dom": "^20.11.1",
+    "solid-js": "^1.9.14",
+    "typescript": "^7.0.2",
+    "vite": "catalog:",
+    "vite-plugin-solid": "^2.11.13",
+    "vite-plus": "catalog:"
+  },
+  "peerDependencies": {
+    "solid-js": "^1.9.14"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "playground",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vp dev",
+    "build": "tsc && vp build",
+    "preview": "vp preview"
+  },
+  "dependencies": {
+    "@teamgaga/richtext-solid": "workspace:*",
+    "@teamgaga/richtext-solid-toolbar": "workspace:*",
+    "solid-js": "^1.9.14"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.2",
+    "vite": "catalog:",
+    "vite-plugin-solid": "^2.11.13",
+    "vite-plus": "catalog:"
+  }
+}

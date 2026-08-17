@@ -1,0 +1,897 @@
+/*
+ * Stable visual rules for the WebView rich-text editor (ADR 0002).
+ *
+ * This file is the single implementation source for stable rich-text styles:
+ * body typography T, H1–H3, links, Mention, Channel, Divider, block spacing,
+ * content alignment, and the stable look of the title input + desktop toolbar.
+ * The Flutter host only injects runtime state (theme, platform mode, shell
+ * background, copy) — it must not duplicate any of the rules below.
+ *
+ * Token subset: only the semantic tokens actually used by this runtime are
+ * copied here from `theme.css` (the generated full Figma reference — do NOT
+ * import it wholesale), with Light + Dark values. Keep the Figma semantic
+ * naming so equal color values never justify reusing a different token:
+ * e.g. Common Blue and Blue/Primary are both #009dff but stay separate vars.
+ *
+ * The Flutter shell injects the effective brightness (`theme: "light"|"dark"`)
+ * and this runtime toggles `tg-theme-dark` / `tg-theme-light` on <html>.
+ * `:root` holds light values (default); `html.tg-theme-dark` overrides dark.
+ * The platform class `tg-webview-layout-mobile` / `tg-webview-layout-desktop`
+ * on `#app` is set by the runtime from `toolbarMode` (ADR 0002).
+ *
+ * The document surface and Flutter shell both use Figma
+ * Schemes/Surface Container Low. Flutter still passes `shellBackgroundColor`
+ * for the native WebView first paint; runtime CSS owns the same semantic token
+ * so the loaded document never depends on transparency to match its host.
+ */
+:root {
+  color-scheme: light;
+
+  /* Figma Schemes/On Surface — H1–H3 + body typography T. */
+  --tgg-schemes-on-surface: #171d19;
+  /* Figma Schemes/Surface Container Low — editor document surface. */
+  --tgg-schemes-surface-container-low: #f5f5f4;
+  /* Figma Extended Colors/Common Colors/Common Blue — Link. */
+  --tgg-common-blue: #009dff;
+  /* Figma Blue/Secondary — Mention. */
+  --tgg-blue-secondary: #0091ed;
+  /* Figma Primary/01 — Channel. */
+  --tgg-primary-01: #009c64;
+  /* Figma Schemes/Divider Low — Divider. */
+  --tgg-divider-low: #e3e8e5;
+  /* text */
+  --tgg-text02: #313131;
+  --tgg-text03: #5f5f5f;
+  --tgg-text04: #acacac;
+  /* primary (list leading / toolbar active state) */
+  --tgg-primary02: #00a66a;
+  /* icon */
+  --tgg-icon02: #313131;
+  --tgg-icon03: #5f5f5f;
+  --tgg-icon04: #acacac;
+  /* background */
+  --tgg-background03: #ffffff;
+  /* border */
+  --tgg-border01: #e3e3e3;
+  /* fill */
+  --tgg-fill10: #c7c7c7;
+  /* Figma State Layers/On Surface Variant/Opacity-08 — toolbar hover.
+   * theme.css: --color-state-layers-on-surface-variant-opacity-08 */
+  --tgg-state-layers-on-surface-variant-opacity-08: rgba(64, 73, 66, 0.08);
+  /* red (error / missing-embed surfaces) */
+  --tgg-red-primary: #de3730;
+  --tgg-red-secondary: #ba1a1a;
+  --tgg-red-tertiary: #ffedea;
+  /* yellow (dev hint surface) */
+  --tgg-yellow-secondary: #e2a800;
+  --tgg-yellow-tertiary: #fff9e9;
+  /* Quote (figma.md): content at 80% opacity; left bar at 30% opacity. */
+  --tgg-quote-text: color-mix(in srgb, var(--tgg-schemes-on-surface) 80%, transparent);
+  --tgg-quote-bar: color-mix(in srgb, var(--tgg-schemes-on-surface) 30%, transparent);
+
+  --tgg-shadow-secondary: 0px 1px 2px 0px rgba(0, 0, 0, 0.1);
+
+  /* derived: toolbar tooltip — high-contrast dark overlay with light text */
+  --tgg-tooltip-bg: #2e2e2e;
+  --tgg-tooltip-text: #fafafa;
+
+  color: var(--tgg-schemes-on-surface);
+  background: var(--tgg-schemes-surface-container-low);
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
+  /* Allow faux italic: CJK system fonts (e.g. PingFang) have no italic face. */
+  font-synthesis: style;
+  text-rendering: optimizeLegibility;
+  -webkit-text-size-adjust: 100%;
+}
+
+html.tg-theme-dark {
+  color-scheme: dark;
+
+  --tgg-schemes-on-surface: #e4e8e3;
+  --tgg-schemes-surface-container-low: #2c302d;
+  --tgg-common-blue: #009dff;
+  --tgg-blue-secondary: #0091ed;
+  --tgg-primary-01: #009c64;
+  --tgg-divider-low: #313532;
+  --tgg-text02: #e3e3e3;
+  --tgg-text03: #acacac;
+  --tgg-text04: #acacac;
+  --tgg-primary02: #009c64;
+  --tgg-icon02: #e3e3e3;
+  --tgg-icon03: #919191;
+  --tgg-icon04: #acacac;
+  --tgg-background03: #272727;
+  --tgg-border01: #474747;
+  --tgg-fill10: #474747;
+  /* Figma State Layers/On Surface Variant/Opacity-08 — toolbar hover.
+   * theme.css: --color-state-layers-on-surface-variant-opacity-08 */
+  --tgg-state-layers-on-surface-variant-opacity-08: rgba(192, 201, 192, 0.08);
+  --tgg-red-primary: #de3730;
+  --tgg-red-secondary: #ba1a1a;
+  --tgg-red-tertiary: rgba(222, 55, 48, 0.2);
+  --tgg-yellow-secondary: #e2a800;
+  --tgg-yellow-tertiary: rgba(255, 200, 0, 0.2);
+  --tgg-shadow-secondary: 0px 1px 2px 0px rgba(0, 0, 0, 0.1);
+  --tgg-tooltip-bg: #3a3a3a;
+  --tgg-tooltip-text: #fafafa;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  /* clip (with hidden fallback) blocks programmatic scrollTop that Quill's
+     scrollRectIntoView would otherwise apply while walking ancestors — on
+     macOS WKWebView overflow:hidden still accepts scrollTop and can shove
+     the fixed chrome out of view. */
+  overflow: hidden;
+  overflow: clip;
+  background: var(--tgg-schemes-surface-container-low);
+}
+
+body {
+  /* Host owns structural insets (desktop card pad 10, mobile 0); runtime CSS
+     compensates per platform class — see the ADR 0002 alignment table. */
+  padding: 0;
+}
+
+.tg-webview-root {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  overflow: hidden;
+  overflow: clip;
+  background: var(--tgg-schemes-surface-container-low);
+}
+
+.tg-webview-dev-hint {
+  flex: 0 0 auto;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--tgg-border01);
+  color: var(--tgg-text03);
+  background: var(--tgg-yellow-tertiary);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.tg-webview-dev-hint strong {
+  color: var(--tgg-yellow-secondary);
+}
+
+.tg-webview-header-slot {
+  /* Lets the title wrap participate in the host column without an extra box. */
+  display: contents;
+}
+
+.tg-webview-title-wrap {
+  flex: 0 0 auto;
+  max-height: 140px;
+  overflow: hidden;
+  box-sizing: border-box;
+  /* Desktop default: host card inset 10 + content inset 6 → final left 16. */
+  margin: 8px 0 0;
+  padding: 0 6px;
+}
+
+/* Mobile: host inset 0 + content inset 16 → final left 16 (ADR 0002). */
+.tg-webview-layout-mobile .tg-webview-title-wrap {
+  margin: 16px 0 0;
+  padding: 0 16px;
+}
+
+.tg-webview-title-input {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  /* Figma: vertical pad 8 + Line Height/LG 28 + pad 8 = 44 (single line). */
+  min-height: 44px;
+  max-height: 140px;
+  margin: 0;
+  padding: 8px 0;
+  overflow: auto;
+  resize: none;
+  border: none;
+  outline: none;
+  /* macOS WKWebView textarea keeps opaque chrome unless appearance is reset. */
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  /* Text/02; Font Size/XL 20 / Semibold / Line Height/LG 28. */
+  color: var(--tgg-text02);
+  font-family:
+    "PingFang SC",
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  font-style: normal;
+  line-height: 28px;
+  letter-spacing: 0;
+  vertical-align: middle;
+  /* Match Flutter ScrollbarThemeData(thickness: 6, radius: 3, thumb: fill10). */
+  scrollbar-width: thin;
+  scrollbar-color: var(--tgg-fill10) transparent;
+}
+
+.tg-webview-title-input::placeholder {
+  color: var(--tgg-text04);
+  opacity: 1;
+}
+
+.tg-webview-editor-root--with-title .tg-richtext-host-editor,
+.tg-webview-editor-root--with-title .ql-container,
+.tg-webview-editor-root--with-title .ql-editor {
+  padding-top: 0;
+}
+
+.tg-webview-editor-root--with-title {
+  /* No root inset: the host owns structural insets (desktop card pads 10,
+     mobile host does not). Mobile platform compensation sits on the body
+     scrollport; the content inset lives on .ql-editor (ADR 0002). */
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.tg-webview-editor-root {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
+  /* Shell column: toolbar + title stay put; only .tg-richtext-host-editor scrolls.
+     clip blocks Quill scrollRectIntoView from shifting this shell (see html/body). */
+  overflow: hidden;
+  overflow: clip;
+  background: transparent;
+}
+
+/* Mention (Blue/Secondary) and Channel (Primary/01) — color only, no chip
+   chrome until Figma provides it (ADR 0002). */
+.tg-webview-editor-root .tgg-mention {
+  color: var(--tgg-blue-secondary);
+}
+.tg-webview-editor-root .tgg-channel {
+  color: var(--tgg-primary-01);
+}
+
+/* Divider (ADR 0002): Divider Low stroke, top-level block spacing 12px,
+   full content width. Desktop 1px (default), mobile 0.5px below. */
+.tg-webview-editor-root hr.tgg-divider {
+  display: block;
+  width: 100%;
+  height: 0;
+  margin: 12px 0 0;
+  border: none;
+  border-top: 1px solid var(--tgg-divider-low);
+}
+
+.tg-webview-layout-mobile .tg-webview-editor-root hr.tgg-divider {
+  border-top-width: 0.5px;
+}
+
+.tg-webview-editor-root img.tgg-image {
+  /* Display width/height come from ImSingleImage-equivalent inline styles.
+     Top-level block: 12px top spacing, no bottom margin (ADR 0002). */
+  display: block;
+  margin: 12px 0 0;
+  max-width: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+  background: var(--tgg-border01);
+}
+
+/* Video cover + play overlay — matches Flutter ImSingleImage(video: true).
+   Top-level block: 12px top spacing, no bottom margin (ADR 0002). */
+.tg-webview-editor-root div.tgg-video {
+  position: relative;
+  display: block;
+  margin: 12px 0 0;
+  max-width: 100%;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--tgg-border01);
+}
+
+.tg-webview-editor-root div.tgg-video .tgg-video__media {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+  background: var(--tgg-border01);
+}
+
+/* AppIconButton.black60(icon: AppIcons.play, size: 40, iconPadding: 4) → 48×48 */
+.tg-webview-editor-root div.tgg-video .tgg-video__play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  pointer-events: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  transform: translate(-50%, -50%);
+}
+
+.tg-webview-editor-root div.tgg-video .tgg-video__play::before {
+  content: "";
+  display: block;
+  width: 0;
+  height: 0;
+  /* Optical centering for a right-pointing play triangle (~40px icon). */
+  margin-left: 3px;
+  border-style: solid;
+  border-width: 10px 0 10px 16px;
+  border-color: transparent transparent transparent #fff;
+}
+
+.tg-webview-editor-root img.tgg-image[data-media-missing="true"],
+.tg-webview-editor-root div.tgg-video[data-media-missing="true"] .tgg-video__media {
+  object-fit: cover;
+  background: var(--tgg-border01);
+  border-radius: 12px;
+}
+
+/* Custom emoji embeds (TeamGaga sticker set).
+   Fixed pixel size so emoji do not scale with header/block font-size changes
+   (1.35em / 0.05em / -0.25em at the 16px editor base font ≈ 22px / 1px / -4px).
+   The blot node is a span wrapping the img (see EmojiBlot) — never an img,
+   or the caret cannot land after the embed on WebKit. */
+.tg-webview-editor-root .tgg-emoji img {
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  margin: 0 1px;
+  vertical-align: -4px;
+  object-fit: contain;
+}
+
+.tg-webview-editor-root .tgg-emoji[data-emoji-missing="true"] img {
+  outline: 1px dashed var(--tgg-red-primary);
+  background: var(--tgg-red-tertiary);
+}
+
+/* Desktop toolbar (optional chrome via toolbarMode=desktop).
+ * Design: row height 32 (matches icon buttons), top flush with WebView top.
+ * Horizontal inset is owned by the Flutter host card (not editor-root).
+ */
+.tg-webview-toolbar {
+  box-sizing: border-box;
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 2px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  color: var(--tgg-text03);
+}
+
+.tg-webview-toolbar .tg-toolbar-spacer {
+  flex: 1 1 auto;
+  min-width: 8px;
+}
+
+.tg-webview-toolbar .tg-toolbar-icon-btn {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  color: var(--tgg-icon03, var(--tgg-text03));
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+}
+
+.tg-webview-toolbar .tg-toolbar-header-menu {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+/* Headers switch: same 32 height / 6 radius; width 52 for glyph + chevron. */
+.tg-webview-toolbar .tg-toolbar-header-menu .tg-toolbar-icon-btn {
+  width: 52px;
+  min-width: 52px;
+  height: 32px;
+  padding: 0;
+  gap: 0;
+  border-radius: 6px;
+}
+
+.tg-webview-toolbar .tg-toolbar-header-menu__chevron {
+  transition: transform 120ms ease;
+}
+
+.tg-webview-toolbar
+  .tg-toolbar-header-menu
+  .tg-toolbar-icon-btn[data-open]
+  .tg-toolbar-header-menu__chevron {
+  transform: rotate(180deg);
+}
+
+.tg-webview-toolbar .tg-toolbar-header-menu__list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 20;
+  display: flex;
+  min-width: 100px;
+  flex-direction: column;
+  gap: 0;
+  padding: 4px 0;
+  border: 1px solid var(--tgg-border01);
+  border-radius: 12px;
+  background: var(--tgg-background03);
+  box-shadow: var(--tgg-shadow-secondary);
+}
+
+.tg-webview-toolbar .tg-toolbar-header-menu__list button {
+  display: flex;
+  width: 100%;
+  height: 40px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 0;
+  color: var(--tgg-icon02, var(--tgg-text03));
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.tg-webview-toolbar .tg-toolbar-header-menu__list button:hover {
+  background: var(--tgg-state-layers-on-surface-variant-opacity-08);
+}
+
+.tg-webview-toolbar .tg-toolbar-header-menu__check {
+  display: inline-flex;
+  width: 12px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+  color: var(--tgg-primary02);
+}
+
+/* Custom tooltip (replaces native `title` for the 11 format items).
+ * Visual target: Flutter `TggTooltip` — dark overlay below the trigger,
+ * zero delay, small arrow. State is driven by the Tooltip component's DOM
+ * (content is rendered only while open), not by `:hover` on the button, so
+ * disabled triggers behave identically. */
+.tg-webview-toolbar .tg-toolbar-tooltip {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+}
+
+.tg-webview-toolbar .tg-toolbar-tooltip__content {
+  /* Shift/arrow set by Tooltip.tsx (Ant Design–style edge auto-shift). */
+  --tg-tooltip-shift-x: 0px;
+  --tg-tooltip-arrow-x: 50%;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  /* Base centering must live outside the enter animation: keyframes only apply
+   * while the animation runs, so without this the bubble snaps right after 90ms.
+   * Edge shift uses margin-left so it does not fight the centering transform. */
+  transform: translateX(-50%);
+  margin-left: var(--tg-tooltip-shift-x);
+  z-index: 30;
+  max-width: 256px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--tgg-tooltip-bg);
+  color: var(--tgg-tooltip-text);
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+  box-shadow: var(--tgg-shadow-secondary);
+  pointer-events: none;
+  animation: tg-tooltip-in 90ms ease-out;
+}
+
+.tg-webview-toolbar .tg-toolbar-tooltip__content::before {
+  content: "";
+  position: absolute;
+  top: -4px;
+  left: var(--tg-tooltip-arrow-x);
+  width: 8px;
+  height: 8px;
+  transform: translateX(-50%) rotate(45deg);
+  border-radius: 1px;
+  background: var(--tgg-tooltip-bg);
+}
+
+@keyframes tg-tooltip-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.tg-webview-toolbar .tg-toolbar-icon-btn:hover:not(:disabled) {
+  background: var(--tgg-state-layers-on-surface-variant-opacity-08);
+}
+
+.tg-webview-toolbar .tg-toolbar-icon-btn[data-active] {
+  color: var(--tgg-primary02);
+}
+
+.tg-webview-toolbar .tg-toolbar-icon-btn:disabled {
+  cursor: not-allowed;
+  color: var(--tgg-icon04, var(--tgg-text03));
+  opacity: 0.45;
+}
+
+.tg-webview-toolbar .tg-toolbar-icon-btn:focus-visible {
+  outline: 2px solid var(--tgg-primary02);
+  outline-offset: 2px;
+}
+
+/* Host mounts the Solid editor into this root — sole body scrollport.
+ * Do not use height:100% here: with desktop toolbar/title siblings that
+ * makes the flex column taller than the shell, and Enter at the last line
+ * lets Quill scroll the shell (toolbar + title leave the viewport). */
+.tg-webview-editor-root .tg-richtext-host-editor {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  cursor: text;
+  background: transparent;
+  /* Keep caret clear of the Flutter toolbar when this host is the scrollport. */
+  scroll-padding-bottom: 16px;
+  /* Match Flutter ScrollbarThemeData(thickness: 6, radius: 3, thumb: fill10). */
+  scrollbar-width: thin;
+  scrollbar-color: var(--tgg-fill10) transparent;
+}
+
+/* Mobile body platform compensation (ADR 0002): the desktop card's 10px
+   structural inset does not exist on mobile — recreate it on the scrollport
+   so the final content left edge stays 10 + 6 = 16px on both platforms. */
+.tg-webview-layout-mobile .tg-webview-editor-root .tg-richtext-host-editor {
+  padding-left: 10px;
+}
+
+.tg-webview-editor-root .tg-richtext-host-editor::-webkit-scrollbar,
+.tg-webview-title-input::-webkit-scrollbar {
+  /* Disable native macOS/WKWebView scrollbar chrome; otherwise the system
+     keeps painting an opaque track even when track background is transparent. */
+  -webkit-appearance: none;
+  appearance: none;
+  width: 6px;
+  height: 6px;
+  background: transparent;
+}
+
+/* Track/gutter only — keep thumb Fill/10; WebKit needs track-piece + corner too. */
+.tg-webview-editor-root .tg-richtext-host-editor::-webkit-scrollbar-track,
+.tg-webview-editor-root .tg-richtext-host-editor::-webkit-scrollbar-track-piece,
+.tg-webview-editor-root .tg-richtext-host-editor::-webkit-scrollbar-corner,
+.tg-webview-title-input::-webkit-scrollbar-track,
+.tg-webview-title-input::-webkit-scrollbar-track-piece,
+.tg-webview-title-input::-webkit-scrollbar-corner {
+  -webkit-appearance: none;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.tg-webview-editor-root .tg-richtext-host-editor::-webkit-scrollbar-button,
+.tg-webview-title-input::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.tg-webview-editor-root .tg-richtext-host-editor::-webkit-scrollbar-thumb,
+.tg-webview-title-input::-webkit-scrollbar-thumb {
+  background: var(--tgg-fill10);
+  border-radius: 3px;
+}
+
+/* Quill adds `.ql-container` onto the same node as `.tg-richtext-host-editor`.
+ * Sizing + overflow live on the host-editor rule only. Do not set
+ * min-height/height here — a later min-height:100% would override the flex
+ * min-height:0 and re-break desktop chrome (toolbar/title) layout. */
+.tg-webview-editor-root .ql-container {
+  width: 100%;
+  /* 正文基础排版 T (ADR 0002): the shared text semantics of paragraphs, list
+     items and quote text. Lists/quotes only layer structure styles on top.
+     PingFang SC is first; platforms without it fall back to system CJK fonts. */
+  font-family:
+    "PingFang SC",
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
+  /* Mobile T: 16/24 regular, tracking 0. */
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: 0;
+  color: var(--tgg-schemes-on-surface);
+}
+
+/* Desktop T: 14/20 regular (ADR 0002). */
+.tg-webview-layout-desktop .tg-webview-editor-root .ql-container {
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.tg-webview-editor-root .ql-editor {
+  flex: 1 1 auto;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 100%;
+  height: auto;
+  /* Override Quill core overflow-y:auto — nested scrollports fight the host
+     and make caret scroll-into-view walk up into the chrome shell. */
+  overflow: visible;
+  /* Content area padding (ADR 0002): top 0 (the first block owns its 12px),
+     right 0 (outer width decides the right edge), bottom 16 (caret + scroll
+     clearance), left 6 (content inset). Platform compensation sits on the
+     scrollport, not here. */
+  padding: 0 0 16px 6px;
+  /* Content padding does not affect scroll-into-view when the caret is flush at
+     the viewport bottom; Quill scrollRectIntoView / CSS scroll-into-view use this. */
+  scroll-padding-bottom: 16px;
+  outline: none;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  cursor: text;
+  position: relative;
+  caret-color: currentColor;
+}
+
+/*
+ * 块间距 (ADR 0002): every top-level content block carries 12px margin-top
+ * and no bottom margin — spacing is expressed only by the following block.
+ * The first block keeps its 12px so the container top padding stays 0 and
+ * title→body, blank→first-block and all block combinations follow one rule.
+ * Direct-child scope protects nested list items / quote paragraphs.
+ */
+.tg-webview-editor-root .ql-editor > p,
+.tg-webview-editor-root .ql-editor > h1,
+.tg-webview-editor-root .ql-editor > h2,
+.tg-webview-editor-root .ql-editor > h3,
+.tg-webview-editor-root .ql-editor > ol,
+.tg-webview-editor-root .ql-editor > ul {
+  margin: 12px 0 0;
+}
+
+/* H1–H3 (ADR 0002 / figma.md): On Surface; Semibold → font-weight 600 with
+   font-style normal; Figma line heights in px; Letter Spacing/None → 0. */
+.tg-webview-editor-root .ql-editor h1 {
+  font-size: 28px;
+  line-height: 40px;
+  font-weight: 600;
+  font-style: normal;
+  letter-spacing: 0;
+  color: var(--tgg-schemes-on-surface);
+}
+
+.tg-webview-editor-root .ql-editor h2 {
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 600;
+  font-style: normal;
+  letter-spacing: 0;
+  color: var(--tgg-schemes-on-surface);
+}
+
+.tg-webview-editor-root .ql-editor h3 {
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 600;
+  font-style: normal;
+  letter-spacing: 0;
+  color: var(--tgg-schemes-on-surface);
+}
+
+/* Link (ADR 0002): Common Blue + visible solid underline; no hover/active/
+   visited states until Figma provides them. */
+.tg-webview-editor-root .ql-editor a {
+  color: var(--tgg-common-blue);
+  text-decoration: underline;
+}
+
+/* Quote group (ADR 0002): consecutive Quill <blockquote> nodes form one
+   domain-level quote group. The first line of a group is a top-level block
+   (12px top). Runtime boundary classes round only the group's first top and
+   final bottom; adjacent lines never overlap, so the translucent bar keeps a
+   uniform color at every join.
+   Keep the marker as a native border: generated content inside an empty
+   contenteditable block can move CJK IME commits outside the Quote in WebView.
+   The 3px border + 8px padding still puts content 11px from the outer edge.
+   Forward sibling selectors only — avoid :has() (WKWebView invalidation). */
+.tg-webview-editor-root .ql-editor > blockquote {
+  margin: 12px 0 0;
+  padding: 0 0 0 8px;
+  /* Reset the generic @teamgaga/richtext-solid quote border. */
+  border: 0;
+  border-left: 3px solid var(--tgg-quote-bar);
+  border-radius: 0;
+  color: var(--tgg-quote-text);
+}
+
+.tg-webview-editor-root .ql-editor > blockquote + blockquote {
+  margin-top: 0;
+}
+
+.tg-webview-editor-root .ql-editor > blockquote.tgg-quote-group-start {
+  border-top-left-radius: 2px;
+}
+
+.tg-webview-editor-root .ql-editor > blockquote.tgg-quote-group-end {
+  border-bottom-left-radius: 2px;
+}
+
+.tg-webview-editor-root .ql-editor.ql-blank::before {
+  content: attr(data-placeholder);
+  position: absolute;
+  /* Placeholder shares the first block's origin — 6px content inset, 12px
+     first-block top — so it never jumps when real input replaces it. */
+  top: 12px;
+  left: 6px;
+  right: 0;
+  color: var(--tgg-text04);
+  font-style: normal;
+  line-height: inherit;
+  pointer-events: none;
+}
+
+.tg-webview-editor-root .ql-editor:focus {
+  outline: none;
+}
+
+.tg-webview-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  padding: 24px;
+  color: var(--tgg-red-secondary);
+  text-align: center;
+  background: var(--tgg-red-tertiary);
+  font-size: 14px;
+}
+
+.tg-webview-error strong {
+  font-size: 16px;
+}
+
+/*
+ * Lists — must load after quill.core.css.
+ * IME-safe (Quill #3875) + Flutter AppQuillEditorConfig parity:
+ * leading color = tokens.colors.primary02, gutter = 2em, ol padding = 0.
+ */
+.tg-webview-editor-root .ql-editor ol {
+  padding-left: 0;
+}
+
+.tg-webview-editor-root .ql-editor li {
+  position: static;
+  list-style-type: none;
+  padding-left: 2em;
+}
+
+.tg-webview-editor-root .ql-editor li[data-list="bullet"] > .ql-ui,
+.tg-webview-editor-root .ql-editor li[data-list="ordered"] > .ql-ui {
+  display: contents;
+  position: static;
+}
+
+.tg-webview-editor-root .ql-editor li > .ql-ui::before {
+  box-sizing: border-box;
+  display: inline-block;
+  position: static;
+  width: 2em;
+  margin-left: -2em;
+  margin-right: 0;
+  padding-right: 0.5em;
+  color: var(--tgg-primary02);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.tg-webview-editor-root .ql-editor li[data-list="bullet"] > .ql-ui::before {
+  font-weight: 700;
+}
+
+/* Indent step = 2em (~two characters); max level 5. List gutter = 2em. */
+.tg-webview-editor-root .ql-editor .ql-indent-1:not(.ql-direction-rtl) {
+  padding-left: 2em;
+}
+
+.tg-webview-editor-root .ql-editor li.ql-indent-1:not(.ql-direction-rtl) {
+  padding-left: 4em;
+}
+
+.tg-webview-editor-root .ql-editor .ql-indent-2:not(.ql-direction-rtl) {
+  padding-left: 4em;
+}
+
+.tg-webview-editor-root .ql-editor li.ql-indent-2:not(.ql-direction-rtl) {
+  padding-left: 6em;
+}
+
+.tg-webview-editor-root .ql-editor .ql-indent-3:not(.ql-direction-rtl) {
+  padding-left: 6em;
+}
+
+.tg-webview-editor-root .ql-editor li.ql-indent-3:not(.ql-direction-rtl) {
+  padding-left: 8em;
+}
+
+.tg-webview-editor-root .ql-editor .ql-indent-4:not(.ql-direction-rtl) {
+  padding-left: 8em;
+}
+
+.tg-webview-editor-root .ql-editor li.ql-indent-4:not(.ql-direction-rtl) {
+  padding-left: 10em;
+}
+
+.tg-webview-editor-root .ql-editor .ql-indent-5:not(.ql-direction-rtl) {
+  padding-left: 10em;
+}
+
+.tg-webview-editor-root .ql-editor li.ql-indent-5:not(.ql-direction-rtl) {
+  padding-left: 12em;
+}

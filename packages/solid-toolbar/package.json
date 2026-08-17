@@ -1,0 +1,40 @@
+{
+  "name": "@teamgaga/richtext-solid-toolbar",
+  "version": "0.0.0",
+  "description": "Optional desktop toolbar components for the TeamGaga Solid rich text editor.",
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "vp pack",
+    "dev": "vp pack --watch",
+    "test": "vp test",
+    "check": "vp check",
+    "prepublishOnly": "vp run build"
+  },
+  "devDependencies": {
+    "@teamgaga/richtext-core": "workspace:*",
+    "@teamgaga/richtext-solid": "workspace:*",
+    "@types/node": "^26.1.1",
+    "happy-dom": "^20.11.1",
+    "solid-js": "^1.9.14",
+    "typescript": "^7.0.2",
+    "unplugin-solid": "catalog:",
+    "vite": "catalog:",
+    "vite-plus": "catalog:",
+    "vite-solid-svg": "catalog:"
+  },
+  "peerDependencies": {
+    "@teamgaga/richtext-solid": "workspace:*",
+    "solid-js": "^1.9.14"
+  }
+}
