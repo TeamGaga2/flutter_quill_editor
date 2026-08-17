@@ -1,17 +1,17 @@
 # WebView runtime release
 
-The `dev` branch publishes an immutable GitLab Release after the runtime build
-and asset checks pass. The release tag is
-`webview-runtime-channel-<branch-slug>-<branch-identity>-<pipeline-iid>` where
-the identity is the first 16 characters of the SHA-256 of the full branch name.
+The GitHub Actions workflow publishes an immutable GitHub Release for the
+`dev` branch after verification and the runtime build pass. Pull requests and
+the `main` branch run verification only.
 
-The pipeline uploads `webview-runtime.tar.gz`, `runtime-release.json`, and the
-archive checksum to the Generic Package Registry, reads each upload back, and
-only then creates the Release. A failed build or upload never creates a
-client-consumable Release.
+The release tag is
+`webview-runtime-channel-<branch-slug>-<branch-identity>-<run-number>`. The
+release contains `webview-runtime.tar.gz`, `runtime-release.json`, and the
+archive checksum. The metadata keeps the source commit, branch, GitHub run ID,
+run number, protocol versions, and archive SHA-256 together.
 
-The publish script uses `CI_API_V4_URL`, `CI_PROJECT_ID`, `CI_JOB_TOKEN`,
-`CI_COMMIT_BRANCH`, `CI_COMMIT_SHA`, `CI_PIPELINE_ID`, and `CI_PIPELINE_IID`.
-For a self-managed GitLab, the project must allow the job token to write the
-Generic Package Registry and create the generated tag/release. No token is put
-in a URL, log, or artifact.
+The publishing job uses the workflow's `GITHUB_TOKEN` with `contents: write`.
+It verifies an existing release with the same tag before treating the run as
+successful. A new release stays as a draft while all three assets are uploaded
+and read back; it is published only after every byte matches the verified
+runtime build.
