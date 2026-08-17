@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   ARCHIVE_NAME,
@@ -12,6 +12,7 @@ import {
 const root = resolve(new URL("..", import.meta.url).pathname);
 const distDir = resolve(root, "apps/webview-runtime/dist");
 const outputDir = resolve(root, ".runtime-release");
+const githubApi = (process.env.GITHUB_API_URL || "https://api.github.com").replace(/\/$/, "");
 
 function required(name) {
   const value = process.env[name]?.trim();
@@ -25,111 +26,133 @@ function integerEnv(name) {
   return value;
 }
 
-function apiUrl() {
-  const value = process.env.CI_API_V4_URL?.trim() || process.env.TG_RICHTEXT_GITLAB_API?.trim();
-  if (!value) throw new Error("CI_API_V4_URL or TG_RICHTEXT_GITLAB_API is required");
-  return value.replace(/\/$/, "");
+function repository() {
+  const value = process.env.GITHUB_REPOSITORY?.trim();
+  if (!value || !/^[^/]+\/[^/]+$/.test(value)) {
+    throw new Error("GITHUB_REPOSITORY must be in owner/name form");
+  }
+  return value;
 }
 
-function projectId() {
-  return encodeURIComponent(required("CI_PROJECT_ID").replace(/^\/+|\/+$/g, ""));
+function endpoint(path) {
+  return `${githubApi}/repos/${repository()}${path}`;
+}
+
+function isGitHubOrigin(url) {
+  const origin = new URL(url).origin;
+  return origin === new URL(githubApi).origin || origin === "https://uploads.github.com";
 }
 
 async function request(url, options = {}, expectedStatuses = null) {
-  const gitlabOrigin = new URL(apiUrl()).origin;
+  const token = required("GITHUB_TOKEN");
   const method = options.method || "GET";
   let current = new URL(url);
   for (let redirects = 0; ; redirects++) {
-    const headers = { ...options.headers };
-    if (current.origin === gitlabOrigin) headers["JOB-TOKEN"] = required("CI_JOB_TOKEN");
+    const headers = {
+      Accept: "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28",
+      ...options.headers,
+    };
+    if (isGitHubOrigin(current)) headers.Authorization = `Bearer ${token}`;
     const response = await fetch(current, { ...options, headers, redirect: "manual" });
     if ([301, 302, 303, 307, 308].includes(response.status)) {
-      if (redirects >= 5) throw new Error("GitLab request exceeded the redirect limit");
       if (method !== "GET" && method !== "HEAD") {
-        throw new Error(`GitLab unexpectedly redirected ${method} ${current.pathname}`);
+        throw new Error(`GitHub unexpectedly redirected ${method} ${current.pathname}`);
       }
+      if (redirects >= 5) throw new Error("GitHub request exceeded the redirect limit");
       const location = response.headers.get("location");
-      if (!location) throw new Error("GitLab redirect did not include a location");
+      if (!location) throw new Error("GitHub redirect did not include a location");
       current = new URL(location, current);
-      if (current.protocol !== "https:") throw new Error("GitLab redirect must use HTTPS");
+      if (current.protocol !== "https:") throw new Error("GitHub redirect must use HTTPS");
       continue;
     }
-    const accepted =
-      expectedStatuses ||
-      (response.status >= 200 && response.status < 300 ? [response.status] : []);
+    const accepted = expectedStatuses || (response.ok ? [response.status] : []);
     if (!accepted.includes(response.status)) {
-      throw new Error(`GitLab request failed (${response.status}) for ${current.pathname}`);
+      throw new Error(`GitHub request failed (${response.status}) for ${current.pathname}`);
     }
     return response;
   }
 }
 
-function packageUrl(api, project, tag, name) {
-  return `${api}/projects/${project}/packages/generic/webview-runtime/${encodeURIComponent(tag)}/${encodeURIComponent(name)}`;
+async function releaseByTag(tag) {
+  for (let page = 1; page <= 10; page++) {
+    const response = await request(endpoint(`/releases?per_page=100&page=${page}`));
+    const releases = await response.json();
+    if (!Array.isArray(releases)) throw new Error("GitHub releases response is not an array");
+    const match = releases.find((release) => release?.tag_name === tag);
+    if (match) return match;
+    if (releases.length < 100) return null;
+  }
+  throw new Error("GitHub runtime Release pagination exceeded the safety limit");
 }
 
-async function uploadAndVerify(url, bytes, contentType) {
-  const existing = await request(url, {}, [200, 404]);
-  if (existing.status === 200) {
-    const existingBytes = new Uint8Array(await existing.arrayBuffer());
-    const expected = createHash("sha256").update(bytes).digest("hex");
-    const actual = createHash("sha256").update(existingBytes).digest("hex");
-    if (expected !== actual)
-      throw new Error(`existing package content differs for ${url.split("/").pop()}`);
-    return;
+async function assetBytes(asset) {
+  const response = await request(asset.url, {
+    headers: { Accept: "application/octet-stream" },
+  });
+  return new Uint8Array(await response.arrayBuffer());
+}
+
+async function verifyReleaseAssets(release, expected) {
+  const assets = new Map((release.assets || []).map((asset) => [asset.name, asset]));
+  for (const [name, bytes] of expected) {
+    const asset = assets.get(name);
+    if (!asset) throw new Error(`GitHub Release is missing asset: ${name}`);
+    const actual = createHash("sha256")
+      .update(await assetBytes(asset))
+      .digest("hex");
+    const digest = createHash("sha256").update(bytes).digest("hex");
+    if (actual !== digest) throw new Error(`existing GitHub Release asset differs: ${name}`);
   }
-  await request(url, {
-    method: "PUT",
-    headers: { "Content-Type": contentType, "Content-Length": String(bytes.length) },
+}
+
+async function verifyExistingRelease(release, tag, sourceCommit, expected) {
+  if (release.tag_name !== tag) throw new Error("existing GitHub Release has an unexpected tag");
+  if (release.target_commitish && release.target_commitish !== sourceCommit) {
+    throw new Error("existing GitHub Release points to a different commit");
+  }
+  await verifyReleaseAssets(release, expected);
+}
+
+async function uploadAsset(uploadUrl, name, bytes, contentType) {
+  const url = new URL(uploadUrl.replace(/\{.*\}$/, ""));
+  url.searchParams.set("name", name);
+  const response = await request(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": contentType,
+      "Content-Length": String(bytes.length),
+    },
     body: bytes,
   });
-  const downloaded = new Uint8Array(await (await request(url, {}, [200])).arrayBuffer());
-  const expected = createHash("sha256").update(bytes).digest("hex");
-  const actual = createHash("sha256").update(downloaded).digest("hex");
-  if (expected !== actual)
-    throw new Error(`uploaded package verification failed for ${url.split("/").pop()}`);
+  const asset = await response.json();
+  if (asset.name !== name) throw new Error(`GitHub uploaded an unexpected asset: ${name}`);
+  return asset;
 }
 
-async function verifyExistingRelease({
-  api,
-  project,
-  tag,
-  sourceCommit,
-  archiveUrl,
-  metadataUrl,
-  shaUrl,
-}) {
-  const releaseUrl = `${api}/projects/${project}/releases/${encodeURIComponent(tag)}`;
-  const response = await request(releaseUrl, {}, [200, 404]);
-  if (response.status === 404) return false;
-  const release = await response.json();
-  if (release.tag_name !== tag) throw new Error("existing GitLab Release has an unexpected tag");
-  const links = new Map((release.assets?.links || []).map((link) => [link.name, link.url]));
-  for (const [name, url] of [
-    [ARCHIVE_NAME, archiveUrl],
-    ["runtime-release.json", metadataUrl],
-    [`${ARCHIVE_NAME}.sha256`, shaUrl],
-  ]) {
-    if (links.get(name) !== url) throw new Error(`existing GitLab Release asset differs: ${name}`);
+async function ensureAsset(release, name, bytes, contentType) {
+  const existing = (release.assets || []).find((asset) => asset.name === name);
+  if (existing) {
+    const actual = createHash("sha256")
+      .update(await assetBytes(existing))
+      .digest("hex");
+    const expected = createHash("sha256").update(bytes).digest("hex");
+    if (actual !== expected) throw new Error(`existing GitHub Release asset differs: ${name}`);
+    return;
   }
-  const tagResponse = await request(
-    `${api}/projects/${project}/repository/tags/${encodeURIComponent(tag)}`,
-  );
-  const tagData = await tagResponse.json();
-  const actualCommit = tagData.commit?.id || tagData.target;
-  if (actualCommit !== sourceCommit)
-    throw new Error("existing GitLab Release tag points to a different commit");
-  return true;
+  const asset = await uploadAsset(release.upload_url, name, bytes, contentType);
+  release.assets = [...(release.assets || []), asset];
 }
 
 async function main() {
-  const branch = required("CI_COMMIT_BRANCH");
-  const sourceCommit = required("CI_COMMIT_SHA").toLowerCase();
-  const pipelineId = integerEnv("CI_PIPELINE_ID");
-  const pipelineIid = integerEnv("CI_PIPELINE_IID");
+  const branch = required("TG_SOURCE_BRANCH");
+  if (branch !== "dev") throw new Error(`runtime Release publishing is not enabled for ${branch}`);
+  const sourceCommit = required("TG_SOURCE_COMMIT").toLowerCase();
+  const pipelineId = integerEnv("TG_PIPELINE_ID");
+  const pipelineIid = integerEnv("TG_PIPELINE_IID");
   const runtimeVersion = validateRuntimeDist(distDir);
   if (runtimeVersion.sourceCommit !== sourceCommit) {
-    throw new Error("runtime-version.json sourceCommit does not match CI_COMMIT_SHA");
+    throw new Error("runtime-version.json sourceCommit does not match TG_SOURCE_COMMIT");
   }
 
   rmSync(outputDir, { recursive: true, force: true });
@@ -150,53 +173,49 @@ async function main() {
   });
   const metadataBytes = Buffer.from(`${JSON.stringify(metadata, null, 2)}\n`, "utf8");
   const shaBytes = Buffer.from(`${archiveSha256}  ${ARCHIVE_NAME}\n`, "utf8");
-  const metadataPath = resolve(outputDir, "runtime-release.json");
-  const shaPath = resolve(outputDir, `${ARCHIVE_NAME}.sha256`);
-  writeFileSync(metadataPath, metadataBytes);
-  writeFileSync(shaPath, shaBytes);
 
-  const api = apiUrl();
-  const project = projectId();
-  const archiveUrl = packageUrl(api, project, tag, ARCHIVE_NAME);
-  const metadataUrl = packageUrl(api, project, tag, "runtime-release.json");
-  const shaUrl = packageUrl(api, project, tag, `${ARCHIVE_NAME}.sha256`);
-  await uploadAndVerify(archiveUrl, archiveBytes, "application/gzip");
-  await uploadAndVerify(metadataUrl, metadataBytes, "application/json");
-  await uploadAndVerify(shaUrl, shaBytes, "text/plain; charset=utf-8");
-
-  if (
-    await verifyExistingRelease({
-      api,
-      project,
-      tag,
-      sourceCommit,
-      archiveUrl,
-      metadataUrl,
-      shaUrl,
-    })
-  ) {
+  const existing = await releaseByTag(tag);
+  let release = existing;
+  const expected = [
+    [ARCHIVE_NAME, archiveBytes],
+    ["runtime-release.json", metadataBytes],
+    [`${ARCHIVE_NAME}.sha256`, shaBytes],
+  ];
+  if (release) {
+    await verifyExistingRelease(release, tag, sourceCommit, release.draft ? [] : expected);
+  } else {
+    const releaseResponse = await request(endpoint("/releases"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: `WebView runtime ${branch} #${pipelineIid}`,
+        tag_name: tag,
+        target_commitish: sourceCommit,
+        draft: true,
+        prerelease: false,
+        body: `branch=${branch}\nsourceCommit=${sourceCommit}\npipelineId=${pipelineId}\npipelineIid=${pipelineIid}\narchiveSha256=${archiveSha256}`,
+      }),
+    });
+    release = await releaseResponse.json();
+  }
+  if (release.tag_name !== tag) throw new Error("GitHub created a release with an unexpected tag");
+  if (release.draft !== true) {
     console.log(`runtime release already published ${tag} (${archiveSha256})`);
     return;
   }
-  const releaseResponse = await request(`${api}/projects/${project}/releases`, {
-    method: "POST",
+  if (typeof release.upload_url !== "string")
+    throw new Error("GitHub release did not include an upload URL");
+  await ensureAsset(release, ARCHIVE_NAME, archiveBytes, "application/gzip");
+  await ensureAsset(release, "runtime-release.json", metadataBytes, "application/json");
+  await ensureAsset(release, `${ARCHIVE_NAME}.sha256`, shaBytes, "text/plain; charset=utf-8");
+  await verifyReleaseAssets(release, expected);
+  const publishedResponse = await request(endpoint(`/releases/${release.id}`), {
+    method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      name: `WebView runtime ${branch} #${pipelineIid}`,
-      tag_name: tag,
-      ref: sourceCommit,
-      description: `branch=${branch}\nsourceCommit=${sourceCommit}\npipelineId=${pipelineId}\npipelineIid=${pipelineIid}\narchiveSha256=${archiveSha256}`,
-      assets: {
-        links: [
-          { name: ARCHIVE_NAME, url: archiveUrl, link_type: "package" },
-          { name: "runtime-release.json", url: metadataUrl, link_type: "package" },
-          { name: `${ARCHIVE_NAME}.sha256`, url: shaUrl, link_type: "package" },
-        ],
-      },
-    }),
+    body: JSON.stringify({ draft: false }),
   });
-  const release = await releaseResponse.json();
-  if (release.tag_name !== tag) throw new Error("GitLab created a release with an unexpected tag");
+  const published = await publishedResponse.json();
+  if (published.draft !== false) throw new Error("GitHub Release could not be published");
   console.log(`published runtime release ${tag} (${archiveSha256})`);
 }
 

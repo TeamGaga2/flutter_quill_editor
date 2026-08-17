@@ -3,7 +3,7 @@
 ## 状态
 
 - 决策：[ADR 0003](../adr/0003-client-follows-branch-runtime-release.md)
-- 当前阶段：代码实施完成，等待 GitLab 权限和 Jenkins 凭据配置后联调
+- 当前阶段：GitHub Actions 发布与 client GitHub Release 消费代码已完成，等待 GitHub Actions 联调
 - 当前生产方式：分支 Release + client 显式 pre-build；上线顺序必须先 richtext 发布、后 client 消费
 
 ## 目标流程
@@ -24,7 +24,7 @@ teamgaga-client
 1. client 只配置要跟随的 richtext 分支，不固定 runtime 版本。
 2. 每次正式构建在线查询该分支最新一次成功发布的制品。
 3. 同一次构建解析结果固定，Android、iOS 等产物不得各自重新解析到不同 Release。
-4. App 运行时不访问 GitLab 或 CDN。
+4. App 运行时不访问 GitHub 或 CDN。
 5. 无法确认“最新”时失败，不自动使用上次构建的旧制品。
 
 ## 职责边界
@@ -46,18 +46,18 @@ teamgaga-client
 
 - client 构建读取 sibling richtext checkout 或现场运行 Node 构建。
 - 通过 `latest` 文件名覆盖旧 Release 内容。
-- GitLab 查询失败时把本地旧缓存当作最新制品继续构建。
+- GitHub 查询失败时把本地旧缓存当作最新制品继续构建。
 - App 安装后再联网更新 runtime。
 
 ## 发布端设计
 
 ### 发布范围
 
-GitLab CI 只为明确允许的分支创建 runtime Release。第一阶段至少支持 `dev`；新增其他发布通道时必须在流水线 allowlist 中显式加入，不能让任意 feature branch 自动产生长期 Release。
+GitHub Actions 只为明确允许的分支创建 runtime Release。第一阶段至少支持 `dev`；PR 和 `main` 只验证，不能让任意 feature branch 自动产生长期 Release。
 
 ### Release 身份
 
-GitLab Release 基于 tag，不能直接绑定一个会移动的分支头。因此每次成功构建创建一个不可变 tag，格式为：
+GitHub Release 基于 tag，不能直接绑定一个会移动的分支头。因此每次成功构建创建一个不可变 tag，格式为：
 
 ```text
 webview-runtime-channel-<branch-slug>-<branch-hash>-<pipeline-iid>
@@ -66,7 +66,7 @@ webview-runtime-channel-<branch-slug>-<branch-hash>-<pipeline-iid>
 - `branch-hash` 来自完整分支名，避免不同分支产生相同 slug；
 - `pipeline-iid` 用于确定同一通道内的先后顺序；
 - Release metadata 保存完整 branch、source commit、pipeline ID 和发布时间；
-- tag 指向实际构建的 `CI_COMMIT_SHA`，不得指向查询时的新分支头。
+- tag 指向实际构建的 GitHub commit SHA，不得指向查询时的新分支头。
 
 “某分支最新制品”定义为：该 branch identity 下 pipeline IID 最大、且完整发布步骤成功的 Release。
 
@@ -98,9 +98,9 @@ webview-runtime-channel-<branch-slug>-<branch-hash>-<pipeline-iid>
 2. 使用固定依赖执行 `vp check`、runtime 测试和完整依赖闭包构建。
 3. 校验 `runtime-version.json`、入口 SHA-256 和全部相对资源。
 4. 生成归档、摘要和 `runtime-release.json`。
-5. 将二进制存入 GitLab Generic Package Registry。
-6. 回读并校验上传内容。
-7. 最后创建 tag 与 GitLab Release，并挂载 package links。
+5. 创建 GitHub draft Release。
+6. 上传并回读校验三个 Release assets。
+7. 最后将 draft Release 发布为正式 Release。
 
 只有第 7 步完成的记录才参与 client 的“最新成功 Release”解析。普通 CI Job Artifact 会过期，不作为长期下载源。
 
@@ -123,7 +123,7 @@ client 提供一个跨平台 Dart 准备工具，由仓库的正式 build/run/te
 ### 解析 latest
 
 1. 读取通道配置并计算 branch identity。
-2. 通过 GitLab API 查询该通道的 Release，按 pipeline IID 选择最新一条。
+2. 通过 GitHub API 查询该通道的 Release，按 GitHub run number 选择最新一条。
 3. 下载并校验 `runtime-release.json`，确认完整分支名、tag、commit 和 pipeline 一致。
 4. 将解析结果写入本次构建目录；该次构建后续步骤只使用此结果，不再次查询 latest。
 
@@ -172,9 +172,9 @@ client 提供一个跨平台 Dart 准备工具，由仓库的正式 build/run/te
 
 ## 凭据
 
-因为 pre-build 需要查询私有 GitLab Release API，Jenkins 使用只读 Project Access Token，本地开发使用个人访问令牌。token 由凭据库或环境注入，只放 HTTP header，不写入通道配置、URL query、日志、缓存或构建产物。
+GitHub 仓库公开时 pre-build 不需要 token；私有仓库由 Jenkins 或本地凭据注入只读 GitHub token，只放 HTTP header，不写入通道配置、URL query、日志、缓存或构建产物。
 
-发布任务使用 GitLab CI Job Token。所有 API 和资源下载只接受预期的 `git.teamgaga.com` host。
+发布任务使用 GitHub Actions 内置 `GITHUB_TOKEN` 和 `contents: write`。所有 API 和资源下载只接受预期的 GitHub API host。
 
 ## 失败与回滚
 
@@ -194,7 +194,7 @@ client 不保存固定 runtime 版本。回滚方式是在目标 richtext 分支
 
 ### 阶段一：建立分支发布
 
-1. 增加允许发布分支的 GitLab CI job。
+1. 增加允许发布分支的 GitHub Actions job。
 2. 补齐 manifest 与资源完整性测试。
 3. 为 `dev` 发布两个连续的候选 Release，验证 latest 顺序。
 
@@ -231,14 +231,13 @@ client 不保存固定 runtime 版本。回滚方式是在目标 richtext 分支
 - 单次 Jenkins 构建中的 APK 与 IPA 使用相同 Release。
 - 新 Release 出现后，下次构建无需 client commit 即可消费。
 - API 不可用时不会用旧缓存冒充 latest。
-- App 运行时不访问 GitLab 或 CDN。
+- App 运行时不访问 GitHub 或 CDN。
 - 构建产物可以追溯到准确的 branch、Release、commit、pipeline 和 SHA-256。
 
 ## 实施前置条件
 
-- 确认自建 GitLab 版本支持 Generic Package Registry、Release API 和 Release asset link。
-- 配置允许 CI 创建 `webview-runtime-channel-*` tag。
-- 为 Jenkins 建立只读 Release API 与 package 下载凭据。
+- 确认 GitHub Actions workflow 可使用 `contents: write` 创建 Release 和 tag。
+- 私有仓库场景为 Jenkins 建立只读 GitHub Release API 凭据。
 - 确认 `dev` 是第一阶段需要跟随的发布分支；其他分支必须显式加入 allowlist。
 
 ## 不在本次范围

@@ -1,0 +1,73 @@
+name: WebView runtime
+
+on:
+  pull_request:
+  push:
+    branches:
+      - dev
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: webview-runtime-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify runtime
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.16.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec vp check
+      - run: pnpm exec vitest run scripts/runtime-release.test.mjs
+      - name: Build runtime
+        env:
+          TG_SOURCE_COMMIT: ${{ github.sha }}
+          TG_BUILD_ID: ${{ github.sha }}
+          TG_BUILD_AT: ${{ github.event.head_commit.timestamp || github.event.pull_request.updated_at }}
+        run: pnpm --filter webview-runtime... run build
+      - run: node scripts/verify-runtime-dist.mjs
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'push' && github.ref_name == 'dev'
+        with:
+          name: webview-runtime-dist
+          path: apps/webview-runtime/dist
+          if-no-files-found: error
+          retention-days: 1
+
+  release:
+    name: Publish runtime release
+    if: github.event_name == 'push' && github.ref_name == 'dev'
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: webview-runtime-dist
+          path: apps/webview-runtime/dist
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Publish GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_API_URL: ${{ github.api_url }}
+          TG_SOURCE_BRANCH: ${{ github.ref_name }}
+          TG_SOURCE_COMMIT: ${{ github.sha }}
+          TG_PIPELINE_ID: ${{ github.run_id }}
+          TG_PIPELINE_IID: ${{ github.run_number }}
+        run: node scripts/publish-runtime-release.mjs
