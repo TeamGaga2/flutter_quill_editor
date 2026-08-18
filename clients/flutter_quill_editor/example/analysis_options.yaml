@@ -1,0 +1,2 @@
+# Example apps are not lint-gated in CI; the package owns its own
+# analysis options.
