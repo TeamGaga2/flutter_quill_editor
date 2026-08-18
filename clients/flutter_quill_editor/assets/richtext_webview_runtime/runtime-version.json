@@ -1,0 +1,10 @@
+{
+  "protocolVersion": 1,
+  "hostEnvelopeVersion": 1,
+  "buildId": "95b24d3e08df7719f95421b9e02f0d8f4c63da95",
+  "builtAt": "2026-08-18T14:00:53+08:00",
+  "package": "webview-runtime",
+  "sourceCommit": "95b24d3e08df7719f95421b9e02f0d8f4c63da95",
+  "webEntry": "iframe.29f80cc163765896.html",
+  "webEntrySha256": "29f80cc163765896f1de5faa7a9fda4d65edd07d5f07bd221c92ee06eecf0945"
+}

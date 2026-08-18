@@ -1,0 +1,70 @@
+name: Flutter client
+
+on:
+  pull_request:
+    paths:
+      - clients/flutter_quill_editor/**
+      - .github/workflows/flutter-client.yml
+  push:
+    branches:
+      - dev
+      - main
+    paths:
+      - clients/flutter_quill_editor/**
+    tags:
+      - dart-v*
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flutter-client-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze-and-test:
+    name: Analyze and test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: clients/flutter_quill_editor
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Protocol version consistency
+        run: |
+          manifest_version=$(sed -n 's/.*kRichTextRuntimeProtocolVersion = \([0-9]*\);.*/\1/p' lib/host/runtime_manifest.dart)
+          runtime_version=$(sed -n 's/.*"protocolVersion"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/p' assets/richtext_webview_runtime/runtime-release.json)
+          echo "manifest protocol version: $manifest_version"
+          echo "runtime protocol version: $runtime_version"
+          test -n "$manifest_version" && test "$manifest_version" = "$runtime_version"
+      - run: flutter analyze
+      - run: flutter test
+      - name: Verify example resolves
+        run: |
+          cd example
+          flutter pub get
+          flutter build web
+
+  publish:
+    name: Publish to pub.dev
+    if: startsWith(github.ref, 'refs/tags/dart-v')
+    needs: analyze-and-test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: clients/flutter_quill_editor
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: dart pub get
+      - name: Publish
+        env:
+          PUB_ACCESS_TOKEN: ${{ secrets.PUB_ACCESS_TOKEN }}
+        run: dart pub publish --force

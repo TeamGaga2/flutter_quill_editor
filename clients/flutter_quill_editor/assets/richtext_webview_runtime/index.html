@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="color-scheme" content="light dark" />
+    <title>TeamGaga Rich Text</title>
+    <script>
+(function injectTeamGagaRichTextBridge() {
+  "use strict";
+
+  // 1) Config first (optional; defaults to toolbarMode: 'none').
+  //    theme is injected dynamically by Flutter as "light" | "dark" (the
+  //    app's effective brightness, honoring AdaptiveTheme system/light/dark).
+  //    The runtime applies it as tg-theme-light / tg-theme-dark on <html>.
+  window.__TG_RICHTEXT_CONFIG__ = window.__TG_RICHTEXT_CONFIG__ || {
+    toolbarMode: "none",
+    // mediaMaxSize: 240, // mobile; Flutter desktop injects 320
+    // theme: "light", // Flutter injects the effective brightness ("light"|"dark")
+    // locale: "en",
+  };
+
+  // 2) Transport factory — required in production (runtime fail-fast if missing).
+  window.__TG_RICHTEXT_CREATE_TRANSPORT__ = function createTgRichTextTransport() {
+    var listeners = [];
+    var destroyed = false;
+
+    function deliver(message) {
+      if (destroyed) {
+        return;
+      }
+      // Copy in case a listener unsubscribes mid-dispatch.
+      var snapshot = listeners.slice();
+      for (var i = 0; i < snapshot.length; i++) {
+        try {
+          snapshot[i](message);
+        } catch {
+          // Isolate listener failures from the bridge.
+        }
+      }
+    }
+
+    // Flutter calls this to push inbound Protocol JSON strings into the host.
+    // Canonical name: __TG_RICHTEXT_DELIVER__. Alias kept for older client drafts.
+    window.__TG_RICHTEXT_DELIVER__ = deliver;
+    window.__TG_RICHTEXT_DELIVER_FROM_FLUTTER__ = deliver;
+
+    return {
+      send: function send(message) {
+        if (destroyed) {
+          throw new Error("TgRichTextBridge transport has been destroyed.");
+        }
+        // webview_flutter: JavascriptChannel(name: 'TgRichTextBridge', ...)
+        if (
+          typeof TgRichTextBridge === "undefined" ||
+          typeof TgRichTextBridge.postMessage !== "function"
+        ) {
+          throw new Error(
+            "TgRichTextBridge channel is not available. Register JavascriptChannel before load.",
+          );
+        }
+        TgRichTextBridge.postMessage(message);
+      },
+      subscribe: function subscribe(listener) {
+        if (destroyed) {
+          throw new Error("TgRichTextBridge transport has been destroyed.");
+        }
+        listeners.push(listener);
+        return function unsubscribe() {
+          var idx = listeners.indexOf(listener);
+          if (idx >= 0) {
+            listeners.splice(idx, 1);
+          }
+        };
+      },
+      destroy: function destroy() {
+        destroyed = true;
+        listeners = [];
+        try {
+          delete window.__TG_RICHTEXT_DELIVER__;
+        } catch {
+          window.__TG_RICHTEXT_DELIVER__ = undefined;
+        }
+      },
+    };
+  };
+})();
+    </script>
+    <script type="module" crossorigin src="./assets/main-6jqigyeW.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/preload-helper-ChlXO5hK.js">
+    <link rel="modulepreload" crossorigin href="./assets/mount-editor-DO5gVnAB.js">
+    <link rel="stylesheet" crossorigin href="./assets/mount-editor-BlfaIVr6.css">
+  </head>
+  <body>
+    <div id="app" class="tg-webview-root"></div>
+  </body>
+</html>

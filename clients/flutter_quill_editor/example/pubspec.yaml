@@ -1,0 +1,17 @@
+name: flutter_quill_editor_example
+description: Example app for flutter_quill_editor.
+publish_to: none
+
+environment:
+  sdk: ^3.11.0
+  flutter: ">=3.22.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_quill_editor:
+    path: ../
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter

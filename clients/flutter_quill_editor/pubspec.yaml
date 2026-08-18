@@ -1,0 +1,36 @@
+name: flutter_quill_editor
+description: >-
+  Flutter client for the TeamGaga rich-text editor WebView runtime —
+  protocol, transport, controller and a ready-to-embed RichTextWebView widget.
+version: 0.1.0
+repository: https://github.com/TeamGaga2/flutter_quill_editor
+homepage: https://github.com/TeamGaga2/flutter_quill_editor/tree/dev/clients/flutter_quill_editor
+
+environment:
+  sdk: ^3.11.0
+  flutter: ">=3.22.0"
+
+dependencies:
+  clock: ^1.1.2
+  flutter:
+    sdk: flutter
+  path: ^1.9.1
+  path_provider: ^2.1.5
+  uuid: ^4.5.3
+  web: ^1.1.1
+  webview_flutter: ^4.13.0
+  webview_flutter_android: ^4.10.0
+  webview_flutter_wkwebview: ^3.23.0
+
+dev_dependencies:
+  archive: ^4.0.9
+  crypto: ^3.0.7
+  flutter_test:
+    sdk: flutter
+  http: ^1.6.0
+  very_good_analysis: ^10.3.0
+
+flutter:
+  assets:
+    - assets/richtext_webview_runtime/
+    - assets/richtext_webview_runtime/assets/
