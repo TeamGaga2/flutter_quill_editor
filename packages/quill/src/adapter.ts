@@ -56,6 +56,7 @@ export function createQuillAdapter(options: QuillAdapterOptions): QuillAdapter {
   let lastEmittedSelection: { start: number; end: number } | null = null;
 
   const emitSelectionChange = (selection: { start: number; end: number } | null): void => {
+    if (suppressHostSelectionSync > 0) return;
     const same =
       (lastEmittedSelection?.start ?? -1) === (selection?.start ?? -1) &&
       (lastEmittedSelection?.end ?? -1) === (selection?.end ?? -1);
@@ -230,19 +231,21 @@ export function createQuillAdapter(options: QuillAdapterOptions): QuillAdapter {
       rememberSelection(range.index, range.index + range.length);
     }
 
-    emitSelectionChange(
-      range
-        ? {
-            start: range.index,
-            end: range.index + range.length,
-          }
-        : null,
-    );
+    if (suppressHostSelectionSync === 0) {
+      emitSelectionChange(
+        range
+          ? {
+              start: range.index,
+              end: range.index + range.length,
+            }
+          : null,
+      );
 
-    if (range && !oldRange) {
-      emit({ type: "focus" });
-    } else if (!range && oldRange) {
-      emit({ type: "blur" });
+      if (range && !oldRange) {
+        emit({ type: "focus" });
+      } else if (!range && oldRange) {
+        emit({ type: "blur" });
+      }
     }
 
     emitState();
