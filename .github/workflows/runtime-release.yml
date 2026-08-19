@@ -2,10 +2,30 @@ name: WebView runtime
 
 on:
   pull_request:
+    paths:
+      - apps/webview-runtime/**
+      - packages/**
+      - scripts/**
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - tsconfig.json
+      - vite.config.ts
+      - .github/workflows/runtime-release.yml
   push:
     branches:
       - dev
       - main
+    paths:
+      - apps/webview-runtime/**
+      - packages/**
+      - scripts/**
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - tsconfig.json
+      - vite.config.ts
+      - .github/workflows/runtime-release.yml
 
 permissions:
   contents: read
