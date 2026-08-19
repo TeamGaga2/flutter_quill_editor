@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vite-plus/test";
-import fixtures from "../fixtures/v1.json";
+import fixtures from "../fixtures/v2.json";
 import {
   decodeProtocolMessage,
   encodeProtocolMessage,
+  PROTOCOL_VERSION,
   type ProtocolMessage,
 } from "../src/index.ts";
 
@@ -115,7 +116,7 @@ describe("protocol JSON codec", () => {
 
   it("rejects invalid typed input at runtime before encoding", () => {
     const invalid = {
-      version: 1,
+      version: PROTOCOL_VERSION,
       kind: "command",
       id: "request-1",
       type: "undo",

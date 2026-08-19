@@ -12,7 +12,6 @@ import {
   bindEditorEventBridge,
   createProtocolReadyEvent,
   createProtocolRequestCloseEvent,
-  createProtocolRequestLinkEvent,
   type EditorEventBridge,
 } from "../events/editor-event-bridge";
 import {
@@ -96,22 +95,6 @@ export function createRichTextHostInternal(options: CreateRichTextHostOptions): 
 
   const host: RichTextHost = {
     ready,
-    requestLink(selection) {
-      if (state !== "ready" || !editor) {
-        return;
-      }
-
-      const resolved =
-        selection === undefined ? editor.getSelection() : selection === null ? null : selection;
-
-      try {
-        enqueueEncoded(encodeProtocolMessage(createProtocolRequestLinkEvent(resolved)));
-      } catch {
-        reportError(
-          createHostError("event", "encode_failed", "Failed to encode request_link event."),
-        );
-      }
-    },
     requestClose() {
       if (state !== "ready" || !editor) {
         return;
@@ -166,7 +149,7 @@ export function createRichTextHostInternal(options: CreateRichTextHostOptions): 
     }
 
     try {
-      const response = dispatchEditorCommand(editor, command);
+      const response = dispatchEditorCommand(editor, command, options.uiController);
       enqueueResponse(response);
     } catch {
       reportError(createHostError("dispatch", "command_failed", "Editor command dispatch failed."));

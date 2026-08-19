@@ -85,6 +85,7 @@ export type UndoCommand = ProtocolCommand<"undo", Record<string, never>>;
 export type RedoCommand = ProtocolCommand<"redo", Record<string, never>>;
 export type FocusCommand = ProtocolCommand<"focus", Record<string, never>>;
 export type BlurCommand = ProtocolCommand<"blur", Record<string, never>>;
+export type OpenLinkFormCommand = ProtocolCommand<"open_link_form", Record<string, never>>;
 
 export type EditorCommandMessage =
   | SetSnapshotCommand
@@ -106,6 +107,7 @@ export type EditorCommandMessage =
   | UndoCommand
   | RedoCommand
   | FocusCommand
-  | BlurCommand;
+  | BlurCommand
+  | OpenLinkFormCommand;
 
 export type EditorCommandType = EditorCommandMessage["type"];

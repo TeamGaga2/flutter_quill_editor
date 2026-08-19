@@ -48,12 +48,37 @@ void main() {
         ),
       );
 
+      expect(css, contains('--tgg-fill04:#fff'));
+      expect(css, contains('--tgg-fill03:#fafafa'));
+      expect(css, contains('--tgg-fill01:#e9e9e9'));
+      expect(css, contains('--tgg-text01:#121212'));
+      expect(css, contains('--tgg-text05:#fff'));
+      expect(css, contains('--tgg-schemes-primary:#009c64'));
+      expect(css, contains('--tgg-schemes-on-primary:#fff'));
+      expect(css, contains('--tgg-schemes-outline-variant:#a0a7a1'));
+      expect(css, contains('--tgg-schemes-on-surface-variant:#404942'));
+      expect(css, contains('--tgg-primary03:#38c585'));
+      expect(css, contains('--tgg-primary04:#88dcb6'));
+      expect(css, contains('--tgg-shadow-primary:0px 8px 40px 0px #0003'));
+      expect(css, contains('--tgg-scrim-black70:#000000b3'));
+
       final dark = RegExp(r'html\.tg-theme-dark\{[^}]*\}').firstMatch(css);
       expect(dark, isNotNull);
       final darkRule = dark!.group(0)!;
       expect(darkRule, contains('--tgg-schemes-on-surface:#e4e8e3'));
       expect(darkRule, contains('--tgg-schemes-surface-container-low:#2c302d'));
       expect(darkRule, contains('--tgg-divider-low:#313532'));
+      expect(darkRule, contains('--tgg-fill04:#3a3a3a'));
+      expect(darkRule, contains('--tgg-fill03:#313131'));
+      expect(darkRule, contains('--tgg-fill01:#272727'));
+      expect(darkRule, contains('--tgg-text01:#fafafa'));
+      expect(darkRule, contains('--tgg-text05:#fff'));
+      expect(darkRule, contains('--tgg-schemes-primary:#91d5ac'));
+      expect(darkRule, contains('--tgg-schemes-on-primary:#003921'));
+      expect(darkRule, contains('--tgg-schemes-outline-variant:#4e5550'));
+      expect(darkRule, contains('--tgg-schemes-on-surface-variant:#c0c9c0'));
+      expect(darkRule, contains('--tgg-primary03:#009c64'));
+      expect(darkRule, contains('--tgg-primary04:#4a8f70'));
     });
 
     test('paints the editor document with Surface Container Low', () {
@@ -69,7 +94,6 @@ void main() {
     test('does not keep per-orientation body text indirection or merged tokens', () {
       expect(css, isNot(contains('--tgg-body-text')));
       expect(css, isNot(contains('--tgg-blue-primary')));
-      expect(css, isNot(contains('--tgg-primary03')));
     });
   });
 

@@ -6,7 +6,7 @@ import { defineConfig } from "vite-plus";
 import solid from "vite-plugin-solid";
 
 /** Keep in sync with `@teamgaga/richtext-protocol` PROTOCOL_VERSION. */
-const PROTOCOL_VERSION = 1;
+const PROTOCOL_VERSION = 2;
 /** Keep in sync with `@teamgaga/richtext-host-web` HOST_ENVELOPE_VERSION. */
 const HOST_ENVELOPE_VERSION = 1;
 

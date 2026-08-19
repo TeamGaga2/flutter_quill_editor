@@ -12,7 +12,7 @@ import {
   type EditorCommandMessage,
   type ProtocolMessage,
 } from "@teamgaga/richtext-protocol";
-import fixtures from "@teamgaga/richtext-protocol/fixtures/v1.json";
+import fixtures from "@teamgaga/richtext-protocol/fixtures/v2.json";
 import { createMemoryTransport } from "../src/bridge/memory-transport";
 import { createRichTextHostInternal } from "../src/lifecycle/create-host";
 import { getActiveHost } from "../src/lifecycle/root-registry";

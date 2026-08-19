@@ -1,12 +1,11 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 import { createEditor } from "@teamgaga/richtext-core";
-import { decodeProtocolMessage } from "@teamgaga/richtext-protocol";
+import { decodeProtocolMessage, PROTOCOL_VERSION } from "@teamgaga/richtext-protocol";
 import { MockEditorAdapter } from "@teamgaga/richtext-testing";
 import {
   bindEditorEventBridge,
   createProtocolReadyEvent,
   createProtocolRequestCloseEvent,
-  createProtocolRequestLinkEvent,
 } from "../src/events/editor-event-bridge";
 
 describe("editor event bridge", () => {
@@ -85,33 +84,9 @@ describe("editor event bridge", () => {
     editor.destroy();
   });
 
-  it("builds request_link events with optional selection", () => {
-    expect(createProtocolRequestLinkEvent()).toEqual({
-      version: 1,
-      kind: "event",
-      type: "request_link",
-      payload: {},
-    });
-    expect(createProtocolRequestLinkEvent(null)).toEqual({
-      version: 1,
-      kind: "event",
-      type: "request_link",
-      payload: {},
-    });
-    expect(createProtocolRequestLinkEvent({ start: 0, end: 3 })).toEqual({
-      version: 1,
-      kind: "event",
-      type: "request_link",
-      payload: { selection: { start: 0, end: 3 } },
-    });
-
-    const ready = createProtocolReadyEvent();
-    expect(ready.type).toBe("ready");
-  });
-
   it("builds request_close events", () => {
     expect(createProtocolRequestCloseEvent()).toEqual({
-      version: 1,
+      version: PROTOCOL_VERSION,
       kind: "event",
       type: "request_close",
       payload: {},

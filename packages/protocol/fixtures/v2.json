@@ -1,0 +1,355 @@
+{
+  "commands": [
+    {
+      "version": 2,
+      "kind": "command",
+      "id": "cmd-set-snapshot",
+      "type": "set_snapshot",
+      "payload": { "snapshot": { "content": [{ "insert": "hello\n" }] } }
+    },
+    {
+      "version": 2,
+      "kind": "command",
+      "id": "cmd-get-snapshot",
+      "type": "get_snapshot",
+      "payload": {}
+    },
+    {
+      "version": 2,
+      "kind": "command",
+      "id": "cmd-set-selection",
+      "type": "set_selection",
+      "payload": { "selection": { "start": 0, "end": 5 } }
+    },
+    {
+      "version": 2,
+      "kind": "command",
+      "id": "cmd-get-selection",
+      "type": "get_selection",
+      "payload": {}
+    },
+    {
+      "version": 2,
+      "kind": "command",
+      "id": "cmd-inline",
+      "type": "toggle_inline_format",
+      "payload": { "format": "bold" }
+    },
+    {
+      "version": 2,
+      "kind": "command",
+      "id": "cmd-header",
+      "type": "toggle_block_format",
+      "payload": { "format": "header", "value": 2 }
+    },
+    {
+      "version": 2,
+      "kind": "command",
+      "id": "cmd-list",
+      "type": "toggle_block_format",
+      "payload": { "format": "list", "value": "bullet" }
+    },
+    {
+      "version": 2,
+      "kind": "command",
+      "id": "cmd-blockquote",
+      "type": "toggle_block_format",
+      "payload": { "format": "blockquote" }
+    },
+    {
+      "version": 2,
+      "kind": "command",
+      "id": "cmd-emoji",
+      "type": "insert_emoji",
+      "payload": { "id": "party_parrot" }
+    },
+    {
+      "version": 2,
+      "kind": "command",
+      "id": "cmd-mention",
+      "type": "insert_mention",
+      "payload": {
+        "id": "user-42",
+        "sign": "!",
+        "displayText": "Alice",
+        "selection": { "start": 0, "end": 0 }
+      }
+    },
+    {
+      "version": 2,
+      "kind": "command",
+      "id": "cmd-channel",
+      "type": "insert_channel",
+      "payload": { "id": "channel-7", "displayText": "general" }
+    },
+    {
+      "version": 2,
+      "kind": "command",
+      "id": "cmd-image",
+      "type": "insert_image",
+      "payload": {
+        "src": "tgg-local-media://image-token-123",
+        "width": "640",
+        "height": "480",
+        "mimeType": "image/png",
+        "fileSize": 102400
+      }
+    },
+    {
+      "version": 2,
+      "kind": "command",
+      "id": "cmd-video",
+      "type": "insert_video",
+      "payload": {
+        "src": "https://cdn.teamgaga.com/video.mp4",
+        "width": "1280",
+        "height": "720",
+        "mimeType": "video/mp4",
+        "fileSize": 1048576,
+        "poster": "https://cdn.teamgaga.com/poster.png",
+        "duration": 30,
+        "selection": { "start": 1, "end": 2 }
+      }
+    },
+    {
+      "version": 2,
+      "kind": "command",
+      "id": "cmd-link",
+      "type": "insert_link",
+      "payload": {
+        "url": "https://teamgaga.com",
+        "text": "TeamGaga",
+        "selection": { "start": 0, "end": 5 }
+      }
+    },
+    {
+      "version": 2,
+      "kind": "command",
+      "id": "cmd-divider",
+      "type": "insert_divider",
+      "payload": {}
+    },
+    { "version": 2, "kind": "command", "id": "cmd-indent", "type": "indent", "payload": {} },
+    { "version": 2, "kind": "command", "id": "cmd-outdent", "type": "outdent", "payload": {} },
+    {
+      "version": 2,
+      "kind": "command",
+      "id": "cmd-get-caret-rect",
+      "type": "get_caret_rect",
+      "payload": {}
+    },
+    { "version": 2, "kind": "command", "id": "cmd-undo", "type": "undo", "payload": {} },
+    { "version": 2, "kind": "command", "id": "cmd-redo", "type": "redo", "payload": {} },
+    { "version": 2, "kind": "command", "id": "cmd-focus", "type": "focus", "payload": {} },
+    { "version": 2, "kind": "command", "id": "cmd-blur", "type": "blur", "payload": {} },
+    {
+      "version": 2,
+      "kind": "command",
+      "id": "cmd-open-link-form",
+      "type": "open_link_form",
+      "payload": {}
+    }
+  ],
+  "events": [
+    { "version": 2, "kind": "event", "type": "ready", "payload": { "protocol_version": 2 } },
+    {
+      "version": 2,
+      "kind": "event",
+      "type": "change",
+      "payload": { "snapshot": { "content": [{ "insert": "hello\n" }] } }
+    },
+    {
+      "version": 2,
+      "kind": "event",
+      "type": "selection_change",
+      "payload": { "selection": { "start": 1, "end": 1 } }
+    },
+    { "version": 2, "kind": "event", "type": "focus", "payload": {} },
+    { "version": 2, "kind": "event", "type": "blur", "payload": {} },
+    {
+      "version": 2,
+      "kind": "event",
+      "type": "state_change",
+      "payload": {
+        "state": {
+          "focused": true,
+          "selection": { "start": 0, "end": 5 },
+          "canUndo": true,
+          "canRedo": false,
+          "formats": {
+            "bold": true,
+            "italic": false,
+            "underline": false,
+            "strike": false,
+            "header": 2,
+            "list": false,
+            "blockquote": false
+          }
+        }
+      }
+    },
+    { "version": 2, "kind": "event", "type": "request_close", "payload": {} }
+  ],
+  "responses": [
+    {
+      "version": 2,
+      "kind": "response",
+      "id": "cmd-set-snapshot",
+      "type": "set_snapshot",
+      "ok": true,
+      "value": {}
+    },
+    {
+      "version": 2,
+      "kind": "response",
+      "id": "cmd-get-snapshot",
+      "type": "get_snapshot",
+      "ok": true,
+      "value": { "snapshot": { "content": [{ "insert": "hello\n" }] } }
+    },
+    {
+      "version": 2,
+      "kind": "response",
+      "id": "cmd-set-selection",
+      "type": "set_selection",
+      "ok": true,
+      "value": {}
+    },
+    {
+      "version": 2,
+      "kind": "response",
+      "id": "cmd-get-selection",
+      "type": "get_selection",
+      "ok": true,
+      "value": { "selection": null }
+    },
+    {
+      "version": 2,
+      "kind": "response",
+      "id": "cmd-inline",
+      "type": "toggle_inline_format",
+      "ok": true,
+      "value": {}
+    },
+    {
+      "version": 2,
+      "kind": "response",
+      "id": "cmd-header",
+      "type": "toggle_block_format",
+      "ok": true,
+      "value": {}
+    },
+    {
+      "version": 2,
+      "kind": "response",
+      "id": "cmd-emoji",
+      "type": "insert_emoji",
+      "ok": true,
+      "value": {}
+    },
+    {
+      "version": 2,
+      "kind": "response",
+      "id": "cmd-mention",
+      "type": "insert_mention",
+      "ok": true,
+      "value": {}
+    },
+    {
+      "version": 2,
+      "kind": "response",
+      "id": "cmd-channel",
+      "type": "insert_channel",
+      "ok": true,
+      "value": {}
+    },
+    {
+      "version": 2,
+      "kind": "response",
+      "id": "cmd-image",
+      "type": "insert_image",
+      "ok": true,
+      "value": {}
+    },
+    {
+      "version": 2,
+      "kind": "response",
+      "id": "cmd-video",
+      "type": "insert_video",
+      "ok": true,
+      "value": {}
+    },
+    {
+      "version": 2,
+      "kind": "response",
+      "id": "cmd-link",
+      "type": "insert_link",
+      "ok": true,
+      "value": {}
+    },
+    {
+      "version": 2,
+      "kind": "response",
+      "id": "cmd-divider",
+      "type": "insert_divider",
+      "ok": true,
+      "value": {}
+    },
+    {
+      "version": 2,
+      "kind": "response",
+      "id": "cmd-indent",
+      "type": "indent",
+      "ok": true,
+      "value": {}
+    },
+    {
+      "version": 2,
+      "kind": "response",
+      "id": "cmd-outdent",
+      "type": "outdent",
+      "ok": true,
+      "value": {}
+    },
+    {
+      "version": 2,
+      "kind": "response",
+      "id": "cmd-get-caret-rect",
+      "type": "get_caret_rect",
+      "ok": true,
+      "value": {
+        "rect": { "x": 12.5, "y": 48, "width": 0, "height": 20 }
+      }
+    },
+    { "version": 2, "kind": "response", "id": "cmd-undo", "type": "undo", "ok": true, "value": {} },
+    { "version": 2, "kind": "response", "id": "cmd-redo", "type": "redo", "ok": true, "value": {} },
+    {
+      "version": 2,
+      "kind": "response",
+      "id": "cmd-focus",
+      "type": "focus",
+      "ok": true,
+      "value": {}
+    },
+    { "version": 2, "kind": "response", "id": "cmd-blur", "type": "blur", "ok": true, "value": {} },
+    {
+      "version": 2,
+      "kind": "response",
+      "id": "cmd-open-link-form",
+      "type": "open_link_form",
+      "ok": true,
+      "value": {}
+    },
+    {
+      "version": 2,
+      "kind": "response",
+      "id": "cmd-undo",
+      "ok": false,
+      "error": {
+        "code": "command_failed",
+        "message": "Command failed.",
+        "details": { "reason": "test fixture" }
+      }
+    }
+  ]
+}

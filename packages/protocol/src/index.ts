@@ -18,6 +18,7 @@ export type {
   InsertVideoCommand,
   InsertLinkCommand,
   InsertDividerCommand,
+  OpenLinkFormCommand,
   OutdentCommand,
   ProtocolCaretRect,
   ProtocolImageAttributes,
@@ -52,7 +53,6 @@ export type {
   ProtocolEditorState,
   ReadyEvent,
   RequestCloseEvent,
-  RequestLinkEvent,
   SelectionChangeEvent,
   StateChangeEvent,
 } from "./events";

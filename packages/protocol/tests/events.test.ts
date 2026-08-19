@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import fixtures from "../fixtures/v1.json";
+import fixtures from "../fixtures/v2.json";
 import { PROTOCOL_VERSION, isProtocolMessage, parseProtocolMessage } from "../src/index.ts";
 
 function expectError(input: unknown, code: string, path: string): void {
@@ -42,23 +42,7 @@ describe("protocol events and responses", () => {
     ).toBe(true);
   });
 
-  it("validates request_link, request_close, and get_caret_rect payloads", () => {
-    expect(
-      parseProtocolMessage({
-        version: PROTOCOL_VERSION,
-        kind: "event",
-        type: "request_link",
-        payload: {},
-      }).ok,
-    ).toBe(true);
-    expect(
-      parseProtocolMessage({
-        version: PROTOCOL_VERSION,
-        kind: "event",
-        type: "request_link",
-        payload: { selection: { start: 1, end: 3 } },
-      }).ok,
-    ).toBe(true);
+  it("validates request_close, and get_caret_rect payloads", () => {
     expect(
       parseProtocolMessage({
         version: PROTOCOL_VERSION,
@@ -91,16 +75,6 @@ describe("protocol events and responses", () => {
       {
         version: PROTOCOL_VERSION,
         kind: "event",
-        type: "request_link",
-        payload: { selection: { start: 3, end: 1 } },
-      },
-      "invalid_payload",
-      "$.payload.selection.end",
-    );
-    expectError(
-      {
-        version: PROTOCOL_VERSION,
-        kind: "event",
         type: "request_close",
         payload: { extra: true },
       },
@@ -123,28 +97,28 @@ describe("protocol events and responses", () => {
 
   it("strictly validates events and editor state", () => {
     expectError(
-      { version: 1, kind: "future", type: "focus", payload: {} },
+      { version: PROTOCOL_VERSION, kind: "future", type: "focus", payload: {} },
       "invalid_message",
       "$.kind",
     );
     expectError(
-      { version: 1, kind: "event", type: "future_event", payload: {} },
+      { version: PROTOCOL_VERSION, kind: "event", type: "future_event", payload: {} },
       "invalid_message",
       "$.type",
     );
     expectError(
-      { version: 1, kind: "event", type: "ready", payload: { protocol_version: 2 } },
+      { version: PROTOCOL_VERSION, kind: "event", type: "ready", payload: { protocol_version: 1 } },
       "invalid_payload",
       "$.payload.protocol_version",
     );
     expectError(
-      { version: 1, kind: "event", type: "focus", payload: { extra: true } },
+      { version: PROTOCOL_VERSION, kind: "event", type: "focus", payload: { extra: true } },
       "invalid_payload",
       "$.payload.extra",
     );
     expectError(
       {
-        version: 1,
+        version: PROTOCOL_VERSION,
         kind: "event",
         type: "state_change",
         payload: {
@@ -170,7 +144,7 @@ describe("protocol events and responses", () => {
     );
     expectError(
       {
-        version: 1,
+        version: PROTOCOL_VERSION,
         kind: "event",
         type: "state_change",
         payload: {
@@ -199,7 +173,7 @@ describe("protocol events and responses", () => {
   it("validates success values and request correlation", () => {
     expectError(
       {
-        version: 1,
+        version: PROTOCOL_VERSION,
         kind: "response",
         id: "request-1",
         type: "undo",
@@ -211,7 +185,7 @@ describe("protocol events and responses", () => {
     );
     expectError(
       {
-        version: 1,
+        version: PROTOCOL_VERSION,
         kind: "response",
         id: "request-1",
         type: "undo",
@@ -223,7 +197,7 @@ describe("protocol events and responses", () => {
     );
     expectError(
       {
-        version: 1,
+        version: PROTOCOL_VERSION,
         kind: "response",
         id: " ",
         type: "undo",
@@ -235,7 +209,7 @@ describe("protocol events and responses", () => {
     );
     expectError(
       {
-        version: 1,
+        version: PROTOCOL_VERSION,
         kind: "response",
         id: "request-1",
         type: "get_snapshot",
@@ -249,7 +223,7 @@ describe("protocol events and responses", () => {
 
   it("correlates success and failure responses with the request id", () => {
     const success = parseProtocolMessage({
-      version: 1,
+      version: PROTOCOL_VERSION,
       kind: "response",
       id: "same-request",
       type: "undo",
@@ -257,7 +231,7 @@ describe("protocol events and responses", () => {
       value: {},
     });
     const failure = parseProtocolMessage({
-      version: 1,
+      version: PROTOCOL_VERSION,
       kind: "response",
       id: "same-request",
       ok: false,
@@ -275,7 +249,7 @@ describe("protocol events and responses", () => {
   it("requires structured JSON-safe failure responses", () => {
     expectError(
       {
-        version: 1,
+        version: PROTOCOL_VERSION,
         kind: "response",
         id: "request-1",
         ok: false,
@@ -286,7 +260,7 @@ describe("protocol events and responses", () => {
     );
     expectError(
       {
-        version: 1,
+        version: PROTOCOL_VERSION,
         kind: "response",
         id: "request-1",
         ok: false,
@@ -297,7 +271,7 @@ describe("protocol events and responses", () => {
     );
     expectError(
       {
-        version: 1,
+        version: PROTOCOL_VERSION,
         kind: "response",
         id: "request-1",
         ok: false,
@@ -308,7 +282,7 @@ describe("protocol events and responses", () => {
     );
     expectError(
       {
-        version: 1,
+        version: PROTOCOL_VERSION,
         kind: "response",
         id: "request-1",
         ok: false,

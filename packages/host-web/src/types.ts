@@ -26,16 +26,14 @@ export interface CreateRichTextHostOptions {
   adapterFactory?: RichTextAdapterFactory;
   /** Called when the core editor is mounted and ready for shell wiring (e.g. title input). */
   onEditorReady?: (editor: RichTextEditor) => void;
+  /** Optional UI controller (e.g. in-web link popover) to handle UI commands like open_link_form. */
+  uiController?: {
+    openLinkForm?: () => void;
+  };
 }
 
 export interface RichTextHost {
   readonly ready: Promise<void>;
-  /**
-   * Emit a Web→Flutter `request_link` event so the host can open its link dialog.
-   * When `selection` is omitted, uses the editor's current selection (if any).
-   * Pass `null` to omit selection from the payload.
-   */
-  requestLink(selection?: { start: number; end: number } | null): void;
   /** Emit a Web→Flutter `request_close` event when the host is ready. */
   requestClose(): void;
   destroy(): void;

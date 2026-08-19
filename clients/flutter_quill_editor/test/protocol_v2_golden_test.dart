@@ -6,12 +6,12 @@ import 'package:flutter_quill_editor/protocol/messages.dart';
 import 'package:flutter_quill_editor/protocol/protocol_version.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Vendored copy of flutter_quill_editor `packages/protocol/fixtures/v1.json`.
+/// Vendored copy of flutter_quill_editor `packages/protocol/fixtures/v2.json`.
 ///
 /// Keep in sync when the richtext protocol package bumps fixtures.
 File get _fixtureFile {
   // flutter test CWD is the package root (`app/`).
-  return File('test/fixtures/richtext_protocol/v1.json');
+  return File('test/fixtures/richtext_protocol/v2.json');
 }
 
 Map<String, Object?> _asMap(Object? value) {
@@ -43,10 +43,10 @@ void main() {
     fixtures = _asMap(jsonDecode(raw));
   });
 
-  group('Protocol v1 golden fixtures', () {
+  group('Protocol v2 golden fixtures', () {
     test('fixture file is present and versioned', () {
       expect(_fixtureFile.existsSync(), isTrue);
-      expect(kRichTextProtocolVersion, 1);
+      expect(kRichTextProtocolVersion, 2);
     });
 
     test('decode every command fixture', () {
@@ -194,7 +194,7 @@ void main() {
     test('rejects missing required command fields', () {
       final missingId = decodeProtocolMessage(
         jsonEncode({
-          'version': 1,
+          'version': kRichTextProtocolVersion,
           'kind': 'command',
           'type': 'undo',
           'payload': <String, Object?>{},
@@ -206,7 +206,7 @@ void main() {
     test('validates snapshots in non-command containers with their own paths', () {
       final change = decodeProtocolMessage(
         jsonEncode({
-          'version': 1,
+          'version': kRichTextProtocolVersion,
           'kind': 'event',
           'type': 'change',
           'payload': {
@@ -231,7 +231,7 @@ void main() {
 
       final response = decodeProtocolMessage(
         jsonEncode({
-          'version': 1,
+          'version': kRichTextProtocolVersion,
           'kind': 'response',
           'id': 'get-snapshot',
           'type': 'get_snapshot',
@@ -256,7 +256,7 @@ void main() {
     test('deep-validates canonical snapshot operations and attributes', () {
       final result = decodeProtocolMessage(
         jsonEncode({
-          'version': 1,
+          'version': kRichTextProtocolVersion,
           'kind': 'command',
           'id': 'canonical',
           'type': 'set_snapshot',
@@ -371,7 +371,7 @@ void main() {
       for (final snapshot in invalidSnapshots) {
         final result = decodeProtocolMessage(
           jsonEncode({
-            'version': 1,
+            'version': kRichTextProtocolVersion,
             'kind': 'command',
             'id': 'invalid-snapshot',
             'type': 'set_snapshot',
@@ -451,7 +451,7 @@ void main() {
     test('validates optional insert selection and media fields', () {
       final valid = decodeProtocolMessage(
         jsonEncode({
-          'version': 1,
+          'version': kRichTextProtocolVersion,
           'kind': 'command',
           'id': 'image',
           'type': 'insert_image',
@@ -469,7 +469,7 @@ void main() {
 
       final minimalVideo = decodeProtocolMessage(
         jsonEncode({
-          'version': 1,
+          'version': kRichTextProtocolVersion,
           'kind': 'command',
           'id': 'video-minimal',
           'type': 'insert_video',
@@ -491,7 +491,7 @@ void main() {
 
       final invalid = decodeProtocolMessage(
         jsonEncode({
-          'version': 1,
+          'version': kRichTextProtocolVersion,
           'kind': 'command',
           'id': 'video',
           'type': 'insert_video',
@@ -516,7 +516,7 @@ void main() {
     test('validates link and divider insertion payloads', () {
       final invalidLink = decodeProtocolMessage(
         jsonEncode({
-          'version': 1,
+          'version': kRichTextProtocolVersion,
           'kind': 'command',
           'id': 'link',
           'type': 'insert_link',
@@ -532,7 +532,7 @@ void main() {
 
       final invalidDivider = decodeProtocolMessage(
         jsonEncode({
-          'version': 1,
+          'version': kRichTextProtocolVersion,
           'kind': 'command',
           'id': 'divider',
           'type': 'insert_divider',
@@ -542,11 +542,11 @@ void main() {
       expect(invalidDivider, isA<ProtocolParseFailure<ProtocolMessage>>());
     });
 
-    test('supports indent/outdent/get_caret_rect and request_link', () {
-      for (final type in ['indent', 'outdent', 'get_caret_rect']) {
+    test('supports indent/outdent/get_caret_rect and open_link_form', () {
+      for (final type in ['indent', 'outdent', 'get_caret_rect', 'open_link_form']) {
         final command = decodeProtocolMessage(
           jsonEncode({
-            'version': 1,
+            'version': kRichTextProtocolVersion,
             'kind': 'command',
             'id': 'cmd-$type',
             'type': type,
@@ -558,7 +558,7 @@ void main() {
 
       final caretResponse = decodeProtocolMessage(
         jsonEncode({
-          'version': 1,
+          'version': kRichTextProtocolVersion,
           'kind': 'response',
           'id': 'cmd-get-caret-rect',
           'type': 'get_caret_rect',
@@ -578,7 +578,7 @@ void main() {
 
       final nullCaret = decodeProtocolMessage(
         jsonEncode({
-          'version': 1,
+          'version': kRichTextProtocolVersion,
           'kind': 'response',
           'id': 'cmd-get-caret-rect',
           'type': 'get_caret_rect',
@@ -593,35 +593,9 @@ void main() {
         isNull,
       );
 
-      final requestLink = decodeProtocolMessage(
-        jsonEncode({
-          'version': 1,
-          'kind': 'event',
-          'type': 'request_link',
-          'payload': {
-            'selection': {'start': 0, 'end': 5},
-          },
-        }),
-      );
-      expect(requestLink, isA<ProtocolParseSuccess<ProtocolMessage>>());
-      final event =
-          (requestLink as ProtocolParseSuccess<ProtocolMessage>).value as RequestLinkEvent;
-      expect(event.selection, const ProtocolSelection(start: 0, end: 5));
-
-      final emptyRequestLink = encodeProtocolMessage(RequestLinkEvent());
-      expect(
-        _normalizeJson(jsonDecode(emptyRequestLink)),
-        _normalizeJson({
-          'version': 1,
-          'kind': 'event',
-          'type': 'request_link',
-          'payload': <String, Object?>{},
-        }),
-      );
-
       final invalidCaret = decodeProtocolMessage(
         jsonEncode({
-          'version': 1,
+          'version': kRichTextProtocolVersion,
           'kind': 'response',
           'id': 'cmd-get-caret-rect',
           'type': 'get_caret_rect',
@@ -639,7 +613,7 @@ void main() {
     test('accepts integral JSON doubles and normalizes typed integer fields', () {
       final result = decodeProtocolMessage(
         jsonEncode({
-          'version': 1,
+          'version': kRichTextProtocolVersion,
           'kind': 'command',
           'id': 'image-double',
           'type': 'insert_image',
@@ -661,7 +635,7 @@ void main() {
 
       final video = decodeProtocolMessage(
         jsonEncode({
-          'version': 1,
+          'version': kRichTextProtocolVersion,
           'kind': 'command',
           'id': 'video-double',
           'type': 'insert_video',
@@ -740,7 +714,7 @@ void main() {
         final entry = invalidMessages[index];
         final result = decodeProtocolMessage(
           jsonEncode({
-            'version': 1,
+            'version': kRichTextProtocolVersion,
             'kind': 'command',
             'id': 'invalid-number-$index',
             'type': entry['type'],

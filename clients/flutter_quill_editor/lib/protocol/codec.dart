@@ -78,6 +78,7 @@ const _commandTypes = <String>{
   'redo',
   'focus',
   'blur',
+  'open_link_form',
 };
 
 const _emptyCommandTypes = <String>{
@@ -90,6 +91,7 @@ const _emptyCommandTypes = <String>{
   'redo',
   'focus',
   'blur',
+  'open_link_form',
 };
 
 const _emptySuccessTypes = <String>{
@@ -110,6 +112,7 @@ const _emptySuccessTypes = <String>{
   'redo',
   'focus',
   'blur',
+  'open_link_form',
 };
 
 const _eventTypes = <String>{
@@ -121,7 +124,6 @@ const _eventTypes = <String>{
   'title_focus',
   'title_blur',
   'state_change',
-  'request_link',
   'request_close',
 };
 
@@ -380,6 +382,8 @@ ProtocolParseResult<ProtocolMessage> _parseCommand(ProtocolJsonMap map) {
       command = FocusCommand(id: id, version: version);
     case 'blur':
       command = BlurCommand(id: id, version: version);
+    case 'open_link_form':
+      command = OpenLinkFormCommand(id: id, version: version);
     default:
       return _fail(
         ProtocolErrorCode.unsupportedCommand,
@@ -461,14 +465,6 @@ ProtocolParseResult<ProtocolMessage> _parseEvent(ProtocolJsonMap map) {
         state: ProtocolEditorState.fromJson(
           _asJsonMap(payloadMap['state']! as Map),
         ),
-      );
-    case 'request_link':
-      final selectionRaw = payloadMap['selection'];
-      event = RequestLinkEvent(
-        version: version,
-        selection: selectionRaw == null
-            ? null
-            : ProtocolSelection.fromJson(_asJsonMap(selectionRaw as Map)),
       );
     case 'request_close':
       event = RequestCloseEvent(version: version);
@@ -831,28 +827,6 @@ List<ProtocolValidationIssue> _validateDividerInsertPayload(
   return issues;
 }
 
-List<ProtocolValidationIssue> _validateRequestLinkPayload(Object? payload) {
-  if (payload is! Map) {
-    return [
-      const ProtocolValidationIssue(
-        code: ProtocolErrorCode.invalidPayload,
-        path: r'$.payload',
-        message: 'Event payload must be an object.',
-      ),
-    ];
-  }
-  final map = _asJsonMap(payload);
-  final issues = _validateRequiredAndOptionalKeys(
-    map,
-    requiredKeys: const [],
-    optionalKeys: const ['selection'],
-    path: r'$.payload',
-    label: 'request_link payload',
-  );
-  _addOptionalSelectionIssues(issues, map, r'$.payload');
-  return issues;
-}
-
 List<ProtocolValidationIssue> _validateNullableCaretRectContainer(
   ProtocolJsonMap container,
   String path,
@@ -1097,8 +1071,6 @@ List<ProtocolValidationIssue> _validateEventPayload(
       return _validateEmptyObject(payload, r'$.payload');
     case 'state_change':
       return _validateStateContainer(payload);
-    case 'request_link':
-      return _validateRequestLinkPayload(payload);
     default:
       return [
         const ProtocolValidationIssue(

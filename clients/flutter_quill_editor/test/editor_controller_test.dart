@@ -4,12 +4,13 @@ import 'dart:convert';
 import 'package:flutter_quill_editor/bridge/richtext_transport.dart';
 import 'package:flutter_quill_editor/protocol/codec.dart';
 import 'package:flutter_quill_editor/protocol/messages.dart';
+import 'package:flutter_quill_editor/protocol/protocol_version.dart';
 import 'package:flutter_quill_editor/widget/richtext_editor_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void _deliverReady(MemoryRichTextTransport transport) {
   transport.deliverFromWeb(
-    encodeProtocolMessage(ReadyEvent(protocolVersion: 1)),
+    encodeProtocolMessage(ReadyEvent(protocolVersion: kRichTextProtocolVersion)),
   );
 }
 
@@ -42,7 +43,7 @@ void main() {
       expect(controller.isReady, isFalse);
 
       transport.deliverFromWeb(
-        encodeProtocolMessage(ReadyEvent(protocolVersion: 1)),
+        encodeProtocolMessage(ReadyEvent(protocolVersion: kRichTextProtocolVersion)),
       );
 
       await readyFuture;
@@ -401,26 +402,29 @@ void main() {
       await withAction.dispose();
     });
 
-    test('onRequestLink receives request_link events with optional selection', () async {
-      final links = <RequestLinkEvent>[];
-      final sub = controller.onRequestLink.listen(links.add);
+    test('openLinkForm sends command and awaits matching response', () async {
+      _deliverReady(transport);
 
-      transport
-        ..deliverFromWeb(
-          encodeProtocolMessage(
-            RequestLinkEvent(
-              selection: const ProtocolSelection(start: 0, end: 5),
-            ),
-          ),
-        )
-        ..deliverFromWeb(encodeProtocolMessage(RequestLinkEvent()));
-
+      final future = controller.openLinkForm();
       await Future<void>.delayed(Duration.zero);
-      expect(links, hasLength(2));
-      expect(links[0].selection, const ProtocolSelection(start: 0, end: 5));
-      expect(links[1].selection, isNull);
+      expect(outbound, hasLength(1));
 
-      await sub.cancel();
+      final sent = decodeProtocolMessage(outbound.first);
+      expect(sent, isA<ProtocolParseSuccess<ProtocolMessage>>());
+      final command = (sent as ProtocolParseSuccess<ProtocolMessage>).value as ProtocolCommand;
+      expect(command.type, 'open_link_form');
+
+      transport.deliverFromWeb(
+        encodeProtocolMessage(
+          ProtocolSuccessResponse(
+            id: command.id,
+            type: 'open_link_form',
+            value: const {},
+          ),
+        ),
+      );
+
+      await expectLater(future, completes);
     });
   });
 }

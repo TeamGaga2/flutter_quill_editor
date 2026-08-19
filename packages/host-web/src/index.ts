@@ -28,9 +28,7 @@ export {
 export type { InitializeHandshakeMessage, SurfaceReadyMessage } from "./bridge/iframe-handshake";
 
 export { createRichTextHost } from "./lifecycle/create-host";
+export { dispatchEditorCommand, type HostUIController } from "./dispatcher/command-dispatcher";
 export type { CreateRichTextHostOptions, RichTextHost } from "./types";
 export type { RichTextHostError, RichTextHostErrorPhase } from "./errors";
-export {
-  createProtocolRequestCloseEvent,
-  createProtocolRequestLinkEvent,
-} from "./events/editor-event-bridge";
+export { createProtocolRequestCloseEvent } from "./events/editor-event-bridge";

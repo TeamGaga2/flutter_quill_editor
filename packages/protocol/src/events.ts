@@ -35,8 +35,6 @@ export type TitleFocusEvent = ProtocolEvent<"title_focus", Record<string, never>
 /** Title input (WebView shell) lost focus. */
 export type TitleBlurEvent = ProtocolEvent<"title_blur", Record<string, never>>;
 export type StateChangeEvent = ProtocolEvent<"state_change", { state: ProtocolEditorState }>;
-/** Web→Flutter UI intent: open host link dialog (e.g. desktop Solid toolbar). */
-export type RequestLinkEvent = ProtocolEvent<"request_link", { selection?: ProtocolSelection }>;
 /** Web→Flutter UI intent: close the host editor shell. */
 export type RequestCloseEvent = ProtocolEvent<"request_close", Record<string, never>>;
 
@@ -49,7 +47,6 @@ export type EditorEventMessage =
   | TitleFocusEvent
   | TitleBlurEvent
   | StateChangeEvent
-  | RequestLinkEvent
   | RequestCloseEvent;
 
 export type EditorEventType = EditorEventMessage["type"];

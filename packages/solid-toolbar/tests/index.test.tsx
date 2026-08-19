@@ -421,6 +421,36 @@ describe("optional Solid toolbar", () => {
     root.remove();
   });
 
+  it("triggers onOpenLinkForm when link button is clicked", () => {
+    const fake = createFakeAdapter();
+    const onOpenLinkForm = vi.fn();
+    let controller!: SolidRichTextController;
+
+    function App(): JSX.Element {
+      controller = createRichTextEditor({ adapterFactory: () => fake.adapter });
+
+      return (
+        <RichTextProvider editor={controller}>
+          <RichTextToolbar onOpenLinkForm={onOpenLinkForm} />
+          <RichTextEditor />
+        </RichTextProvider>
+      );
+    }
+
+    const root = document.createElement("div");
+    document.body.append(root);
+    const dispose = render(() => <App />, root);
+
+    const linkButton = root.querySelector<HTMLButtonElement>('button[aria-label="Link"]');
+    expect(linkButton?.disabled).toBe(false);
+
+    linkButton?.click();
+    expect(onOpenLinkForm).toHaveBeenCalledTimes(1);
+
+    dispose();
+    root.remove();
+  });
+
   it("keeps Link disabled when no host handler is wired", () => {
     const fake = createFakeAdapter();
 

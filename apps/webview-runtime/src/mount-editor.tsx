@@ -12,10 +12,13 @@ import {
 } from "@teamgaga/richtext-protocol";
 import {
   createSolidAdapterFactory,
+  LinkPopoverHost,
   setMediaMaxSize,
   setMediaUriResolver,
+  type LinkPopoverController,
 } from "@teamgaga/richtext-solid";
 import { createSignal, type Accessor, type JSX } from "solid-js";
+import { render } from "solid-js/web";
 /* Quill core first; solid editor.css overrides list positioning for CJK IME. */
 import "quill/dist/quill.core.css";
 import "@teamgaga/richtext-solid/style.css";
@@ -135,6 +138,7 @@ function prepareShell(
 
 async function resolveDesktopChrome(
   config: RuntimeConfig,
+  openLinkForm: () => void,
   hostRef: { current: ReturnType<typeof createRichTextHost> | null },
   titleFocused: Accessor<boolean>,
 ): Promise<CreateRichTextHostOptions["renderChrome"]> {
@@ -148,9 +152,7 @@ async function resolveDesktopChrome(
     <RichTextToolbar
       class="tg-webview-toolbar"
       aria-label="Rich text formatting"
-      onRequestLink={(context) => {
-        hostRef.current?.requestLink(context.selection);
-      }}
+      onOpenLinkForm={openLinkForm}
       onRequestClose={() => hostRef.current?.requestClose()}
       titleFocused={titleFocused}
     />
@@ -170,6 +172,9 @@ export async function mountEditor(options: MountEditorOptions): Promise<MountedE
   const { config, transport } = options;
   setMediaMaxSize(config.mediaMaxSize);
   setMediaUriResolver((uri) => resolveRegisteredMediaUri(uri));
+
+  let editorRef: RichTextEditor | null = null;
+  let linkPopoverController: LinkPopoverController | undefined;
 
   const [titleFocused, setTitleFocused] = createSignal(false);
   const publishTitleEvent = (type: "title_focus" | "title_blur"): void => {
@@ -197,8 +202,31 @@ export async function mountEditor(options: MountEditorOptions): Promise<MountedE
     },
   });
 
+  const linkPopoverRoot = document.createElement("div");
+  linkPopoverRoot.id = "tg-link-popover-root";
+  app.append(linkPopoverRoot);
+
+  const disposePopover = render(
+    () => (
+      <LinkPopoverHost
+        editor={() => editorRef ?? undefined}
+        locale={() => config.locale}
+        isMobile={() => config.toolbarMode !== "desktop"}
+        onControllerReady={(c) => {
+          linkPopoverController = c;
+        }}
+      />
+    ),
+    linkPopoverRoot,
+  );
+
   const hostRef: { current: ReturnType<typeof createRichTextHost> | null } = { current: null };
-  const renderChrome = await resolveDesktopChrome(config, hostRef, titleFocused);
+  const renderChrome = await resolveDesktopChrome(
+    config,
+    () => linkPopoverController?.open(),
+    hostRef,
+    titleFocused,
+  );
   const emojiRegistry = resolveEmojiRegistry(config.emojiDefinitions);
   // Body placeholder must reach Quill at construction — CSS ::before reads
   // data-placeholder. Flutter Web iframe has no MutationObserver bootstrap
@@ -208,7 +236,6 @@ export async function mountEditor(options: MountEditorOptions): Promise<MountedE
     placeholder: config.placeholder ?? "Enter text",
   });
 
-  let editorRef: RichTextEditor | null = null;
   let editingSessionCold = false;
   /** Host overlay open (Flutter Menu / link dialog) — suppress wake reclaim. */
   let interactionBlocked = false;
@@ -515,6 +542,9 @@ export async function mountEditor(options: MountEditorOptions): Promise<MountedE
     renderChrome,
     headerElement: titleWrap,
     adapterFactory,
+    uiController: {
+      openLinkForm: () => linkPopoverController?.open(),
+    },
     onEditorReady: (editor: RichTextEditor) => {
       editorRef = editor;
       quoteGroupObserver?.disconnect();
@@ -553,6 +583,27 @@ export async function mountEditor(options: MountEditorOptions): Promise<MountedE
   });
   hostRef.current = host;
 
+  const onGlobalKeyDown = (event: KeyboardEvent): void => {
+    const isCmdOrCtrl = event.metaKey || event.ctrlKey;
+    if (
+      isCmdOrCtrl &&
+      (event.key === "k" || event.key === "K") &&
+      !event.shiftKey &&
+      !event.altKey
+    ) {
+      if (destroyed || interactionBlocked) return;
+      const active = document.activeElement;
+      const inEditor =
+        active && (active.classList.contains("ql-editor") || editorRoot.contains(active));
+      if (inEditor || editorRef?.getState().focused) {
+        event.preventDefault();
+        event.stopPropagation();
+        linkPopoverController?.open();
+      }
+    }
+  };
+  window.addEventListener("keydown", onGlobalKeyDown, true);
+
   void host.ready
     .then(() => {
       if (destroyed) return;
@@ -582,6 +633,7 @@ export async function mountEditor(options: MountEditorOptions): Promise<MountedE
     if (destroyed) return;
     destroyed = true;
     boundAdapterFocus = null;
+    window.removeEventListener("keydown", onGlobalKeyDown, true);
     window.removeEventListener("blur", onBlur);
     document.removeEventListener("visibilitychange", onVisibility);
     window.removeEventListener("focus", onFocus);
@@ -595,6 +647,8 @@ export async function mountEditor(options: MountEditorOptions): Promise<MountedE
         __TG_RICHTEXT_WAKE_EDITING_SESSION__?: (keepTitle?: boolean) => void;
       }
     ).__TG_RICHTEXT_WAKE_EDITING_SESSION__;
+    disposePopover();
+    linkPopoverRoot.remove();
     host.destroy();
     transport.destroy();
     clearMediaRegistrations();

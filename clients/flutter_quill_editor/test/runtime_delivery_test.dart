@@ -7,6 +7,7 @@ import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 import 'package:crypto/crypto.dart';
+import 'package:flutter_quill_editor/protocol/protocol_version.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 
@@ -113,7 +114,7 @@ void main() {
             'webview-runtime-channel-dev-${runtimeBranchIdentity('dev').substring(0, 16)}-1',
         'archiveName': kRuntimeArchiveName,
         'archiveSha256': 'not-a-sha',
-        'protocolVersion': 1,
+        'protocolVersion': kRichTextProtocolVersion,
         'hostEnvelopeVersion': 1,
       }),
       throwsStateError,
@@ -132,7 +133,7 @@ void main() {
         'releaseTag': 'webview-runtime-channel-dev-${identity.substring(0, 16)}-1',
         'archiveName': kRuntimeArchiveName,
         'archiveSha256': repeated('b', 64),
-        'protocolVersion': 2,
+        'protocolVersion': kRichTextProtocolVersion + 1,
         'hostEnvelopeVersion': 1,
       }),
       throwsStateError,
@@ -209,7 +210,7 @@ void main() {
       'releaseTag': 'webview-runtime-channel-dev-${identity.substring(0, 16)}-11',
       'archiveName': kRuntimeArchiveName,
       'archiveSha256': repeated('b', 64),
-      'protocolVersion': 1,
+      'protocolVersion': kRichTextProtocolVersion,
       'hostEnvelopeVersion': 1,
       'runtimeBuildId': 'build',
       'generatedAt': '2026-01-01T00:00:00.000Z',
@@ -226,7 +227,7 @@ void main() {
         'package': 'webview-runtime',
         'buildId': 'build',
         'sourceCommit': metadata.sourceCommit,
-        'protocolVersion': 1,
+        'protocolVersion': metadata.protocolVersion,
         'hostEnvelopeVersion': 1,
         'webEntry': 'iframe.html',
         'webEntrySha256': sha256.convert(utf8.encode(iframe)).toString(),

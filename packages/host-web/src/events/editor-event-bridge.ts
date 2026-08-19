@@ -1,12 +1,10 @@
-import type { RichTextEditor, RichTextSelection, Unsubscribe } from "@teamgaga/richtext-core";
+import type { RichTextEditor, Unsubscribe } from "@teamgaga/richtext-core";
 import {
   encodeProtocolMessage,
   PROTOCOL_VERSION,
   type EditorEventMessage,
   type ProtocolEditorState,
-  type ProtocolSelection,
   type RequestCloseEvent,
-  type RequestLinkEvent,
 } from "@teamgaga/richtext-protocol";
 import { createHostError, type RichTextHostError } from "../errors";
 
@@ -137,35 +135,6 @@ export function createProtocolReadyEvent(): EditorEventMessage {
     kind: "event",
     type: "ready",
     payload: { protocol_version: PROTOCOL_VERSION },
-  };
-}
-
-/**
- * Web→Flutter UI intent: ask the host native shell to open its link dialog.
- * Desktop Solid toolbar (or other chrome) can call this via `RichTextHost.requestLink`.
- */
-export function createProtocolRequestLinkEvent(
-  selection?: ProtocolSelection | RichTextSelection | null,
-): RequestLinkEvent {
-  if (selection == null) {
-    return {
-      version: PROTOCOL_VERSION,
-      kind: "event",
-      type: "request_link",
-      payload: {},
-    };
-  }
-
-  return {
-    version: PROTOCOL_VERSION,
-    kind: "event",
-    type: "request_link",
-    payload: {
-      selection: {
-        start: selection.start,
-        end: selection.end,
-      },
-    },
   };
 }
 

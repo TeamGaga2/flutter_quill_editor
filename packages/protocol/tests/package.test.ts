@@ -18,10 +18,11 @@ describe("published protocol package", () => {
     expect(packageJson.name).toBe("@teamgaga/richtext-protocol");
     expect(packageJson.files).toContain("fixtures");
     expect(packageJson.exports?.["./fixtures/v1.json"]).toBe("./fixtures/v1.json");
+    expect(packageJson.exports?.["./fixtures/v2.json"]).toBe("./fixtures/v2.json");
 
     const require = createRequire(import.meta.url);
-    expect(require.resolve("@teamgaga/richtext-protocol/fixtures/v1.json")).toBe(
-      resolve(packageRoot, "fixtures/v1.json"),
+    expect(require.resolve("@teamgaga/richtext-protocol/fixtures/v2.json")).toBe(
+      resolve(packageRoot, "fixtures/v2.json"),
     );
   });
 

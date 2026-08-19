@@ -890,6 +890,22 @@ final class BlurCommand extends ProtocolCommand {
   ProtocolJsonMap get payload => const <String, Object?>{};
 }
 
+final class OpenLinkFormCommand extends ProtocolCommand {
+  OpenLinkFormCommand({
+    required super.id,
+    this.version = kRichTextProtocolVersion,
+  });
+
+  @override
+  final int version;
+
+  @override
+  String get type => 'open_link_form';
+
+  @override
+  ProtocolJsonMap get payload => const <String, Object?>{};
+}
+
 // ---------------------------------------------------------------------------
 // Responses
 // ---------------------------------------------------------------------------
@@ -1159,26 +1175,6 @@ final class StateChangeEvent extends ProtocolEvent {
 
   @override
   ProtocolJsonMap get payload => <String, Object?>{'state': state.toJson()};
-}
-
-/// Web→Flutter UI intent: open host link dialog (e.g. desktop Solid toolbar).
-final class RequestLinkEvent extends ProtocolEvent {
-  RequestLinkEvent({
-    this.selection,
-    this.version = kRichTextProtocolVersion,
-  });
-
-  @override
-  final int version;
-  final ProtocolSelection? selection;
-
-  @override
-  String get type => 'request_link';
-
-  @override
-  ProtocolJsonMap get payload => <String, Object?>{
-    if (selection != null) 'selection': selection!.toJson(),
-  };
 }
 
 /// Web→Flutter UI intent: dismiss the host composition panel (In-Web close).

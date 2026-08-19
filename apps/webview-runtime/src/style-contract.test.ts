@@ -32,6 +32,19 @@ describe("ADR 0002 style contract", () => {
     expect(light).toContain(
       "--tgg-state-layers-on-surface-variant-opacity-08: rgba(64, 73, 66, 0.08)",
     );
+    expect(light).toContain("--tgg-fill04: #ffffff");
+    expect(light).toContain("--tgg-fill03: #fafafa");
+    expect(light).toContain("--tgg-fill01: #e9e9e9");
+    expect(light).toContain("--tgg-text01: #121212");
+    expect(light).toContain("--tgg-text05: #ffffff");
+    expect(light).toContain("--tgg-schemes-primary: #009c64");
+    expect(light).toContain("--tgg-schemes-on-primary: #ffffff");
+    expect(light).toContain("--tgg-schemes-outline-variant: #a0a7a1");
+    expect(light).toContain("--tgg-schemes-on-surface-variant: #404942");
+    expect(light).toContain("--tgg-primary03: #38c585");
+    expect(light).toContain("--tgg-primary04: #88dcb6");
+    expect(light).toContain("--tgg-shadow-primary: 0px 8px 40px 0px rgba(0, 0, 0, 0.2)");
+    expect(light).toContain("--tgg-scrim-black70: rgba(0, 0, 0, 0.70196)");
 
     const dark = rule("html.tg-theme-dark");
     expect(dark).toContain("--tgg-schemes-on-surface: #e4e8e3");
@@ -43,6 +56,19 @@ describe("ADR 0002 style contract", () => {
     expect(dark).toContain(
       "--tgg-state-layers-on-surface-variant-opacity-08: rgba(192, 201, 192, 0.08)",
     );
+    expect(dark).toContain("--tgg-fill04: #3a3a3a");
+    expect(dark).toContain("--tgg-fill03: #313131");
+    expect(dark).toContain("--tgg-fill01: #272727");
+    expect(dark).toContain("--tgg-text01: #fafafa");
+    expect(dark).toContain("--tgg-text05: #ffffff");
+    expect(dark).toContain("--tgg-schemes-primary: #91d5ac");
+    expect(dark).toContain("--tgg-schemes-on-primary: #003921");
+    expect(dark).toContain("--tgg-schemes-outline-variant: #4e5550");
+    expect(dark).toContain("--tgg-schemes-on-surface-variant: #c0c9c0");
+    expect(dark).toContain("--tgg-primary03: #009c64");
+    expect(dark).toContain("--tgg-primary04: #4a8f70");
+    expect(dark).toContain("--tgg-shadow-primary: 0px 8px 40px 0px rgba(0, 0, 0, 0.2)");
+    expect(dark).toContain("--tgg-scrim-black70: rgba(0, 0, 0, 0.70196)");
   });
 
   it("paints the WebView editor surface with Surface Container Low", () => {
@@ -212,8 +238,6 @@ describe("ADR 0002 style contract", () => {
     expect(css).not.toContain("--tgg-background05");
     expect(css).not.toContain("--tgg-line03");
     expect(css).not.toContain("--tgg-line07");
-    expect(css).not.toContain("--tgg-fill03");
-    expect(css).not.toContain("--tgg-fill04");
   });
 
   it("uses Divider Low with a 0.5px mobile and 1px desktop stroke", () => {
@@ -223,5 +247,35 @@ describe("ADR 0002 style contract", () => {
     expect(rule(".tg-webview-layout-mobile .tg-webview-editor-root hr.tgg-divider")).toContain(
       "border-top-width: 0.5px;",
     );
+  });
+
+  it("implements ADR 0004 link popover and modal visual specs", () => {
+    const desktop = rule(".tg-link-popover");
+    expect(desktop).toContain("width: 360px;");
+    expect(desktop).toContain("max-height: 230px;");
+    expect(desktop).toContain("padding: 24px;");
+    expect(desktop).toContain("border-radius: 16px;");
+    expect(desktop).toContain("background: var(--tgg-fill04);");
+    expect(desktop).toContain("box-shadow: var(--tgg-shadow-primary);");
+
+    const modal = rule(".tg-link-popover-modal");
+    expect(modal).toContain("max-width: 420px;");
+    expect(modal).toContain("border-radius: 16px;");
+    expect(modal).toContain("background: var(--tgg-fill04);");
+
+    const scrim = rule(".tg-link-popover-modal-scrim");
+    expect(scrim).toContain("background: var(--tgg-scrim-black70);");
+
+    const okBtn = rule(".tg-link-popover-btn-ok");
+    expect(okBtn).toContain("background: var(--tgg-schemes-primary);");
+    expect(okBtn).toContain("color: var(--tgg-schemes-on-primary);");
+
+    const okDisabled = rule(".tg-link-popover-btn-ok:disabled");
+    expect(okDisabled).toContain("background: var(--tgg-primary04);");
+    expect(okDisabled).toContain("color: var(--tgg-text05);");
+
+    const cancelBtn = rule(".tg-link-popover-btn-cancel");
+    expect(cancelBtn).toContain("border: 1px solid var(--tgg-schemes-outline-variant);");
+    expect(cancelBtn).toContain("color: var(--tgg-schemes-on-surface-variant);");
   });
 });

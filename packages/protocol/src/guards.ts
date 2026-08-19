@@ -36,6 +36,7 @@ const COMMAND_TYPES = new Set<EditorCommandType>([
   "redo",
   "focus",
   "blur",
+  "open_link_form",
 ]);
 const EMPTY_COMMAND_TYPES = new Set<EditorCommandType>([
   "get_snapshot",
@@ -47,6 +48,7 @@ const EMPTY_COMMAND_TYPES = new Set<EditorCommandType>([
   "redo",
   "focus",
   "blur",
+  "open_link_form",
 ]);
 const EMPTY_SUCCESS_TYPES = new Set<EditorCommandType>([
   "set_snapshot",
@@ -66,6 +68,7 @@ const EMPTY_SUCCESS_TYPES = new Set<EditorCommandType>([
   "redo",
   "focus",
   "blur",
+  "open_link_form",
 ]);
 const EVENT_TYPES = new Set([
   "ready",
@@ -76,7 +79,6 @@ const EVENT_TYPES = new Set([
   "title_focus",
   "title_blur",
   "state_change",
-  "request_link",
   "request_close",
 ]);
 const ERROR_CODES = new Set<ProtocolErrorCode>([
@@ -294,6 +296,7 @@ function validateCommandPayload(
     case "redo":
     case "focus":
     case "blur":
+    case "open_link_form":
       return validateEmptyObject(payload, "$.payload");
   }
 }
@@ -330,8 +333,6 @@ function validateEventPayload(type: string, payload: unknown): ProtocolValidatio
       return validateEmptyObject(payload, "$.payload");
     case "state_change":
       return validateStateContainer(payload);
-    case "request_link":
-      return validateRequestLinkPayload(payload);
     default:
       return [issue("invalid_message", "$.type", "Unknown editor event type.")];
   }
@@ -685,22 +686,6 @@ function validateOptionalSelection(
   return Object.prototype.hasOwnProperty.call(container, "selection")
     ? validateSelection(container.selection, `${path}.selection`)
     : [];
-}
-
-function validateRequestLinkPayload(payload: unknown): ProtocolValidationIssue[] {
-  if (!isRecord(payload)) {
-    return [issue("invalid_payload", "$.payload", "Event payload must be an object.")];
-  }
-
-  const issues = validateExactKeysWithOptional(
-    payload,
-    [],
-    ["selection"],
-    "$.payload",
-    "request_link payload",
-  );
-  issues.push(...validateOptionalSelection(payload, "$.payload"));
-  return issues;
 }
 
 function validateNullableCaretRectContainer(

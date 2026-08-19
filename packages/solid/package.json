@@ -36,6 +36,7 @@
     "@teamgaga/richtext-quill": "workspace:*"
   },
   "devDependencies": {
+    "@teamgaga/richtext-testing": "workspace:*",
     "@types/node": "^26.1.1",
     "bumpp": "^11.1.0",
     "happy-dom": "^20.11.1",

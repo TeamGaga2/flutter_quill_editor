@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import fixtures from "../fixtures/v1.json";
+import fixtures from "../fixtures/v2.json";
 import { PROTOCOL_VERSION, parseProtocolCommand } from "../src/index.ts";
 
 const base = {
@@ -20,7 +20,7 @@ function expectError(input: unknown, code: string, path: string): void {
 }
 
 describe("protocol commands", () => {
-  it("accepts every v1 command fixture", () => {
+  it("accepts every v2 command fixture", () => {
     for (const command of fixtures.commands) {
       const result = parseProtocolCommand(command);
       expect(result).toEqual({ ok: true, value: command });
@@ -61,7 +61,7 @@ describe("protocol commands", () => {
 
   it("rejects invalid envelopes and unsupported commands", () => {
     expectError(
-      { ...base, type: "undo", payload: {}, version: 2 },
+      { ...base, type: "undo", payload: {}, version: 1 },
       "unsupported_version",
       "$.version",
     );
@@ -75,8 +75,8 @@ describe("protocol commands", () => {
     );
   });
 
-  it("accepts indent, outdent, and get_caret_rect empty payloads", () => {
-    for (const type of ["indent", "outdent", "get_caret_rect"] as const) {
+  it("accepts indent, outdent, get_caret_rect, and open_link_form empty payloads", () => {
+    for (const type of ["indent", "outdent", "get_caret_rect", "open_link_form"] as const) {
       expect(
         parseProtocolCommand({
           ...base,

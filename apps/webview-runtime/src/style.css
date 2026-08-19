@@ -40,11 +40,20 @@
   /* Figma Schemes/Divider Low — Divider. */
   --tgg-divider-low: #e3e8e5;
   /* text */
+  --tgg-text01: #121212;
   --tgg-text02: #313131;
   --tgg-text03: #5f5f5f;
   --tgg-text04: #acacac;
-  /* primary (list leading / toolbar active state) */
+  --tgg-text05: #ffffff;
+  /* primary */
   --tgg-primary02: #00a66a;
+  --tgg-primary03: #38c585;
+  --tgg-primary04: #88dcb6;
+  /* schemes */
+  --tgg-schemes-primary: #009c64;
+  --tgg-schemes-on-primary: #ffffff;
+  --tgg-schemes-outline-variant: #a0a7a1;
+  --tgg-schemes-on-surface-variant: #404942;
   /* icon */
   --tgg-icon02: #313131;
   --tgg-icon03: #5f5f5f;
@@ -54,6 +63,9 @@
   /* border */
   --tgg-border01: #e3e3e3;
   /* fill */
+  --tgg-fill01: #e9e9e9;
+  --tgg-fill03: #fafafa;
+  --tgg-fill04: #ffffff;
   --tgg-fill10: #c7c7c7;
   /* Figma State Layers/On Surface Variant/Opacity-08 — toolbar hover.
    * theme.css: --color-state-layers-on-surface-variant-opacity-08 */
@@ -69,7 +81,9 @@
   --tgg-quote-text: color-mix(in srgb, var(--tgg-schemes-on-surface) 80%, transparent);
   --tgg-quote-bar: color-mix(in srgb, var(--tgg-schemes-on-surface) 30%, transparent);
 
+  --tgg-shadow-primary: 0px 8px 40px 0px rgba(0, 0, 0, 0.2);
   --tgg-shadow-secondary: 0px 1px 2px 0px rgba(0, 0, 0, 0.1);
+  --tgg-scrim-black70: rgba(0, 0, 0, 0.70196);
 
   /* derived: toolbar tooltip — high-contrast dark overlay with light text */
   --tgg-tooltip-bg: #2e2e2e;
@@ -100,15 +114,26 @@ html.tg-theme-dark {
   --tgg-blue-secondary: #0091ed;
   --tgg-primary-01: #009c64;
   --tgg-divider-low: #313532;
+  --tgg-text01: #fafafa;
   --tgg-text02: #e3e3e3;
   --tgg-text03: #acacac;
   --tgg-text04: #acacac;
+  --tgg-text05: #ffffff;
   --tgg-primary02: #009c64;
+  --tgg-primary03: #009c64;
+  --tgg-primary04: #4a8f70;
+  --tgg-schemes-primary: #91d5ac;
+  --tgg-schemes-on-primary: #003921;
+  --tgg-schemes-outline-variant: #4e5550;
+  --tgg-schemes-on-surface-variant: #c0c9c0;
   --tgg-icon02: #e3e3e3;
   --tgg-icon03: #919191;
   --tgg-icon04: #acacac;
   --tgg-background03: #272727;
   --tgg-border01: #474747;
+  --tgg-fill01: #272727;
+  --tgg-fill03: #313131;
+  --tgg-fill04: #3a3a3a;
   --tgg-fill10: #474747;
   /* Figma State Layers/On Surface Variant/Opacity-08 — toolbar hover.
    * theme.css: --color-state-layers-on-surface-variant-opacity-08 */
@@ -118,7 +143,9 @@ html.tg-theme-dark {
   --tgg-red-tertiary: rgba(222, 55, 48, 0.2);
   --tgg-yellow-secondary: #e2a800;
   --tgg-yellow-tertiary: rgba(255, 200, 0, 0.2);
+  --tgg-shadow-primary: 0px 8px 40px 0px rgba(0, 0, 0, 0.2);
   --tgg-shadow-secondary: 0px 1px 2px 0px rgba(0, 0, 0, 0.1);
+  --tgg-scrim-black70: rgba(0, 0, 0, 0.70196);
   --tgg-tooltip-bg: #3a3a3a;
   --tgg-tooltip-text: #fafafa;
 }
@@ -894,4 +921,199 @@ body {
 
 .tg-webview-editor-root .ql-editor li.ql-indent-5:not(.ql-direction-rtl) {
   padding-left: 12em;
+}
+
+/*
+ * Link Popover & Modal (ADR 0004)
+ * Desktop: Caret-anchored floating layer (360x230, fill04, shadow-primary).
+ * Mobile: Centered modal dialog (max-width 420, fill04, scrim-black70).
+ */
+.tg-link-popover-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 29;
+  background: transparent;
+  cursor: default;
+}
+
+.tg-link-popover {
+  position: fixed;
+  z-index: 30;
+  width: 360px;
+  max-height: 230px;
+  padding: 24px;
+  border-radius: 16px;
+  background: var(--tgg-fill04);
+  box-shadow: var(--tgg-shadow-primary);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.tg-link-popover-form {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.tg-link-popover-field {
+  width: 100%;
+}
+
+.tg-link-popover-field + .tg-link-popover-field {
+  margin-top: 16px;
+}
+
+.tg-link-popover-input {
+  display: block;
+  width: 100%;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 8px;
+  border: 1px solid var(--tgg-border01);
+  background: var(--tgg-fill03);
+  color: var(--tgg-text01);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  outline: none;
+  box-sizing: border-box;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.tg-link-popover-input:hover {
+  background: var(--tgg-fill04);
+}
+
+.tg-link-popover-input:focus {
+  background: var(--tgg-fill04);
+  border-color: var(--tgg-primary03);
+}
+
+.tg-link-popover-input::placeholder {
+  color: var(--tgg-text04);
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.tg-link-popover-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.tg-link-popover-btn-cancel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 92px;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 8px;
+  border: 1px solid var(--tgg-schemes-outline-variant);
+  background: transparent;
+  color: var(--tgg-schemes-on-surface-variant);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  cursor: pointer;
+  box-sizing: border-box;
+  text-decoration: none;
+}
+
+.tg-link-popover-btn-ok {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 92px;
+  min-width: 84px;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 8px;
+  border: none;
+  background: var(--tgg-schemes-primary);
+  color: var(--tgg-schemes-on-primary);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  cursor: pointer;
+  box-sizing: border-box;
+  text-decoration: none;
+}
+
+.tg-link-popover-btn-ok:disabled {
+  background: var(--tgg-primary04);
+  color: var(--tgg-text05);
+  cursor: not-allowed;
+}
+
+/* Mobile Modal Dialog */
+.tg-link-popover-modal-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: var(--tgg-scrim-black70);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.tg-link-popover-modal {
+  width: 100%;
+  max-width: 420px;
+  padding: 28px 24px 24px;
+  border-radius: 16px;
+  background: var(--tgg-fill04);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.tg-link-popover-modal-title {
+  margin: 0 0 12px;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.33;
+  color: var(--tgg-text01);
+  text-align: center;
+}
+
+.tg-link-popover-modal .tg-link-popover-field + .tg-link-popover-field {
+  margin-top: 12px;
+}
+
+.tg-link-popover-modal .tg-link-popover-input {
+  height: 48px;
+  padding: 14px 16px;
+  border-radius: 8px;
+  background: var(--tgg-fill01);
+  font-size: 16px;
+}
+
+.tg-link-popover-modal .tg-link-popover-input:hover,
+.tg-link-popover-modal .tg-link-popover-input:focus {
+  background: var(--tgg-fill01);
+}
+
+.tg-link-popover-modal .tg-link-popover-input:focus {
+  border-color: var(--tgg-primary03);
+}
+
+.tg-link-popover-modal .tg-link-popover-actions {
+  margin-top: 24px;
+}
+
+.tg-link-popover-modal .tg-link-popover-btn-cancel,
+.tg-link-popover-modal .tg-link-popover-btn-ok {
+  flex: 1;
+  width: auto;
+  padding: 0 24px;
 }

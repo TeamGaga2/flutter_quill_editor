@@ -18,5 +18,28 @@ export {
   type SolidAdapterOptions,
 } from "./adapters/solidAdapter";
 
+export {
+  LinkPopover,
+  LinkPopoverHost,
+  useLinkPopover,
+  extractLinkContext,
+  isValidUrl,
+  resolveLinkPopoverLabels,
+  ZH_LABELS,
+  EN_LABELS,
+  HI_LABELS,
+} from "./link-popover";
+export type {
+  ExtractedLinkContext,
+  LinkFormState,
+  LinkPopoverAnchor,
+  LinkPopoverController,
+  LinkPopoverHostProps,
+  LinkPopoverLabels,
+  LinkPopoverPlacement,
+  LinkPopoverProps,
+  UseLinkPopoverOptions,
+} from "./link-popover";
+
 export { setMediaMaxSize, getMediaMaxSize, setMediaUriResolver } from "@teamgaga/richtext-quill";
 export type { MediaMaxSize, MediaUriResolver } from "@teamgaga/richtext-quill";

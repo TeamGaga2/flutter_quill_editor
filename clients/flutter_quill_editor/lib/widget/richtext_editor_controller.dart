@@ -38,7 +38,6 @@ class RichTextEditorController {
   final _stateController = StreamController<StateChangeEvent>.broadcast();
   final _eventController = StreamController<ProtocolEvent>.broadcast();
   final _selectionController = StreamController<SelectionChangeEvent>.broadcast();
-  final _requestLinkController = StreamController<RequestLinkEvent>.broadcast();
   final _requestCloseController = StreamController<RequestCloseEvent>.broadcast();
 
   StreamSubscription<String>? _inboundSub;
@@ -63,13 +62,10 @@ class RichTextEditorController {
   /// Selection updates.
   Stream<SelectionChangeEvent> get onSelectionChange => _selectionController.stream;
 
-  /// Host should open a link dialog (Web→Flutter UI intent).
-  Stream<RequestLinkEvent> get onRequestLink => _requestLinkController.stream;
-
   /// Host should dismiss the composition panel (Web→Flutter UI intent).
   Stream<RequestCloseEvent> get onRequestClose => _requestCloseController.stream;
 
-  /// All protocol events (including ready/focus/blur/request_link/request_close).
+  /// All protocol events (including ready/focus/blur/request_close).
   Stream<ProtocolEvent> get onEvent => _eventController.stream;
 
   // ---------------------------------------------------------------------------
@@ -323,6 +319,14 @@ class RichTextEditorController {
     _ensureOk(response);
   }
 
+  /// Ask the web runtime to open its in-webview link form popover.
+  Future<void> openLinkForm() async {
+    final response = await _request(
+      OpenLinkFormCommand(id: _nextId('open_link_form')),
+    );
+    _ensureOk(response);
+  }
+
   /// Reclaim macOS WKWebView editing via title→body focus handoff.
   ///
   /// No-op when no [wakeEditingSessionAction] was injected (e.g. the memory
@@ -362,7 +366,6 @@ class RichTextEditorController {
     await _stateController.close();
     await _eventController.close();
     await _selectionController.close();
-    await _requestLinkController.close();
     await _requestCloseController.close();
   }
 
@@ -475,10 +478,6 @@ class RichTextEditorController {
       case SelectionChangeEvent():
         if (!_selectionController.isClosed) {
           _selectionController.add(event);
-        }
-      case RequestLinkEvent():
-        if (!_requestLinkController.isClosed) {
-          _requestLinkController.add(event);
         }
       case RequestCloseEvent():
         if (!_requestCloseController.isClosed) {

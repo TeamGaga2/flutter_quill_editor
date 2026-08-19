@@ -26,9 +26,12 @@ export interface RichTextToolbarProps {
   class?: string;
   "aria-label"?: string;
   /**
+   * Open the in-WebView link popover / modal.
+   */
+  onOpenLinkForm?: () => void;
+  /**
    * Host extension: open a native/app link dialog.
-   * The toolbar does not render a web link form. When omitted, Link is disabled.
-   * Host should apply the result with Core `insertLink` / Protocol `insert_link`.
+   * @deprecated In Protocol v2, use onOpenLinkForm for in-WebView link popover.
    */
   onRequestLink?: RequestLinkHandler;
   /** Host extension: close the native/app editor shell. */
@@ -43,7 +46,7 @@ export function RichTextToolbar(props: RichTextToolbarProps): JSX.Element {
   const controller = props.editor ?? useRichText();
   const state = useToolbarState(controller, {
     get canRequestLink() {
-      return props.onRequestLink !== undefined;
+      return props.onOpenLinkForm !== undefined || props.onRequestLink !== undefined;
     },
     get titleFocused() {
       return props.titleFocused;
@@ -153,7 +156,11 @@ export function RichTextToolbar(props: RichTextToolbarProps): JSX.Element {
         disabled={state().link.disabled}
         onPress={run(
           (editor) => {
-            props.onRequestLink?.(buildLinkRequestContext(editor));
+            if (props.onOpenLinkForm) {
+              props.onOpenLinkForm();
+            } else if (props.onRequestLink) {
+              props.onRequestLink(buildLinkRequestContext(editor));
+            }
           },
           { restoreFocus: false },
         )}

@@ -5,9 +5,14 @@ import {
   type EditorResponseMessage,
 } from "@teamgaga/richtext-protocol";
 
+export interface HostUIController {
+  openLinkForm?: () => void;
+}
+
 export function dispatchEditorCommand(
   editor: RichTextEditor,
   command: EditorCommandMessage,
+  uiController?: HostUIController,
 ): EditorResponseMessage {
   try {
     switch (command.type) {
@@ -148,6 +153,10 @@ export function dispatchEditorCommand(
 
       case "blur":
         editor.blur();
+        return success(command);
+
+      case "open_link_form":
+        uiController?.openLinkForm?.();
         return success(command);
 
       default:

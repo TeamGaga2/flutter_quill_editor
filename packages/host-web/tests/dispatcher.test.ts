@@ -1,9 +1,10 @@
-import { describe, expect, it } from "vite-plus/test";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { createEditor } from "@teamgaga/richtext-core";
-import fixtures from "@teamgaga/richtext-protocol/fixtures/v1.json";
+import fixtures from "@teamgaga/richtext-protocol/fixtures/v2.json";
 import {
   parseProtocolCommand,
   parseProtocolMessage,
+  PROTOCOL_VERSION,
   type EditorCommandMessage,
 } from "@teamgaga/richtext-protocol";
 import { MockEditorAdapter } from "@teamgaga/richtext-testing";
@@ -22,18 +23,20 @@ function getFixtureCommands(): EditorCommandMessage[] {
 }
 
 describe("Protocol to Core command dispatcher", () => {
-  it("maps every Protocol v1 command and returns valid correlated responses", () => {
+  it("maps every Protocol v2 command and returns valid correlated responses", () => {
     const adapter = new MockEditorAdapter();
     const editor = createEditor({ adapter });
     editor.mount();
+    const openLinkForm = vi.fn();
 
     const responses = getFixtureCommands().map((command) => {
-      const response = dispatchEditorCommand(editor, command);
+      const response = dispatchEditorCommand(editor, command, { openLinkForm });
       expect(response.id).toBe(command.id);
       expect(parseProtocolMessage(response).ok).toBe(true);
       return response;
     });
 
+    expect(openLinkForm).toHaveBeenCalled();
     expect(responses.every((response) => response.ok)).toBe(true);
     expect(editor.getSnapshot()).toEqual({ content: [{ insert: "hello\n" }] });
     expect(
@@ -109,7 +112,7 @@ describe("Protocol to Core command dispatcher", () => {
     const response = dispatchEditorCommand(editor, command);
 
     expect(response).toEqual({
-      version: 1,
+      version: PROTOCOL_VERSION,
       kind: "response",
       id: command.id,
       ok: false,

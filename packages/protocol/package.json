@@ -23,6 +23,7 @@
       "import": "./dist/index.mjs"
     },
     "./fixtures/v1.json": "./fixtures/v1.json",
+    "./fixtures/v2.json": "./fixtures/v2.json",
     "./package.json": "./package.json"
   },
   "publishConfig": {
