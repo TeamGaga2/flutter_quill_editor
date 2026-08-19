@@ -39,9 +39,9 @@ class RichTextRuntimeManifest {
 const RichTextRuntimeManifest kRichTextRuntimeManifest = RichTextRuntimeManifest(
   protocolVersion: 1,
   hostEnvelopeVersion: 1,
-  buildId: "2026-08-19T03:28:26.183Z",
-  webEntry: "iframe.91ab26f1113b9772.html",
-  webEntrySha256: "91ab26f1113b9772ac84d0c57b58321338c221aa71a290d4ec99fec77c27bb41",
+  buildId: "2026-08-19T06:42:53.326Z",
+  webEntry: "iframe.37387445ad152159.html",
+  webEntrySha256: "37387445ad1521591a18999c1da454b42cd0f2571c9319f7451ea7a1d9ac147f",
   sourceCommit: "619fdc80f4db602ae2412f8606c362a18d7f8539",
   branch: "dev",
   branchIdentity: "ef260e9aa3c673af240d17a2660480361a8e081d1ffeca2a5ed0e3219fc18567",

@@ -1161,4 +1161,60 @@ describe("QuillAdapter block formats", () => {
     unsubscribe();
     adapter.destroy();
   });
+
+  it("preserves caret position after toggling block formats while blurred and focusing back", async () => {
+    const adapter = createMountedAdapter(
+      {
+        content: [{ insert: "First line\nSecond line\n" }],
+      },
+      { start: 15, end: 15 },
+    );
+
+    adapter.blur();
+    await Promise.resolve();
+
+    expect(adapter.getState().focused).toBe(false);
+
+    // Toggle H1 on second line while blurred
+    adapter.execute({ type: "toggle-block-format", format: "header", value: 1 });
+    expect(adapter.getState().formats.header).toBe(1);
+
+    // Focus back — must restore caret to index 15
+    adapter.focus();
+    await Promise.resolve();
+
+    expect(adapter.getState()).toMatchObject({
+      focused: true,
+      selection: { start: 15, end: 15 },
+      formats: { header: 1 },
+    });
+
+    adapter.destroy();
+  });
+
+  it("preserves selection range across blurred inline and block format changes", async () => {
+    const adapter = createMountedAdapter(
+      {
+        content: [{ insert: "Hello world\n" }],
+      },
+      { start: 0, end: 5 },
+    );
+
+    adapter.blur();
+    await Promise.resolve();
+
+    adapter.execute({ type: "toggle-inline-format", format: "bold" });
+    adapter.execute({ type: "toggle-block-format", format: "blockquote" });
+
+    adapter.focus();
+    await Promise.resolve();
+
+    expect(adapter.getState()).toMatchObject({
+      focused: true,
+      selection: { start: 0, end: 5 },
+      formats: { bold: true, blockquote: true },
+    });
+
+    adapter.destroy();
+  });
 });

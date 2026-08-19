@@ -54,6 +54,7 @@ export function createQuillAdapter(options: QuillAdapterOptions): QuillAdapter {
    * and several adapter inserts emit the caret they computed themselves.
    */
   let lastEmittedSelection: { start: number; end: number } | null = null;
+  let lastEmittedFocus = quill.hasFocus();
 
   const emitSelectionChange = (selection: { start: number; end: number } | null): void => {
     if (suppressHostSelectionSync > 0) return;
@@ -63,6 +64,14 @@ export function createQuillAdapter(options: QuillAdapterOptions): QuillAdapter {
     if (same) return;
     lastEmittedSelection = selection;
     emit({ type: "selection-change", selection });
+  };
+
+  const emitFocusTransition = (): void => {
+    if (suppressHostSelectionSync > 0) return;
+    const current = quill.hasFocus();
+    if (current === lastEmittedFocus) return;
+    lastEmittedFocus = current;
+    emit({ type: current ? "focus" : "blur" });
   };
 
   /**
@@ -226,7 +235,7 @@ export function createQuillAdapter(options: QuillAdapterOptions): QuillAdapter {
     }
   };
 
-  const handleSelectionChange = (range: Range | null, oldRange: Range | null): void => {
+  const handleSelectionChange = (range: Range | null, _oldRange: Range | null): void => {
     if (range) {
       rememberSelection(range.index, range.index + range.length);
     }
@@ -241,11 +250,7 @@ export function createQuillAdapter(options: QuillAdapterOptions): QuillAdapter {
           : null,
       );
 
-      if (range && !oldRange) {
-        emit({ type: "focus" });
-      } else if (!range && oldRange) {
-        emit({ type: "blur" });
-      }
+      emitFocusTransition();
     }
 
     emitState();
@@ -357,8 +362,6 @@ export function createQuillAdapter(options: QuillAdapterOptions): QuillAdapter {
       /* formatting from the accessory panel must not take IME focus */
     };
 
-    // The temporary silent range swap must not leak to the host: formatting
-    // from a blurred accessory panel is intentionally invisible.
     runWithSuppressedSelectionSync(() => {
       try {
         quill.setSelection(range.index, range.length, Quill.sources.SILENT);
@@ -366,7 +369,7 @@ export function createQuillAdapter(options: QuillAdapterOptions): QuillAdapter {
       } finally {
         try {
           rememberSelection(range.index, range.index + range.length);
-          quill.setSelection(null, Quill.sources.SILENT);
+          document.getSelection()?.removeAllRanges();
         } finally {
           root.focus = nativeFocus;
         }
@@ -865,7 +868,6 @@ export function createQuillAdapter(options: QuillAdapterOptions): QuillAdapter {
 
     setSelection(selection) {
       rememberSelection(selection.start, selection.end);
-      const previousRange = quill.getSelection();
       quill.setSelection(selection.start, selection.end - selection.start, Quill.sources.SILENT);
       const range = quill.getSelection();
       const actualSelection = range
@@ -880,38 +882,39 @@ export function createQuillAdapter(options: QuillAdapterOptions): QuillAdapter {
       }
 
       emitSelectionChange(actualSelection);
-
-      if (range && !previousRange) {
-        emit({ type: "focus" });
-      }
-
+      emitFocusTransition();
       emitState();
     },
 
     getState: readState,
 
     focus() {
+      const targetSelection = lastSelection;
       const live = quill.getSelection();
-      // Keep preventScroll during focus — selection is restored below; scrolling
-      // before restore would use a stale range after toolbar embeds.
-      // Skip the DOM focus call when the caret is already live: re-focusing an
-      // already-focused root makes WebView2 re-run its native focus path and
-      // collapse the caret the user just placed.
-      if (!(quill.hasFocus() && live)) {
-        quill.focus({ preventScroll: true });
-      }
 
-      // Plain focus() can collapse the caret (common after toolbar → protocol focus).
-      // Restore the live range, else the last remembered selection from inserts.
-      if (live) {
-        quill.setSelection(live.index, live.length, Quill.sources.SILENT);
-      } else if (lastSelection) {
-        quill.setSelection(
-          lastSelection.start,
-          lastSelection.end - lastSelection.start,
-          Quill.sources.SILENT,
-        );
-      }
+      runWithFinalState(() => {
+        if (!(quill.hasFocus() && live)) {
+          runWithSuppressedSelectionSync(() => {
+            quill.focus({ preventScroll: true });
+          });
+        }
+
+        // Plain focus() can collapse the caret (common after toolbar → protocol focus).
+        // Restore targetSelection from before native focus clobbered it, else live, else lastSelection.
+        const restore =
+          targetSelection ??
+          (live ? { start: live.index, end: live.index + live.length } : lastSelection);
+        if (restore) {
+          const bound = Math.max(0, quill.getLength() - 1);
+          const start = Math.min(Math.max(0, restore.start), bound);
+          const end = Math.min(Math.max(start, restore.end), bound);
+          quill.setSelection(start, end - start, Quill.sources.SILENT);
+          rememberSelection(start, end);
+          emitSelectionChange({ start, end });
+        }
+
+        emitFocusTransition();
+      });
 
       // Host refocus after divider/mention/channel: SILENT restore does not scroll.
       ensureSelectionVisible();
