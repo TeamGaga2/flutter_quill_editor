@@ -40,6 +40,7 @@ export function Tooltip(props: TooltipProps): JSX.Element {
   const [suppressed, setSuppressed] = createSignal(false);
   const [rootEl, setRootEl] = createSignal<HTMLSpanElement | undefined>();
   const [contentEl, setContentEl] = createSignal<HTMLSpanElement | undefined>();
+  const [contentStyle, setContentStyle] = createSignal<JSX.CSSProperties>({});
 
   const hidden = (): boolean => {
     const value = props.hidden;
@@ -61,8 +62,21 @@ export function Tooltip(props: TooltipProps): JSX.Element {
         contentSize: { width: content.offsetWidth, height: content.offsetHeight },
         viewport: { width: window.innerWidth, height: window.innerHeight },
       });
-      content.style.setProperty("--tg-tooltip-shift-x", `${layout.shiftX}px`);
-      content.style.setProperty("--tg-tooltip-arrow-x", `${layout.arrowX}px`);
+      const contentWidth = content.offsetWidth;
+      const triggerCenterX = trigger.left + trigger.width / 2;
+      const left = triggerCenterX - contentWidth / 2 + layout.shiftX;
+      const top = trigger.bottom + 6;
+
+      setContentStyle({
+        position: "fixed",
+        top: `${Math.round(top)}px`,
+        left: `${Math.round(left)}px`,
+        transform: "none",
+        "margin-left": "0px",
+        "--tg-tooltip-shift-x": `${layout.shiftX}px`,
+        "--tg-tooltip-arrow-x": `${layout.arrowX}px`,
+        "z-index": "1000",
+      });
     };
 
     applyLayout();
@@ -104,7 +118,12 @@ export function Tooltip(props: TooltipProps): JSX.Element {
     >
       {props.children}
       <Show when={open()}>
-        <span ref={setContentEl} class="tg-toolbar-tooltip__content" role="tooltip">
+        <span
+          ref={setContentEl}
+          class="tg-toolbar-tooltip__content"
+          style={contentStyle()}
+          role="tooltip"
+        >
           {props.message}
         </span>
       </Show>

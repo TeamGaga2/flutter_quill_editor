@@ -546,14 +546,7 @@ body {
   /* Shift/arrow set by Tooltip.tsx (Ant Design–style edge auto-shift). */
   --tg-tooltip-shift-x: 0px;
   --tg-tooltip-arrow-x: 50%;
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 50%;
-  /* Base centering must live outside the enter animation: keyframes only apply
-   * while the animation runs, so without this the bubble snaps right after 90ms.
-   * Edge shift uses margin-left so it does not fight the centering transform. */
-  transform: translateX(-50%);
-  margin-left: var(--tg-tooltip-shift-x);
+  position: fixed;
   z-index: 30;
   max-width: 256px;
   padding: 6px 8px;
@@ -572,7 +565,7 @@ body {
   content: "";
   position: absolute;
   top: -4px;
-  left: var(--tg-tooltip-arrow-x);
+  left: var(--tg-tooltip-arrow-x, 50%);
   width: 8px;
   height: 8px;
   transform: translateX(-50%) rotate(45deg);

@@ -85,6 +85,7 @@ h2 {
   background: transparent;
   color: #374151;
   overflow-x: auto;
+  overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
 }
@@ -215,15 +216,8 @@ h2 {
   /* Shift/arrow set by Tooltip.tsx (Ant Design–style edge auto-shift). */
   --tg-tooltip-shift-x: 0px;
   --tg-tooltip-arrow-x: 50%;
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 50%;
-  /* Base centering must live outside the enter animation: keyframes only apply
-   * while the animation runs, so without this the bubble snaps right after 90ms.
-   * Edge shift uses margin-left so it does not fight the centering transform. */
-  transform: translateX(-50%);
-  margin-left: var(--tg-tooltip-shift-x);
-  z-index: 30;
+  position: fixed;
+  z-index: 1000;
   max-width: 256px;
   padding: 6px 8px;
   border-radius: 6px;
@@ -241,7 +235,7 @@ h2 {
   content: "";
   position: absolute;
   top: -4px;
-  left: var(--tg-tooltip-arrow-x);
+  left: var(--tg-tooltip-arrow-x, 50%);
   width: 8px;
   height: 8px;
   transform: translateX(-50%) rotate(45deg);
@@ -252,11 +246,11 @@ h2 {
 @keyframes tg-tooltip-in {
   from {
     opacity: 0;
-    transform: translateX(-50%) translateY(2px);
+    transform: translateY(2px);
   }
   to {
     opacity: 1;
-    transform: translateX(-50%) translateY(0);
+    transform: translateY(0);
   }
 }
 
