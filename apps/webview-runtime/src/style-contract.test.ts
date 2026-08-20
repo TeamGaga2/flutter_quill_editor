@@ -284,5 +284,10 @@ describe("ADR 0002 style contract", () => {
     const cancelBtn = rule(".tg-link-popover-btn-cancel");
     expect(cancelBtn).toContain("border: 1px solid var(--tgg-schemes-outline-variant);");
     expect(cancelBtn).toContain("color: var(--tgg-schemes-on-surface-variant);");
+
+    const modalBtns = rule(
+      ".tg-link-popover-modal .tg-link-popover-btn-cancel,\n.tg-link-popover-modal .tg-link-popover-btn-ok",
+    );
+    expect(modalBtns).toContain("border-radius: 20px;");
   });
 });
