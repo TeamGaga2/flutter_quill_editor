@@ -1,5 +1,6 @@
 import { createEffect, createSignal, onCleanup, type JSX } from "solid-js";
 import { render } from "solid-js/web";
+import type { ChannelInsert, MentionInsert } from "@teamgaga/richtext-core";
 import {
   createRichTextEditor,
   LinkPopoverHost,
@@ -9,6 +10,8 @@ import {
   useRichText,
 } from "@teamgaga/richtext-solid";
 import { RichTextToolbar } from "@teamgaga/richtext-solid-toolbar";
+import { MockInsertPicker } from "./components/MockInsertPicker";
+import { createPlaygroundEmojiRegistry } from "./data/emojis";
 import "../../webview-runtime/src/theme.css";
 import "../../webview-runtime/src/style.css";
 import "@teamgaga/richtext-solid/style.css";
@@ -144,9 +147,81 @@ function SnapshotDebug(): JSX.Element {
 }
 
 function App(): JSX.Element {
-  const editor = createRichTextEditor();
+  const editor = createRichTextEditor({
+    emojiRegistry: createPlaygroundEmojiRegistry(),
+  });
   let linkController: LinkPopoverController | undefined;
   const [themeMode, setThemeMode] = createSignal<ThemeMode>(getInitialTheme());
+  const [pickerState, setPickerState] = createSignal<{
+    isOpen: boolean;
+    type: "mention" | "channel" | "emoji" | null;
+    selection: { start: number; end: number } | null;
+  }>({
+    isOpen: false,
+    type: null,
+    selection: null,
+  });
+
+  const handleOpenEmojiPicker = (selection: { start: number; end: number } | null): void => {
+    setPickerState({
+      isOpen: true,
+      type: "emoji",
+      selection,
+    });
+  };
+
+  const handleOpenMentionPicker = (selection: { start: number; end: number } | null): void => {
+    setPickerState({
+      isOpen: true,
+      type: "mention",
+      selection,
+    });
+  };
+
+  const handleOpenChannelPicker = (selection: { start: number; end: number } | null): void => {
+    setPickerState({
+      isOpen: true,
+      type: "channel",
+      selection,
+    });
+  };
+
+  const handleClosePicker = (): void => {
+    setPickerState({
+      isOpen: false,
+      type: null,
+      selection: null,
+    });
+  };
+
+  const handleSelectEmoji = (emojiId: string): void => {
+    const currentEditor = editor.editor();
+    if (currentEditor) {
+      currentEditor.commands.insertEmoji(emojiId);
+      currentEditor.focus();
+    }
+    handleClosePicker();
+  };
+
+  const handleSelectMention = (mention: MentionInsert): void => {
+    const currentEditor = editor.editor();
+    const sel = pickerState().selection;
+    if (currentEditor) {
+      currentEditor.commands.insertMention(mention, sel ?? undefined);
+      currentEditor.focus();
+    }
+    handleClosePicker();
+  };
+
+  const handleSelectChannel = (channel: ChannelInsert): void => {
+    const currentEditor = editor.editor();
+    const sel = pickerState().selection;
+    if (currentEditor) {
+      currentEditor.commands.insertChannel(channel, sel ?? undefined);
+      currentEditor.focus();
+    }
+    handleClosePicker();
+  };
 
   createEffect(() => {
     const mode = themeMode();
@@ -195,9 +270,9 @@ function App(): JSX.Element {
             class="toolbar tg-webview-toolbar"
             aria-label="Rich text formatting"
             visibleInsertActions={["emoji", "mention", "channel", "image"]}
-            onRequestEmoji={(selection) => console.log("request_emoji", selection)}
-            onRequestMention={(selection) => console.log("request_mention", selection)}
-            onRequestChannel={(selection) => console.log("request_channel", selection)}
+            onRequestEmoji={handleOpenEmojiPicker}
+            onRequestMention={handleOpenMentionPicker}
+            onRequestChannel={handleOpenChannelPicker}
             onRequestImage={(selection) => console.log("request_image", selection)}
             onOpenLinkForm={() => linkController?.open()}
           />
@@ -207,6 +282,14 @@ function App(): JSX.Element {
             onControllerReady={(controller) => {
               linkController = controller;
             }}
+          />
+          <MockInsertPicker
+            isOpen={pickerState().isOpen}
+            type={pickerState().type}
+            onClose={handleClosePicker}
+            onSelectMention={handleSelectMention}
+            onSelectChannel={handleSelectChannel}
+            onSelectEmoji={handleSelectEmoji}
           />
         </section>
 

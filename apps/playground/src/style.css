@@ -184,3 +184,334 @@ html.dark .snapshot {
   background: var(--tgg-fill01, #272727);
   color: var(--tgg-text01, #fafafa);
 }
+
+/* ==========================================================================
+   TeamGaga Client Aligned Trigger & Insert Picker
+   ========================================================================== */
+
+.tgg-picker-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: var(--tgg-scrim-secondary, rgba(0, 0, 0, 0.3));
+  animation: tgg-picker-fade-in 120ms ease-out;
+}
+
+.tgg-picker-surface {
+  display: flex;
+  flex-direction: column;
+  width: 380px;
+  max-width: calc(100% - 32px);
+  max-height: 480px;
+  border-radius: 12px;
+  background: var(--tgg-background03, #ffffff);
+  border: 1px solid var(--tgg-border01, #e3e3e3);
+  box-shadow: var(--tgg-shadow-primary, 0px 8px 40px 0px rgba(0, 0, 0, 0.2));
+  overflow: hidden;
+  animation: tgg-picker-scale-in 120ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tgg-picker-surface--emoji {
+  width: 420px;
+}
+
+@keyframes tgg-picker-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes tgg-picker-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.tgg-picker-header {
+  flex: 0 0 auto;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--tgg-border01, #e3e3e3);
+  background: var(--tgg-background03, #ffffff);
+}
+
+.tgg-picker-search-bar {
+  display: flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 8px;
+  border-radius: 8px;
+  background: var(--tgg-fill03, #fafafa);
+  border: 1px solid var(--tgg-border01, #e3e3e3);
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.tgg-picker-search-bar:focus-within {
+  border-color: var(--tgg-primary02, #009c64);
+  box-shadow: 0 0 0 2px rgba(0, 156, 100, 0.12);
+}
+
+.tgg-picker-search-icon {
+  flex: 0 0 auto;
+  color: var(--tgg-icon04, #acacac);
+}
+
+.tgg-picker-search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  padding: 0 8px;
+  border: none;
+  background: transparent;
+  color: var(--tgg-text01, #121212);
+  font-size: 13px;
+  outline: none;
+}
+
+.tgg-picker-search-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--tgg-fill10, #c7c7c7);
+  color: var(--tgg-text05, #ffffff);
+  cursor: pointer;
+  margin-right: 4px;
+}
+
+.tgg-picker-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--tgg-icon03, #5f5f5f);
+  cursor: pointer;
+  transition: background 100ms ease;
+}
+
+.tgg-picker-close-btn:hover {
+  background: var(--tgg-state-layers-on-surface-variant-opacity-08, rgba(64, 73, 66, 0.08));
+  color: var(--tgg-text01, #121212);
+}
+
+.tgg-picker-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  max-height: 360px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--tgg-fill10, #c7c7c7) transparent;
+}
+
+/* --- Emoji Keyboard (7 columns, 32px icons, 20px space) --- */
+.tgg-emoji-keyboard {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 12px 10px;
+  padding: 16px 12px;
+  justify-items: center;
+  align-items: center;
+}
+
+.tgg-emoji-keyboard-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  transition: all 120ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tgg-emoji-keyboard-btn:hover {
+  background: var(--tgg-state-layers-on-surface-variant-opacity-08, rgba(64, 73, 66, 0.08));
+  transform: translateY(-2px) scale(1.18);
+}
+
+.tgg-emoji-keyboard-btn:active {
+  transform: scale(0.95);
+}
+
+.tgg-emoji-keyboard-img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+/* --- Mention & Channel Lists (42px item height) --- */
+.tgg-mention-list,
+.tgg-channel-list {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 0 8px;
+}
+
+.tgg-list-group-title {
+  height: 24px;
+  line-height: 24px;
+  padding: 0 16px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--tgg-text04, #acacac);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 6px;
+}
+
+.tgg-list-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  height: 42px;
+  padding: 0 16px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: background 80ms ease;
+}
+
+.tgg-list-item:hover {
+  background: var(--tgg-state-layers-on-surface-variant-opacity-08, rgba(64, 73, 66, 0.08));
+}
+
+.tgg-item-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--tgg-fill01, #e9e9e9);
+  color: var(--tgg-text02, #313131);
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.tgg-item-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.tgg-item-icon--everyone {
+  background: var(--tgg-primary03, #38c585);
+  color: #ffffff;
+}
+
+.tgg-item-icon--role {
+  background: transparent;
+}
+
+.tgg-item-icon--channel {
+  border-radius: 6px;
+  background: rgba(0, 156, 100, 0.12);
+  color: var(--tgg-primary-01, #009c64);
+}
+
+.tgg-item-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--tgg-text02, #313131);
+  white-space: nowrap;
+}
+
+.tgg-item-title--everyone {
+  color: var(--tgg-text01, #121212);
+  font-weight: 600;
+}
+
+.tgg-item-username {
+  font-size: 11px;
+  color: var(--tgg-text04, #acacac);
+  margin-left: -4px;
+}
+
+.tgg-item-desc {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--tgg-text04, #acacac);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 140px;
+}
+
+.tgg-picker-empty {
+  padding: 32px 16px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--tgg-text04, #acacac);
+}
+
+.tgg-picker-footer {
+  flex: 0 0 auto;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: var(--tgg-text04, #acacac);
+  border-top: 1px solid var(--tgg-border01, #e3e3e3);
+  background: var(--tgg-fill03, #fafafa);
+}
+
+/* --- Dark Theme Overrides --- */
+html.tg-theme-dark .tgg-picker-surface,
+html.dark .tgg-picker-surface {
+  background: var(--tgg-background03, #272727);
+  border-color: var(--tgg-border01, #474747);
+}
+
+html.tg-theme-dark .tgg-picker-header,
+html.dark .tgg-picker-header {
+  background: var(--tgg-background03, #272727);
+  border-color: var(--tgg-border01, #474747);
+}
+
+html.tg-theme-dark .tgg-picker-search-bar,
+html.dark .tgg-picker-search-bar {
+  background: var(--tgg-fill01, #272727);
+  border-color: var(--tgg-border01, #474747);
+}
+
+html.tg-theme-dark .tgg-picker-footer,
+html.dark .tgg-picker-footer {
+  background: var(--tgg-fill01, #272727);
+  border-color: var(--tgg-border01, #474747);
+}

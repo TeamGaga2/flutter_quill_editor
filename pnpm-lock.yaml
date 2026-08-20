@@ -246,6 +246,9 @@ importers:
 
   apps/playground:
     dependencies:
+      '@teamgaga/richtext-core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@teamgaga/richtext-solid':
         specifier: workspace:*
         version: link:../../packages/solid
