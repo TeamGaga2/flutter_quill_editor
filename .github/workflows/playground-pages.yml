@@ -3,6 +3,7 @@ name: Deploy Playground to GitHub Pages
 on:
   push:
     branches:
+      - dev
       - main
     paths:
       - apps/playground/**
