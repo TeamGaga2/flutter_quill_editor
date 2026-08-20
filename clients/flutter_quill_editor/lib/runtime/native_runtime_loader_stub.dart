@@ -18,6 +18,7 @@ class _UnsupportedNativeRuntimeLoader implements NativeRuntimeLoader {
     required int mediaMaxSize,
     required String toolbarMode,
     required bool showTitleInput,
+    bool showCloseButton = true,
     String? titlePlaceholder,
     String? placeholder,
   }) {

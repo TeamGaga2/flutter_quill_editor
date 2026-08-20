@@ -154,6 +154,7 @@ async function resolveDesktopChrome(
       aria-label="Rich text formatting"
       onOpenLinkForm={openLinkForm}
       onRequestClose={() => hostRef.current?.requestClose()}
+      showCloseButton={config.showCloseButton}
       titleFocused={titleFocused}
     />
   );
@@ -353,9 +354,6 @@ export async function mountEditor(options: MountEditorOptions): Promise<MountedE
     const restartNativeFocus = needsNativeFocusRestart();
 
     // Host explicitly wakes the session — the window is definitely active.
-    // Without this, macOS WKWebView can leave windowFocused stuck at false
-    // when window.onFocus does not fire after an app-switch, blocking the
-    // onFocusOut keeper from ever restoring the caret.
     windowFocused = true;
     editingSessionCold = false;
 
@@ -364,9 +362,7 @@ export async function mountEditor(options: MountEditorOptions): Promise<MountedE
       return;
     }
 
-    // Focus body only. Do not bounce through title first — that title→body
-    // handoff was an AppKit workaround and causes Windows WebView2 users to
-    // need two clicks when switching title ↔ body.
+    // Focus body only.
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         focusBodyElement(restartNativeFocus);

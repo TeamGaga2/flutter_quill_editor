@@ -42,9 +42,9 @@ describe("webview runtime config", () => {
     expect(resolveRuntimeConfig().placeholder).toBe("Enter text");
   });
 
-  it("accepts an injected body placeholder from Flutter l10n", () => {
-    window.__TG_RICHTEXT_CONFIG__ = { placeholder: "输入正文..." };
+  it("accepts an injected showCloseButton setting", () => {
+    window.__TG_RICHTEXT_CONFIG__ = { showCloseButton: false };
 
-    expect(resolveRuntimeConfig().placeholder).toBe("输入正文...");
+    expect(resolveRuntimeConfig().showCloseButton).toBe(false);
   });
 });

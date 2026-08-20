@@ -86,6 +86,7 @@ class RichTextWebView extends StatefulWidget {
     this.placeholder,
     this.emojiDefinitions = const <RichTextEmojiDefinition>[],
     this.isDesktopRichTextSurface = false,
+    this.showCloseButton = true,
     this.windowsHostCreator,
     this.failedPlaceholderBuilder,
   });
@@ -140,6 +141,9 @@ class RichTextWebView extends StatefulWidget {
   /// in-web desktop chrome (`toolbarMode: desktop`, larger media
   /// box) instead of the editor-only mobile configuration.
   final bool isDesktopRichTextSurface;
+
+  /// Whether to display the toolbar close button (defaults to true).
+  final bool showCloseButton;
 
   /// Windows backend factory. The package has no InAppWebView /
   /// WebView2 code; Windows hosts must register a creator here or
@@ -261,7 +265,8 @@ class RichTextWebViewState extends State<RichTextWebView> {
     if (oldWidget.shellBackgroundColor != widget.shellBackgroundColor ||
         oldWidget.backgroundColor != widget.backgroundColor ||
         oldWidget.titlePlaceholder != widget.titlePlaceholder ||
-        oldWidget.placeholder != widget.placeholder) {
+        oldWidget.placeholder != widget.placeholder ||
+        oldWidget.showCloseButton != widget.showCloseButton) {
       _scheduleThemeSync();
     }
   }
@@ -606,6 +611,7 @@ class RichTextWebViewState extends State<RichTextWebView> {
             bridgeToken: _capability.token,
             mediaMaxSize: _mediaMaxSize,
             toolbarMode: _toolbarMode,
+            showCloseButton: widget.showCloseButton,
             bridgeChannelKind: _bridgeChannelKindFor(_hostKind),
             theme: theme,
             titlePlaceholder: widget.titlePlaceholder,
@@ -659,6 +665,7 @@ class RichTextWebViewState extends State<RichTextWebView> {
           bridgeToken: _capability.token,
           mediaMaxSize: _mediaMaxSize,
           toolbarMode: _toolbarMode,
+          showCloseButton: widget.showCloseButton,
           bridgeChannelKind: _bridgeChannelKindFor(_hostKind),
           theme: brightness == Brightness.dark ? 'dark' : 'light',
           titlePlaceholder: widget.titlePlaceholder,
@@ -860,6 +867,7 @@ class RichTextWebViewState extends State<RichTextWebView> {
         mediaMaxSize: _mediaMaxSize,
         toolbarMode: _toolbarMode,
         showTitleInput: kRichTextWebShowTitleInput,
+        showCloseButton: widget.showCloseButton,
         titlePlaceholder: widget.titlePlaceholder,
         placeholder: widget.placeholder,
       );
@@ -992,6 +1000,7 @@ class RichTextWebViewState extends State<RichTextWebView> {
       'toolbarMode': _toolbarMode,
       'mediaMaxSize': _mediaMaxSize,
       'showTitleInput': kRichTextWebShowTitleInput,
+      'showCloseButton': widget.showCloseButton,
       'titlePlaceholder': widget.titlePlaceholder,
       // Body blank-state hint — required on Flutter Web (no native bootstrap
       // MutationObserver). Runtime also defaults when omitted.

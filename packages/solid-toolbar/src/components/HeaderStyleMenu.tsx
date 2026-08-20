@@ -97,12 +97,6 @@ export function HeaderStyleMenu(props: HeaderStyleMenuProps): JSX.Element {
       data-open={open() ? "" : undefined}
       disabled={props.disabled}
       tabIndex={-1}
-      on:pointerdown={(event) => {
-        event.preventDefault();
-      }}
-      on:mousedown={(event) => {
-        event.preventDefault();
-      }}
       onClick={() => {
         if (props.disabled) return;
         setOpen((wasOpen) => !wasOpen);
@@ -133,12 +127,6 @@ export function HeaderStyleMenu(props: HeaderStyleMenuProps): JSX.Element {
                 aria-selected={props.value === option.value}
                 data-active={props.value === option.value ? "" : undefined}
                 tabIndex={-1}
-                on:pointerdown={(event) => {
-                  event.preventDefault();
-                }}
-                on:mousedown={(event) => {
-                  event.preventDefault();
-                }}
                 onClick={() => {
                   props.onSelect(option.value);
                   close();

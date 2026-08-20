@@ -15,6 +15,8 @@ export interface RuntimeConfig {
   mediaMaxSize: MediaMaxSize;
   /** When true, render a title textarea above the Quill body (Flutter PC shell). */
   showTitleInput?: boolean;
+  /** When false, hide the toolbar close button (defaults to true). */
+  showCloseButton?: boolean;
   /** Placeholder for the title field (from Flutter l10n). */
   titlePlaceholder?: string;
   /**
@@ -90,6 +92,10 @@ function readInjectedConfig(): InjectedRuntimeConfig {
     next.showTitleInput = raw.showTitleInput;
   }
 
+  if (typeof raw.showCloseButton === "boolean") {
+    next.showCloseButton = raw.showCloseButton;
+  }
+
   if (typeof raw.titlePlaceholder === "string" && raw.titlePlaceholder.length > 0) {
     next.titlePlaceholder = raw.titlePlaceholder;
   }
@@ -118,7 +124,7 @@ function readInjectedConfig(): InjectedRuntimeConfig {
   return next;
 }
 
-/** Dev-only URL query: `?toolbarMode=desktop&theme=dark&locale=en&mediaMaxSize=320&showTitleInput=1`. */
+/** Dev-only URL query: `?toolbarMode=desktop&theme=dark&locale=en&mediaMaxSize=320&showTitleInput=1&showCloseButton=0`. */
 function readDevQueryConfig(): InjectedRuntimeConfig {
   if (!import.meta.env.DEV) {
     return {};
@@ -143,6 +149,13 @@ function readDevQueryConfig(): InjectedRuntimeConfig {
   const showTitleInput = params.get("showTitleInput");
   if (showTitleInput === "1" || showTitleInput === "true") {
     next.showTitleInput = true;
+  }
+
+  const showCloseButton = params.get("showCloseButton");
+  if (showCloseButton === "0" || showCloseButton === "false") {
+    next.showCloseButton = false;
+  } else if (showCloseButton === "1" || showCloseButton === "true") {
+    next.showCloseButton = true;
   }
 
   const titlePlaceholder = params.get("titlePlaceholder");
@@ -176,6 +189,7 @@ export function resolveRuntimeConfig(): RuntimeConfig {
     toolbarMode: injected.toolbarMode ?? query.toolbarMode ?? DEFAULT_CONFIG.toolbarMode,
     mediaMaxSize: injected.mediaMaxSize ?? query.mediaMaxSize ?? DEFAULT_CONFIG.mediaMaxSize,
     showTitleInput: injected.showTitleInput ?? query.showTitleInput,
+    showCloseButton: injected.showCloseButton ?? query.showCloseButton,
     titlePlaceholder: injected.titlePlaceholder ?? query.titlePlaceholder,
     // Match Flutter native bootstrap default when host omits the field
     // (DEV browser / partial inject). Prefer explicit host l10n when present.

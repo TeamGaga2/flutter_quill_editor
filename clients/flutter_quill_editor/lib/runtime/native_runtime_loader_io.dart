@@ -39,6 +39,7 @@ class IoNativeRuntimeLoader implements NativeRuntimeLoader {
     required int mediaMaxSize,
     required String toolbarMode,
     required bool showTitleInput,
+    bool showCloseButton = true,
     String? titlePlaceholder,
     String? placeholder,
   }) async {
@@ -52,6 +53,7 @@ class IoNativeRuntimeLoader implements NativeRuntimeLoader {
       mediaMaxSize: mediaMaxSize,
       toolbarMode: toolbarMode,
       showTitleInput: showTitleInput,
+      showCloseButton: showCloseButton,
       titlePlaceholder: titlePlaceholder,
       placeholder: placeholder,
     );
@@ -96,6 +98,7 @@ class IoNativeRuntimeLoader implements NativeRuntimeLoader {
     required int mediaMaxSize,
     required String toolbarMode,
     required bool showTitleInput,
+    required bool showCloseButton,
     required String? titlePlaceholder,
     required String? placeholder,
   }) async {
@@ -173,6 +176,7 @@ class IoNativeRuntimeLoader implements NativeRuntimeLoader {
       mediaMaxSize: mediaMaxSize,
       toolbarMode: toolbarMode,
       showTitleInput: showTitleInput,
+      showCloseButton: showCloseButton,
       titlePlaceholder: titlePlaceholder,
       placeholder: placeholder,
     );
@@ -213,6 +217,7 @@ class IoNativeRuntimeLoader implements NativeRuntimeLoader {
     required int mediaMaxSize,
     required String toolbarMode,
     required bool showTitleInput,
+    required bool showCloseButton,
     required String? titlePlaceholder,
     required String? placeholder,
   }) async {
@@ -261,6 +266,7 @@ class IoNativeRuntimeLoader implements NativeRuntimeLoader {
       mediaMaxSize: mediaMaxSize,
       toolbarMode: toolbarMode,
       showTitleInput: showTitleInput,
+      showCloseButton: showCloseButton,
       titlePlaceholder: titlePlaceholder,
       placeholder: placeholder,
       shellBackgroundColor: shellBgCss,

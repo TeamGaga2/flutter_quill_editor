@@ -192,5 +192,16 @@ void main() {
         expect(js, isNot(contains('TgRichTextBridge.postMessage(envelope)')));
       },
     );
+
+    test('bakes showCloseButton into injected config', () {
+      final defaultJs = buildRichTextTransportBootstrapJs(bridgeToken: 'tok');
+      expect(defaultJs, contains('showCloseButton: true'));
+
+      final hiddenJs = buildRichTextTransportBootstrapJs(
+        bridgeToken: 'tok',
+        showCloseButton: false,
+      );
+      expect(hiddenJs, contains('showCloseButton: false'));
+    });
   });
 }

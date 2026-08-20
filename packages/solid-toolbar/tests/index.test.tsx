@@ -170,14 +170,13 @@ describe("optional Solid toolbar", () => {
     expect(button?.getAttribute("aria-label")).toBe("Bold");
     expect(button?.getAttribute("aria-pressed")).toBe("true");
     expect(button?.hasAttribute("data-active")).toBe(true);
-    expect(pointerDown.defaultPrevented).toBe(true);
-    expect(mouseDown.defaultPrevented).toBe(true);
+    expect(pointerDown.defaultPrevented).toBe(false);
     expect(onPress).toHaveBeenCalledTimes(1);
     dispose();
     root.remove();
   });
 
-  it("keeps header menu interactions from taking focus via preventDefault", () => {
+  it("handles header menu open and selection interactions", () => {
     const onSelect = vi.fn();
     const root = document.createElement("div");
     document.body.append(root);
@@ -190,8 +189,7 @@ describe("optional Solid toolbar", () => {
     trigger?.dispatchEvent(mouseDown);
     trigger?.click();
 
-    expect(pointerDown.defaultPrevented).toBe(true);
-    expect(mouseDown.defaultPrevented).toBe(true);
+    expect(pointerDown.defaultPrevented).toBe(false);
     expect(trigger?.getAttribute("aria-expanded")).toBe("true");
 
     const option = root.querySelector<HTMLButtonElement>('button[aria-label="H2"]');
@@ -201,8 +199,7 @@ describe("optional Solid toolbar", () => {
     option?.dispatchEvent(optionMouseDown);
     option?.click();
 
-    expect(optionPointerDown.defaultPrevented).toBe(true);
-    expect(optionMouseDown.defaultPrevented).toBe(true);
+    expect(optionPointerDown.defaultPrevented).toBe(false);
     expect(onSelect).toHaveBeenCalledWith(2);
     expect(trigger?.getAttribute("aria-expanded")).toBe("false");
 
@@ -374,6 +371,32 @@ describe("optional Solid toolbar", () => {
     expect(closeButton?.disabled).toBe(false);
     closeButton?.click();
     expect(onRequestClose).toHaveBeenCalledTimes(1);
+
+    dispose();
+    root.remove();
+  });
+
+  it("hides the Close button when showCloseButton is false", () => {
+    const fake = createFakeAdapter();
+    const onRequestClose = vi.fn();
+
+    function App(): JSX.Element {
+      const controller = createRichTextEditor({ adapterFactory: () => fake.adapter });
+
+      return (
+        <RichTextProvider editor={controller}>
+          <RichTextToolbar onRequestClose={onRequestClose} showCloseButton={false} />
+          <RichTextEditor />
+        </RichTextProvider>
+      );
+    }
+
+    const root = document.createElement("div");
+    document.body.append(root);
+    const dispose = render(() => <App />, root);
+
+    expect(root.querySelector<HTMLButtonElement>('button[aria-label="Close"]')).toBeNull();
+    expect(root.querySelector<HTMLSpanElement>(".tg-toolbar-spacer")).toBeNull();
 
     dispose();
     root.remove();

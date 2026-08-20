@@ -1,4 +1,4 @@
-import type { Accessor, JSX } from "solid-js";
+import { Show, type Accessor, type JSX } from "solid-js";
 import type { RichTextEditor } from "@teamgaga/richtext-core";
 import { useRichText, type SolidRichTextController } from "@teamgaga/richtext-solid";
 import { buildLinkRequestContext, type RequestLinkHandler } from "../commands/link-request";
@@ -36,6 +36,8 @@ export interface RichTextToolbarProps {
   onRequestLink?: RequestLinkHandler;
   /** Host extension: close the native/app editor shell. */
   onRequestClose?: () => void;
+  /** Whether to show the toolbar close button (defaults to true). */
+  showCloseButton?: boolean;
   /** True while the host title input owns focus. */
   titleFocused?: boolean | Accessor<boolean>;
 }
@@ -221,14 +223,16 @@ export function RichTextToolbar(props: RichTextToolbarProps): JSX.Element {
       >
         <IconBlockquote size={20} />
       </ToolbarButton>
-      <span class="tg-toolbar-spacer" aria-hidden="true" />
-      <ToolbarButton
-        label="Close"
-        disabled={props.onRequestClose === undefined}
-        onPress={() => props.onRequestClose?.()}
-      >
-        <IconClose size={20} />
-      </ToolbarButton>
+      <Show when={props.showCloseButton !== false}>
+        <span class="tg-toolbar-spacer" aria-hidden="true" />
+        <ToolbarButton
+          label="Close"
+          disabled={props.onRequestClose === undefined}
+          onPress={() => props.onRequestClose?.()}
+        >
+          <IconClose size={20} />
+        </ToolbarButton>
+      </Show>
     </div>
   );
 }

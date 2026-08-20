@@ -46,7 +46,6 @@ export function createTitleInput(options: TitleInputOptions): TitleInputHandle {
   });
 
   textarea.addEventListener("focus", () => {
-    editor?.blur();
     options.onFocus();
   });
 

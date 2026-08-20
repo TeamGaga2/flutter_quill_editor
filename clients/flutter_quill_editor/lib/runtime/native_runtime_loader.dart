@@ -29,6 +29,7 @@ abstract class NativeRuntimeLoader {
     required int mediaMaxSize,
     required String toolbarMode,
     required bool showTitleInput,
+    bool showCloseButton = true,
     String? titlePlaceholder,
     String? placeholder,
   });

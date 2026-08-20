@@ -68,6 +68,7 @@ String buildRichTextTransportBootstrapJs({
   int? mediaMaxSize,
   String? toolbarMode,
   bool? showTitleInput,
+  bool? showCloseButton,
   String? titlePlaceholder,
   String? placeholder,
   String? shellBackgroundColor,
@@ -78,6 +79,7 @@ String buildRichTextTransportBootstrapJs({
   final maxSize = mediaMaxSize ?? richTextWebMediaMaxSizeFor(isDesktopRichTextSurface: false);
   final mode = toolbarMode ?? richTextWebToolbarModeFor(isDesktopRichTextSurface: false);
   final showTitle = showTitleInput ?? kRichTextWebShowTitleInput;
+  final closeButton = showCloseButton ?? true;
   final titleHint = jsonEncode(titlePlaceholder ?? 'Enter a title');
   // Flutter l10n is source of truth; fall back matches runtime default.
   final bodyPlaceholder = jsonEncode(placeholder ?? 'Enter text');
@@ -128,6 +130,7 @@ String buildRichTextTransportBootstrapJs({
     // Flutter host is source of truth for body placeholder (l10n).
     placeholder: $bodyPlaceholder,
     showTitleInput: $showTitle,
+    showCloseButton: $closeButton,
     titlePlaceholder: $titleHint,
     // Flutter host is source of truth — always overwrite so a stale white
     // default from an earlier inject cannot win after the real shell color arrives.
