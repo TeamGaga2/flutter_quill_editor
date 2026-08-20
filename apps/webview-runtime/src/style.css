@@ -652,6 +652,8 @@ body {
   box-shadow: none;
 }
 
+/* Hide scrollbar stepper buttons (arrow triangles) globally and on editor components */
+::-webkit-scrollbar-button,
 .tg-webview-editor-root .tg-richtext-host-editor::-webkit-scrollbar-button,
 .tg-webview-title-input::-webkit-scrollbar-button {
   display: none;
@@ -663,6 +665,11 @@ body {
 .tg-webview-title-input::-webkit-scrollbar-thumb {
   background: var(--tgg-fill10);
   border-radius: 3px;
+}
+
+.tg-webview-editor-root .tg-richtext-host-editor::-webkit-scrollbar-thumb:hover,
+.tg-webview-title-input::-webkit-scrollbar-thumb:hover {
+  background: var(--tgg-icon04);
 }
 
 /* Quill adds `.ql-container` onto the same node as `.tg-richtext-host-editor`.

@@ -290,4 +290,13 @@ describe("ADR 0002 style contract", () => {
     );
     expect(modalBtns).toContain("border-radius: 20px;");
   });
+
+  it("hides scrollbar stepper buttons and provides custom scrollbar chrome", () => {
+    expect(css).toContain("::-webkit-scrollbar-button");
+    expect(css).toContain("display: none;");
+    expect(css).toContain(
+      ".tg-webview-editor-root .tg-richtext-host-editor::-webkit-scrollbar-thumb",
+    );
+    expect(css).toContain("background: var(--tgg-fill10);");
+  });
 });

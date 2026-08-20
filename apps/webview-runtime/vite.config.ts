@@ -45,6 +45,9 @@ export default defineConfig(() => {
 
   return {
     base: "./",
+    test: {
+      environment: "happy-dom",
+    },
     define: {
       __TG_RUNTIME_BUILD_ID__: JSON.stringify(buildId),
     },
