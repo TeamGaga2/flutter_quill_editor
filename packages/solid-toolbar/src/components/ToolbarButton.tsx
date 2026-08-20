@@ -26,6 +26,12 @@ export function ToolbarButton(props: ToolbarButtonProps): JSX.Element {
       data-active={props.active ? "" : undefined}
       disabled={props.disabled}
       tabIndex={-1}
+      onPointerDown={(e) => {
+        e.preventDefault();
+      }}
+      onMouseDown={(e) => {
+        e.preventDefault();
+      }}
       onClick={() => {
         props.onPress();
       }}

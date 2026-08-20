@@ -159,8 +159,8 @@ describe("optional Solid toolbar", () => {
       root,
     );
     const button = root.querySelector("button");
-    const pointerDown = new PointerEvent("pointerdown", { cancelable: true });
-    const mouseDown = new MouseEvent("mousedown", { cancelable: true });
+    const pointerDown = new PointerEvent("pointerdown", { bubbles: true, cancelable: true });
+    const mouseDown = new MouseEvent("mousedown", { bubbles: true, cancelable: true });
 
     button?.dispatchEvent(pointerDown);
     button?.dispatchEvent(mouseDown);
@@ -170,7 +170,8 @@ describe("optional Solid toolbar", () => {
     expect(button?.getAttribute("aria-label")).toBe("Bold");
     expect(button?.getAttribute("aria-pressed")).toBe("true");
     expect(button?.hasAttribute("data-active")).toBe(true);
-    expect(pointerDown.defaultPrevented).toBe(false);
+    expect(pointerDown.defaultPrevented).toBe(true);
+    expect(mouseDown.defaultPrevented).toBe(true);
     expect(onPress).toHaveBeenCalledTimes(1);
     dispose();
     root.remove();
@@ -182,24 +183,26 @@ describe("optional Solid toolbar", () => {
     document.body.append(root);
     const dispose = render(() => <HeaderStyleMenu value="body" onSelect={onSelect} />, root);
     const trigger = root.querySelector<HTMLButtonElement>('button[aria-label="Header"]');
-    const pointerDown = new PointerEvent("pointerdown", { cancelable: true });
-    const mouseDown = new MouseEvent("mousedown", { cancelable: true });
+    const pointerDown = new PointerEvent("pointerdown", { bubbles: true, cancelable: true });
+    const mouseDown = new MouseEvent("mousedown", { bubbles: true, cancelable: true });
 
     trigger?.dispatchEvent(pointerDown);
     trigger?.dispatchEvent(mouseDown);
     trigger?.click();
 
-    expect(pointerDown.defaultPrevented).toBe(false);
+    expect(pointerDown.defaultPrevented).toBe(true);
+    expect(mouseDown.defaultPrevented).toBe(true);
     expect(trigger?.getAttribute("aria-expanded")).toBe("true");
 
     const option = root.querySelector<HTMLButtonElement>('button[aria-label="H2"]');
-    const optionPointerDown = new PointerEvent("pointerdown", { cancelable: true });
-    const optionMouseDown = new MouseEvent("mousedown", { cancelable: true });
+    const optionPointerDown = new PointerEvent("pointerdown", { bubbles: true, cancelable: true });
+    const optionMouseDown = new MouseEvent("mousedown", { bubbles: true, cancelable: true });
     option?.dispatchEvent(optionPointerDown);
     option?.dispatchEvent(optionMouseDown);
     option?.click();
 
-    expect(optionPointerDown.defaultPrevented).toBe(false);
+    expect(optionPointerDown.defaultPrevented).toBe(true);
+    expect(optionMouseDown.defaultPrevented).toBe(true);
     expect(onSelect).toHaveBeenCalledWith(2);
     expect(trigger?.getAttribute("aria-expanded")).toBe("false");
 
