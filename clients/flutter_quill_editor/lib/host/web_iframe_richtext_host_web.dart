@@ -32,7 +32,7 @@ class WebIframeRichTextHost extends RichTextWebViewHost {
         ..style.border = 'none'
         ..style.width = '100%'
         ..style.height = '100%'
-        ..setAttribute('sandbox', 'allow-scripts allow-same-origin')
+        ..setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms')
         ..referrerPolicy = 'no-referrer';
       if (!_iframeMounted.isCompleted) {
         _iframeMounted.complete();

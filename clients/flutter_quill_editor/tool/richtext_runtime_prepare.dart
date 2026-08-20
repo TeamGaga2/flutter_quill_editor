@@ -3,6 +3,9 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:archive/archive.dart';
+import 'package:crypto/crypto.dart';
+
 import 'runtime_delivery.dart';
 import 'package:path/path.dart' as p;
 
@@ -18,11 +21,15 @@ Future<void> main(List<String> arguments) async {
         p.join(appRoot.path, 'richtext-runtime-channel.json'),
   );
 
-  if (arguments.length > 1 ||
-      (arguments.isNotEmpty && arguments.single != '--verify' && arguments.single != '--clean')) {
-    throw ArgumentError('supported arguments are: --verify or --clean');
+  if (arguments.length > 2 ||
+      (arguments.isNotEmpty &&
+          arguments.first != '--verify' &&
+          arguments.first != '--clean' &&
+          arguments.first != '--local' &&
+          arguments.first != '--from-dist')) {
+    throw ArgumentError('supported arguments are: --verify, --clean, --local, or --from-dist [distPath]');
   }
-  final argument = arguments.isEmpty ? null : arguments.single;
+  final argument = arguments.isEmpty ? null : arguments.first;
   if (argument == '--verify') {
     await _verifyExisting(output);
     stdout.writeln('richtext runtime output verified');
@@ -31,6 +38,23 @@ Future<void> main(List<String> arguments) async {
   if (argument == '--clean') {
     await _cleanGenerated(output, manifestFile);
     stdout.writeln('richtext runtime generated output cleaned');
+    return;
+  }
+  if (argument == '--local' || argument == '--from-dist') {
+    final distPath = arguments.length > 1
+        ? arguments[1]
+        : p.normalize(p.join(appRoot.path, '..', '..', 'apps', 'webview-runtime', 'dist'));
+    final distDir = Directory(distPath);
+    if (!await distDir.exists()) {
+      throw StateError('dist directory does not exist: $distPath. Please build webview-runtime first.');
+    }
+    await _prepareFromLocalDist(
+      distDir: distDir,
+      output: output,
+      manifestFile: manifestFile,
+      channelFile: channelFile,
+    );
+    stdout.writeln('richtext runtime prepared from local dist: $distPath');
     return;
   }
 
@@ -118,6 +142,104 @@ Future<void> _cleanGenerated(Directory output, File manifestFile) async {
     }
   }
   if (await manifestFile.exists()) await manifestFile.delete();
+}
+
+String _branchSlug(String branch) {
+  final slug = branch
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+      .replaceAll(RegExp(r'^-+|-+$'), '');
+  final trimmed = slug.length > 48 ? slug.substring(0, 48) : slug;
+  if (trimmed.isEmpty) throw ArgumentError('branch cannot produce a release slug: $branch');
+  return trimmed;
+}
+
+Future<void> _prepareFromLocalDist({
+  required Directory distDir,
+  required Directory output,
+  required File manifestFile,
+  required File channelFile,
+}) async {
+  final versionFile = File(p.join(distDir.path, 'runtime-version.json'));
+  if (!await versionFile.exists()) {
+    throw StateError('runtime-version.json is missing in dist directory: ${distDir.path}');
+  }
+  final version = jsonDecode(await versionFile.readAsString()) as Map<String, Object?>;
+  final config = RuntimeChannelConfig.fromJson(jsonDecode(await channelFile.readAsString()));
+
+  final tarArchive = Archive();
+  for (final entity in distDir.listSync(recursive: true)) {
+    if (entity is File) {
+      final relativePath = p.relative(entity.path, from: distDir.path).replaceAll(r'\', '/');
+      final bytes = await entity.readAsBytes();
+      tarArchive.addFile(ArchiveFile(relativePath, bytes.length, bytes));
+    }
+  }
+  final tarBytes = TarEncoder().encode(tarArchive);
+  final tarGzBytes = GZipEncoder().encode(tarBytes);
+  final archiveSha256 = sha256.convert(tarGzBytes).toString();
+
+  final branch = config.branch;
+  final branchId = config.branchIdentity;
+  final sourceCommit = (version['sourceCommit'] as String? ?? '').toLowerCase();
+  final releaseTag = 'webview-runtime-channel-${_branchSlug(branch)}-${branchId.substring(0, 16)}-1';
+
+  final metadata = RuntimeReleaseMetadata(
+    branch: branch,
+    branchIdentity: branchId,
+    sourceCommit: sourceCommit,
+    pipelineId: 1,
+    pipelineIid: 1,
+    releaseTag: releaseTag,
+    archiveName: kRuntimeArchiveName,
+    archiveSha256: archiveSha256,
+    protocolVersion: version['protocolVersion'] as int,
+    hostEnvelopeVersion: version['hostEnvelopeVersion'] as int,
+    runtimeBuildId: version['buildId'] as String?,
+    generatedAt: version['builtAt'] as String?,
+  );
+
+  final temporaryRoot = await createRuntimePreparationDirectory(output.parent);
+  try {
+    final extracted = Directory(p.join(temporaryRoot.path, 'runtime'));
+    await extracted.create(recursive: true);
+    for (final entity in distDir.listSync(recursive: true)) {
+      final relativePath = p.relative(entity.path, from: distDir.path);
+      final destPath = p.join(extracted.path, relativePath);
+      if (entity is Directory) {
+        await Directory(destPath).create(recursive: true);
+      } else if (entity is File) {
+        await File(destPath).parent.create(recursive: true);
+        await entity.copy(destPath);
+      }
+    }
+    verifyRuntimeDirectory(extracted, metadata);
+    await File(p.join(extracted.path, kRuntimeMetadataName)).writeAsString(
+      '${jsonEncode(
+        <String, Object?>{
+          'schemaVersion': 1,
+          'branch': metadata.branch,
+          'branchIdentity': metadata.branchIdentity,
+          'sourceCommit': metadata.sourceCommit,
+          'pipelineId': metadata.pipelineId,
+          'pipelineIid': metadata.pipelineIid,
+          'releaseTag': metadata.releaseTag,
+          'archiveName': metadata.archiveName,
+          'archiveSha256': metadata.archiveSha256,
+          'protocolVersion': metadata.protocolVersion,
+          'hostEnvelopeVersion': metadata.hostEnvelopeVersion,
+          'runtimeBuildId': metadata.runtimeBuildId,
+          'generatedAt': metadata.generatedAt,
+        },
+      )}\n',
+      flush: true,
+    );
+    final manifest = generateRuntimeManifest(metadata, version);
+    await atomicallyMaterializeRuntime(prepared: extracted, destination: output);
+    await replaceFileAtomically(manifestFile, manifest);
+  } finally {
+    if (await temporaryRoot.exists()) await temporaryRoot.delete(recursive: true);
+  }
 }
 
 Future<void> replaceFileAtomically(File destination, String contents) async {

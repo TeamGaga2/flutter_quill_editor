@@ -187,9 +187,14 @@ export function LinkPopover(props: LinkPopoverProps): JSX.Element {
                 {labels().cancel}
               </button>
               <button
-                type="submit"
+                type="button"
                 class="tg-link-popover-btn-ok"
                 disabled={!props.controller.canSubmit()}
+                onClick={() => {
+                  if (props.controller.canSubmit()) {
+                    props.controller.submit();
+                  }
+                }}
               >
                 {labels().ok}
               </button>

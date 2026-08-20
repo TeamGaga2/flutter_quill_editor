@@ -372,4 +372,60 @@ describe("LinkPopover Component and Host", () => {
     dispose();
     container.remove();
   });
+
+  it("submits via OK button click with type='button' without relying on native form submit", () => {
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+
+    const adapter = new MockEditorAdapter();
+    const editor = createEditor({ adapter });
+    let hostController!: any;
+
+    const dispose = render(
+      () => (
+        <LinkPopoverHost
+          editor={() => editor}
+          locale="zh"
+          onControllerReady={(c) => {
+            hostController = c;
+          }}
+        />
+      ),
+      container,
+    );
+
+    hostController.open();
+
+    const okBtn = container.querySelector<HTMLButtonElement>(".tg-link-popover-btn-ok")!;
+    expect(okBtn).not.toBeNull();
+    expect(okBtn.getAttribute("type")).toBe("button");
+    expect(okBtn.disabled).toBe(true);
+
+    const urlInput = container.querySelector<HTMLInputElement>("#tg-link-url-input")!;
+    const textInput = container.querySelector<HTMLInputElement>("#tg-link-text-input")!;
+
+    urlInput.value = "https://teamgaga.com";
+    urlInput.dispatchEvent(new Event("input", { bubbles: true }));
+    textInput.value = "TeamGaga";
+    textInput.dispatchEvent(new Event("input", { bubbles: true }));
+
+    expect(okBtn.disabled).toBe(false);
+
+    okBtn.click();
+
+    expect(hostController.state().isOpen).toBe(false);
+    expect(adapter.commands).toEqual([
+      {
+        type: "insert-link",
+        link: {
+          url: "https://teamgaga.com",
+          text: "TeamGaga",
+        },
+        selection: undefined,
+      },
+    ]);
+
+    dispose();
+    container.remove();
+  });
 });
