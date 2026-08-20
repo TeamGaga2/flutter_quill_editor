@@ -571,6 +571,21 @@ export async function mountEditor(options: MountEditorOptions): Promise<MountedE
     adapterFactory,
     uiController: {
       openLinkForm: () => linkPopoverController?.open(),
+      isLinkPopoverOpen: () => Boolean(linkPopoverController?.isOpen()),
+      focusLinkPopover: () => {
+        const urlInput = document.getElementById("tg-link-url-input") as HTMLInputElement | null;
+        const textInput = document.getElementById("tg-link-text-input") as HTMLInputElement | null;
+        if (document.activeElement === textInput) {
+          textInput?.focus();
+        } else if (urlInput) {
+          try {
+            urlInput.focus({ preventScroll: true });
+          } catch {
+            urlInput.focus();
+          }
+          urlInput.select();
+        }
+      },
     },
     onEditorReady: (editor: RichTextEditor) => {
       editorRef = editor;

@@ -7,6 +7,8 @@ import {
 
 export interface HostUIController {
   openLinkForm?: () => void;
+  isLinkPopoverOpen?: () => boolean;
+  focusLinkPopover?: () => void;
 }
 
 export function dispatchEditorCommand(
@@ -148,7 +150,11 @@ export function dispatchEditorCommand(
         return success(command);
 
       case "focus":
-        editor.focus();
+        if (uiController?.isLinkPopoverOpen?.()) {
+          uiController.focusLinkPopover?.();
+        } else {
+          editor.focus();
+        }
         return success(command);
 
       case "blur":

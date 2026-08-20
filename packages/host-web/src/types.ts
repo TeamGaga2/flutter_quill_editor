@@ -2,6 +2,7 @@ import type { JSX } from "solid-js";
 import type { RichTextEditor } from "@teamgaga/richtext-core";
 import type { RichTextAdapterFactory } from "@teamgaga/richtext-solid";
 import type { HostTransport } from "./bridge/transport";
+import type { HostUIController } from "./dispatcher/command-dispatcher";
 import type { RichTextHostError } from "./errors";
 
 export interface CreateRichTextHostOptions {
@@ -27,9 +28,7 @@ export interface CreateRichTextHostOptions {
   /** Called when the core editor is mounted and ready for shell wiring (e.g. title input). */
   onEditorReady?: (editor: RichTextEditor) => void;
   /** Optional UI controller (e.g. in-web link popover) to handle UI commands like open_link_form. */
-  uiController?: {
-    openLinkForm?: () => void;
-  };
+  uiController?: HostUIController;
 }
 
 export interface RichTextHost {
