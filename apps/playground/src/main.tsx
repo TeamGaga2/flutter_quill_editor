@@ -2,6 +2,8 @@ import { createEffect, onCleanup, type JSX } from "solid-js";
 import { render } from "solid-js/web";
 import {
   createRichTextEditor,
+  LinkPopoverHost,
+  type LinkPopoverController,
   RichTextEditor,
   RichTextProvider,
   useRichText,
@@ -42,6 +44,7 @@ function SnapshotDebug(): JSX.Element {
 
 function App(): JSX.Element {
   const editor = createRichTextEditor();
+  let linkController: LinkPopoverController | undefined;
 
   return (
     <main class="page">
@@ -61,8 +64,15 @@ function App(): JSX.Element {
             onRequestMention={(selection) => console.log("request_mention", selection)}
             onRequestChannel={(selection) => console.log("request_channel", selection)}
             onRequestImage={(selection) => console.log("request_image", selection)}
+            onOpenLinkForm={() => linkController?.open()}
           />
           <RichTextEditor class="editor" aria-label="Rich text editor" />
+          <LinkPopoverHost
+            editor={() => editor.editor()}
+            onControllerReady={(controller) => {
+              linkController = controller;
+            }}
+          />
         </section>
 
         <section>

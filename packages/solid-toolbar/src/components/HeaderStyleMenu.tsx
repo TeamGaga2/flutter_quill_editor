@@ -56,6 +56,7 @@ function optionFor(value: HeaderStyleValue) {
 export function HeaderStyleMenu(props: HeaderStyleMenuProps): JSX.Element {
   const [open, setOpen] = createSignal(false);
   const [rootEl, setRootEl] = createSignal<HTMLDivElement | undefined>();
+  const [listStyle, setListStyle] = createSignal<JSX.CSSProperties>({});
 
   const close = (): void => {
     setOpen(false);
@@ -63,6 +64,21 @@ export function HeaderStyleMenu(props: HeaderStyleMenuProps): JSX.Element {
 
   createEffect(() => {
     if (!open()) return;
+
+    const updatePosition = (): void => {
+      const el = rootEl();
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      setListStyle({
+        position: "fixed",
+        top: `${Math.round(rect.bottom + 4)}px`,
+        left: `${Math.round(rect.left)}px`,
+        "z-index": "1000",
+      });
+    };
+
+    updatePosition();
+    const frame = requestAnimationFrame(updatePosition);
 
     const onPointerDown = (event: PointerEvent): void => {
       const target = event.target;
@@ -79,9 +95,14 @@ export function HeaderStyleMenu(props: HeaderStyleMenuProps): JSX.Element {
 
     document.addEventListener("pointerdown", onPointerDown, true);
     document.addEventListener("keydown", onKeyDown);
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
     onCleanup(() => {
+      cancelAnimationFrame(frame);
       document.removeEventListener("pointerdown", onPointerDown, true);
       document.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
     });
   });
 
@@ -117,7 +138,12 @@ export function HeaderStyleMenu(props: HeaderStyleMenuProps): JSX.Element {
         </Tooltip>
       )}
       <Show when={open()}>
-        <div class="tg-toolbar-header-menu__list" role="listbox" aria-label="Header styles">
+        <div
+          class="tg-toolbar-header-menu__list"
+          style={listStyle()}
+          role="listbox"
+          aria-label="Header styles"
+        >
           <For each={[...HEADER_OPTIONS]}>
             {(option) => (
               <button
