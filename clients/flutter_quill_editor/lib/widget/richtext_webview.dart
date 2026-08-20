@@ -87,6 +87,7 @@ class RichTextWebView extends StatefulWidget {
     this.emojiDefinitions = const <RichTextEmojiDefinition>[],
     this.isDesktopRichTextSurface = false,
     this.windowsHostCreator,
+    this.failedPlaceholderBuilder,
   });
 
   /// Called once the editor controller is created (before host ready). Fires
@@ -145,6 +146,13 @@ class RichTextWebView extends StatefulWidget {
   /// host creation fails with a
   /// [RichTextWebViewHostCreationException].
   final RichTextWindowsHostCreator? windowsHostCreator;
+
+  /// Optional builder for custom failure placeholder widget.
+  final Widget Function(
+    BuildContext context,
+    RichTextWebViewFailure? failure,
+    VoidCallback onRetry,
+  )? failedPlaceholderBuilder;
 
   @override
   State<RichTextWebView> createState() => RichTextWebViewState();
@@ -1038,11 +1046,12 @@ class RichTextWebViewState extends State<RichTextWebView> {
     final shellColor = widget.shellBackgroundColor ?? widget.backgroundColor;
     final Widget core;
     if (_lifecycle == RichTextWebViewLifecycle.failed) {
-      core = RichTextWebViewFailedPlaceholder(
-        failure: _lastFailure,
-        backgroundColor: shellColor,
-        onRetry: retry,
-      );
+      core = widget.failedPlaceholderBuilder?.call(context, _lastFailure, retry) ??
+          RichTextWebViewFailedPlaceholder(
+            failure: _lastFailure,
+            backgroundColor: shellColor,
+            onRetry: retry,
+          );
     } else {
       final host = _host;
       final webSurface = host?.buildSurface() ?? const SizedBox.expand();
