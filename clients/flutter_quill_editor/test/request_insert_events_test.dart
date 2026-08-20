@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter_quill_editor/bridge/richtext_transport.dart';
 import 'package:flutter_quill_editor/protocol/codec.dart';
 import 'package:flutter_quill_editor/protocol/messages.dart';
