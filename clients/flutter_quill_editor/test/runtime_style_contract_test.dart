@@ -60,7 +60,7 @@ void main() {
       expect(css, contains('--tgg-primary03:#38c585'));
       expect(css, contains('--tgg-primary04:#88dcb6'));
       expect(css, contains('--tgg-shadow-primary:0px 8px 40px 0px #0003'));
-      expect(css, contains('--tgg-scrim-black70:#000000b3'));
+      expect(css, contains('--tgg-scrim-secondary:var(--color-old-scrim-secondary,#0000004d)'));
 
       final dark = RegExp(r'html\.tg-theme-dark\{[^}]*\}').firstMatch(css);
       expect(dark, isNotNull);
@@ -79,6 +79,7 @@ void main() {
       expect(darkRule, contains('--tgg-schemes-on-surface-variant:#c0c9c0'));
       expect(darkRule, contains('--tgg-primary03:#009c64'));
       expect(darkRule, contains('--tgg-primary04:#4a8f70'));
+      expect(darkRule, contains('--tgg-scrim-secondary:var(--color-old-scrim-secondary,#0000008c)'));
     });
 
     test('paints the editor document with Surface Container Low', () {

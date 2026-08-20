@@ -44,7 +44,9 @@ describe("ADR 0002 style contract", () => {
     expect(light).toContain("--tgg-primary03: #38c585");
     expect(light).toContain("--tgg-primary04: #88dcb6");
     expect(light).toContain("--tgg-shadow-primary: 0px 8px 40px 0px rgba(0, 0, 0, 0.2)");
-    expect(light).toContain("--tgg-scrim-black70: rgba(0, 0, 0, 0.70196)");
+    expect(light).toContain(
+      "--tgg-scrim-secondary: var(--color-old-scrim-secondary, rgba(0, 0, 0, 0.3));",
+    );
 
     const dark = rule("html.tg-theme-dark");
     expect(dark).toContain("--tgg-schemes-on-surface: #e4e8e3");
@@ -68,7 +70,9 @@ describe("ADR 0002 style contract", () => {
     expect(dark).toContain("--tgg-primary03: #009c64");
     expect(dark).toContain("--tgg-primary04: #4a8f70");
     expect(dark).toContain("--tgg-shadow-primary: 0px 8px 40px 0px rgba(0, 0, 0, 0.2)");
-    expect(dark).toContain("--tgg-scrim-black70: rgba(0, 0, 0, 0.70196)");
+    expect(dark).toContain(
+      "--tgg-scrim-secondary: var(--color-old-scrim-secondary, rgba(0, 0, 0, 0.55));",
+    );
   });
 
   it("paints the WebView editor surface with Surface Container Low", () => {
@@ -258,13 +262,16 @@ describe("ADR 0002 style contract", () => {
     expect(desktop).toContain("background: var(--tgg-fill04);");
     expect(desktop).toContain("box-shadow: var(--tgg-shadow-primary);");
 
-    const modal = rule(".tg-link-popover-modal");
+    const modal = rule(".tg-link-popover.tg-link-popover-modal,\n.tg-link-popover-modal");
     expect(modal).toContain("max-width: 420px;");
     expect(modal).toContain("border-radius: 16px;");
     expect(modal).toContain("background: var(--tgg-fill04);");
 
-    const scrim = rule(".tg-link-popover-modal-scrim");
-    expect(scrim).toContain("background: var(--tgg-scrim-black70);");
+    const scrim = rule(
+      ".tg-link-popover-scrim.tg-link-popover-scrim--modal,\n.tg-link-popover-scrim--modal,\n.tg-link-popover-modal-scrim",
+    );
+    expect(scrim).toContain("background: var(--tgg-scrim-secondary);");
+    expect(scrim).toContain("padding: 20px;");
 
     const okBtn = rule(".tg-link-popover-btn-ok");
     expect(okBtn).toContain("background: var(--tgg-schemes-primary);");

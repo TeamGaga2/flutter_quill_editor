@@ -328,4 +328,48 @@ describe("LinkPopover Component and Host", () => {
     dispose();
     container.remove();
   });
+
+  it("renders mobile modal dialog when isMobile is true", () => {
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+
+    const adapter = new MockEditorAdapter();
+    const editor = createEditor({ adapter });
+    let hostController!: any;
+
+    const dispose = render(
+      () => (
+        <LinkPopoverHost
+          editor={() => editor}
+          locale="zh"
+          isMobile={true}
+          onControllerReady={(c) => {
+            hostController = c;
+          }}
+        />
+      ),
+      container,
+    );
+
+    hostController.open();
+
+    const scrim = container.querySelector<HTMLElement>(".tg-link-popover-scrim")!;
+    expect(scrim).not.toBeNull();
+    expect(scrim.classList.contains("tg-link-popover-scrim--modal")).toBe(true);
+
+    const dialog = container.querySelector<HTMLElement>(".tg-link-popover")!;
+    expect(dialog).not.toBeNull();
+    expect(dialog.classList.contains("tg-link-popover-modal")).toBe(true);
+
+    const title = container.querySelector<HTMLElement>(".tg-link-popover-modal-title")!;
+    expect(title).not.toBeNull();
+    expect(title.textContent).toBe("添加链接");
+
+    // In mobile mode, positioning is handled by CSS flexbox centering in scrim, not inline coordinates
+    expect(dialog.style.left).toBe("");
+    expect(dialog.style.top).toBe("");
+
+    dispose();
+    container.remove();
+  });
 });

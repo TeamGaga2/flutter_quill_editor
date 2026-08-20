@@ -83,7 +83,7 @@
 
   --tgg-shadow-primary: 0px 8px 40px 0px rgba(0, 0, 0, 0.2);
   --tgg-shadow-secondary: 0px 1px 2px 0px rgba(0, 0, 0, 0.1);
-  --tgg-scrim-black70: rgba(0, 0, 0, 0.70196);
+  --tgg-scrim-secondary: var(--color-old-scrim-secondary, rgba(0, 0, 0, 0.3));
 
   /* derived: toolbar tooltip — high-contrast dark overlay with light text */
   --tgg-tooltip-bg: #2e2e2e;
@@ -145,7 +145,7 @@ html.tg-theme-dark {
   --tgg-yellow-tertiary: rgba(255, 200, 0, 0.2);
   --tgg-shadow-primary: 0px 8px 40px 0px rgba(0, 0, 0, 0.2);
   --tgg-shadow-secondary: 0px 1px 2px 0px rgba(0, 0, 0, 0.1);
-  --tgg-scrim-black70: rgba(0, 0, 0, 0.70196);
+  --tgg-scrim-secondary: var(--color-old-scrim-secondary, rgba(0, 0, 0, 0.55));
   --tgg-tooltip-bg: #3a3a3a;
   --tgg-tooltip-text: #fafafa;
 }
@@ -926,19 +926,34 @@ body {
 /*
  * Link Popover & Modal (ADR 0004)
  * Desktop: Caret-anchored floating layer (360x230, fill04, shadow-primary).
- * Mobile: Centered modal dialog (max-width 420, fill04, scrim-black70).
+ * Mobile: Centered modal dialog (max-width 420, fill04, Scrim/Secondary).
  */
 .tg-link-popover-scrim {
   position: fixed;
   inset: 0;
-  z-index: 29;
+  z-index: 999;
   background: transparent;
   cursor: default;
 }
 
+/* Mobile Modal Scrim: centers the modal horizontally & vertically with 20px edge margin */
+.tg-link-popover-scrim.tg-link-popover-scrim--modal,
+.tg-link-popover-scrim--modal,
+.tg-link-popover-modal-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: var(--tgg-scrim-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
 .tg-link-popover {
   position: fixed;
-  z-index: 30;
+  z-index: 1000;
   width: 360px;
   max-height: 230px;
   padding: 24px;
@@ -1054,27 +1069,25 @@ body {
 }
 
 /* Mobile Modal Dialog */
-.tg-link-popover-modal-scrim {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  background: var(--tgg-scrim-black70);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  box-sizing: border-box;
-}
-
+.tg-link-popover.tg-link-popover-modal,
 .tg-link-popover-modal {
+  position: relative;
+  left: auto !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
   width: 100%;
   max-width: 420px;
+  max-height: none;
+  height: auto;
   padding: 28px 24px 24px;
   border-radius: 16px;
   background: var(--tgg-fill04);
+  box-shadow: var(--tgg-shadow-primary);
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+  margin: 0 auto;
 }
 
 .tg-link-popover-modal-title {
@@ -1115,5 +1128,6 @@ body {
 .tg-link-popover-modal .tg-link-popover-btn-ok {
   flex: 1;
   width: auto;
+  height: 40px;
   padding: 0 24px;
 }
