@@ -22,14 +22,50 @@ describe("protocol events and responses", () => {
   });
 
   it("validates nullable selection events and responses", () => {
-    expect(
-      parseProtocolMessage({
-        version: PROTOCOL_VERSION,
-        kind: "event",
-        type: "selection_change",
-        payload: { selection: null },
-      }).ok,
-    ).toBe(true);
+    for (const type of [
+      "selection_change",
+      "request_emoji",
+      "request_mention",
+      "request_channel",
+      "request_image",
+    ] as const) {
+      expect(
+        parseProtocolMessage({
+          version: PROTOCOL_VERSION,
+          kind: "event",
+          type,
+          payload: { selection: null },
+        }).ok,
+      ).toBe(true);
+      expect(
+        parseProtocolMessage({
+          version: PROTOCOL_VERSION,
+          kind: "event",
+          type,
+          payload: { selection: { start: 1, end: 3 } },
+        }).ok,
+      ).toBe(true);
+      expectError(
+        {
+          version: PROTOCOL_VERSION,
+          kind: "event",
+          type,
+          payload: {},
+        },
+        "invalid_payload",
+        "$.payload.selection",
+      );
+      expectError(
+        {
+          version: PROTOCOL_VERSION,
+          kind: "event",
+          type,
+          payload: { selection: null, extra: true },
+        },
+        "invalid_payload",
+        "$.payload.extra",
+      );
+    }
     expect(
       parseProtocolMessage({
         version: PROTOCOL_VERSION,

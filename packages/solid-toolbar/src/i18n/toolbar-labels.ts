@@ -11,6 +11,10 @@
  */
 
 export interface ToolbarLabels {
+  readonly emoji: string;
+  readonly mention: string;
+  readonly channel: string;
+  readonly image: string;
   readonly header: string;
   readonly bold: string;
   readonly italic: string;
@@ -25,6 +29,10 @@ export interface ToolbarLabels {
 }
 
 const CHINESE_LABELS: ToolbarLabels = Object.freeze({
+  emoji: "表情",
+  mention: "提及",
+  channel: "频道",
+  image: "图片",
   header: "字号",
   bold: "粗体",
   italic: "斜体",
@@ -39,6 +47,10 @@ const CHINESE_LABELS: ToolbarLabels = Object.freeze({
 });
 
 const ENGLISH_LABELS: ToolbarLabels = Object.freeze({
+  emoji: "Emoji",
+  mention: "Mention",
+  channel: "Channel",
+  image: "Image",
   header: "Font size",
   bold: "Bold",
   italic: "Italic",

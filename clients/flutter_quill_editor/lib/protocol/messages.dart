@@ -1191,6 +1191,86 @@ final class RequestCloseEvent extends ProtocolEvent {
   ProtocolJsonMap get payload => const <String, Object?>{};
 }
 
+/// Web→Flutter UI intent: request host to open emoji picker.
+final class RequestEmojiEvent extends ProtocolEvent {
+  RequestEmojiEvent({
+    this.selection,
+    this.version = kRichTextProtocolVersion,
+  });
+
+  @override
+  final int version;
+  final ProtocolSelection? selection;
+
+  @override
+  String get type => 'request_emoji';
+
+  @override
+  ProtocolJsonMap get payload => <String, Object?>{
+    'selection': selection?.toJson(),
+  };
+}
+
+/// Web→Flutter UI intent: request host to open mention selector.
+final class RequestMentionEvent extends ProtocolEvent {
+  RequestMentionEvent({
+    this.selection,
+    this.version = kRichTextProtocolVersion,
+  });
+
+  @override
+  final int version;
+  final ProtocolSelection? selection;
+
+  @override
+  String get type => 'request_mention';
+
+  @override
+  ProtocolJsonMap get payload => <String, Object?>{
+    'selection': selection?.toJson(),
+  };
+}
+
+/// Web→Flutter UI intent: request host to open channel selector.
+final class RequestChannelEvent extends ProtocolEvent {
+  RequestChannelEvent({
+    this.selection,
+    this.version = kRichTextProtocolVersion,
+  });
+
+  @override
+  final int version;
+  final ProtocolSelection? selection;
+
+  @override
+  String get type => 'request_channel';
+
+  @override
+  ProtocolJsonMap get payload => <String, Object?>{
+    'selection': selection?.toJson(),
+  };
+}
+
+/// Web→Flutter UI intent: request host to open media picker.
+final class RequestImageEvent extends ProtocolEvent {
+  RequestImageEvent({
+    this.selection,
+    this.version = kRichTextProtocolVersion,
+  });
+
+  @override
+  final int version;
+  final ProtocolSelection? selection;
+
+  @override
+  String get type => 'request_image';
+
+  @override
+  ProtocolJsonMap get payload => <String, Object?>{
+    'selection': selection?.toJson(),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------

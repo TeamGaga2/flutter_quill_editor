@@ -4,7 +4,12 @@ import {
   PROTOCOL_VERSION,
   type EditorEventMessage,
   type ProtocolEditorState,
+  type ProtocolSelection,
+  type RequestChannelEvent,
   type RequestCloseEvent,
+  type RequestEmojiEvent,
+  type RequestImageEvent,
+  type RequestMentionEvent,
 } from "@teamgaga/richtext-protocol";
 import { createHostError, type RichTextHostError } from "../errors";
 
@@ -145,5 +150,53 @@ export function createProtocolRequestCloseEvent(): RequestCloseEvent {
     kind: "event",
     type: "request_close",
     payload: {},
+  };
+}
+
+/** Web→Flutter UI intent: request host to open emoji picker. */
+export function createProtocolRequestEmojiEvent(
+  selection: ProtocolSelection | null,
+): RequestEmojiEvent {
+  return {
+    version: PROTOCOL_VERSION,
+    kind: "event",
+    type: "request_emoji",
+    payload: { selection },
+  };
+}
+
+/** Web→Flutter UI intent: request host to open mention selector. */
+export function createProtocolRequestMentionEvent(
+  selection: ProtocolSelection | null,
+): RequestMentionEvent {
+  return {
+    version: PROTOCOL_VERSION,
+    kind: "event",
+    type: "request_mention",
+    payload: { selection },
+  };
+}
+
+/** Web→Flutter UI intent: request host to open channel selector. */
+export function createProtocolRequestChannelEvent(
+  selection: ProtocolSelection | null,
+): RequestChannelEvent {
+  return {
+    version: PROTOCOL_VERSION,
+    kind: "event",
+    type: "request_channel",
+    payload: { selection },
+  };
+}
+
+/** Web→Flutter UI intent: request host to open media picker. */
+export function createProtocolRequestImageEvent(
+  selection: ProtocolSelection | null,
+): RequestImageEvent {
+  return {
+    version: PROTOCOL_VERSION,
+    kind: "event",
+    type: "request_image",
+    payload: { selection },
   };
 }

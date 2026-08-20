@@ -53,7 +53,15 @@ function App(): JSX.Element {
 
       <RichTextProvider editor={editor}>
         <section class="editor-shell">
-          <RichTextToolbar class="toolbar" aria-label="Rich text formatting" />
+          <RichTextToolbar
+            class="toolbar"
+            aria-label="Rich text formatting"
+            visibleInsertActions={["emoji", "mention", "channel", "image"]}
+            onRequestEmoji={(selection) => console.log("request_emoji", selection)}
+            onRequestMention={(selection) => console.log("request_mention", selection)}
+            onRequestChannel={(selection) => console.log("request_channel", selection)}
+            onRequestImage={(selection) => console.log("request_image", selection)}
+          />
           <RichTextEditor class="editor" aria-label="Rich text editor" />
         </section>
 

@@ -47,4 +47,24 @@ describe("webview runtime config", () => {
 
     expect(resolveRuntimeConfig().showCloseButton).toBe(false);
   });
+
+  it("parses injected visibleInsertActions with deduplication and filters unknown values", () => {
+    window.__TG_RICHTEXT_CONFIG__ = {
+      visibleInsertActions: ["image", "invalid" as any, "emoji", "image"],
+    };
+
+    expect(resolveRuntimeConfig().visibleInsertActions).toEqual(["image", "emoji"]);
+  });
+
+  it("defaults visibleInsertActions to undefined when empty or non-array", () => {
+    window.__TG_RICHTEXT_CONFIG__ = {
+      visibleInsertActions: [],
+    };
+    expect(resolveRuntimeConfig().visibleInsertActions).toBeUndefined();
+
+    window.__TG_RICHTEXT_CONFIG__ = {
+      visibleInsertActions: "invalid" as any,
+    };
+    expect(resolveRuntimeConfig().visibleInsertActions).toBeUndefined();
+  });
 });

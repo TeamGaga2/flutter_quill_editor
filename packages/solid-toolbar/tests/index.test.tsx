@@ -631,6 +631,10 @@ describe("optional Solid toolbar", () => {
 
 describe("toolbar label localization", () => {
   const CHINESE_LABELS = {
+    emoji: "表情",
+    mention: "提及",
+    channel: "频道",
+    image: "图片",
     header: "字号",
     bold: "粗体",
     italic: "斜体",
@@ -644,6 +648,10 @@ describe("toolbar label localization", () => {
     blockquote: "引用",
   };
   const ENGLISH_LABELS = {
+    emoji: "Emoji",
+    mention: "Mention",
+    channel: "Channel",
+    image: "Image",
     header: "Font size",
     bold: "Bold",
     italic: "Italic",
@@ -962,5 +970,248 @@ describe("computeBottomTooltipLayout (auto shift)", () => {
     // Arrow stays aimed at the off-screen trigger (pinned to the bubble's
     // leading arrow padding after limitShift).
     expect(layout.arrowX).toBe(12);
+  });
+});
+
+describe("insert actions and separator", () => {
+  const ENGLISH_FORMAT_ORDER = [
+    "Font size",
+    "Bold",
+    "Italic",
+    "Underline",
+    "Link",
+    "Divider",
+    "Decrease indent",
+    "Increase indent",
+    "Bulleted list",
+    "Numbered list",
+    "Quote",
+  ];
+  const CHINESE_FORMAT_ORDER = [
+    "字号",
+    "粗体",
+    "斜体",
+    "下划线",
+    "链接",
+    "分割线",
+    "左缩进",
+    "右缩进",
+    "无序列表",
+    "有序列表",
+    "引用",
+  ];
+
+  function itemLabels(root: HTMLElement): string[] {
+    return Array.from(root.querySelectorAll<HTMLButtonElement>("button[aria-label]"))
+      .map((button) => button.getAttribute("aria-label")!)
+      .filter((label) => label !== "Close");
+  }
+
+  it("renders no insert actions and no separator when visibleInsertActions is omitted or empty", () => {
+    const fake = createFakeAdapter();
+    const root = document.createElement("div");
+    document.body.append(root);
+
+    const dispose = render(
+      () => (
+        <RichTextProvider editor={createRichTextEditor({ adapterFactory: () => fake.adapter })}>
+          <RichTextToolbar />
+        </RichTextProvider>
+      ),
+      root,
+    );
+
+    expect(itemLabels(root)).toEqual(ENGLISH_FORMAT_ORDER);
+    expect(root.querySelector(".tg-toolbar-separator")).toBeNull();
+
+    dispose();
+    root.remove();
+  });
+
+  it("renders all 4 insert actions in fixed order before format controls in English and Chinese", () => {
+    const fake = createFakeAdapter();
+
+    // English
+    setBrowserLanguage("en-US");
+    const rootEn = document.createElement("div");
+    document.body.append(rootEn);
+    const disposeEn = render(
+      () => (
+        <RichTextProvider editor={createRichTextEditor({ adapterFactory: () => fake.adapter })}>
+          <RichTextToolbar
+            visibleInsertActions={["emoji", "mention", "channel", "image"]}
+            onRequestEmoji={() => undefined}
+            onRequestMention={() => undefined}
+            onRequestChannel={() => undefined}
+            onRequestImage={() => undefined}
+          />
+        </RichTextProvider>
+      ),
+      rootEn,
+    );
+
+    expect(itemLabels(rootEn)).toEqual([
+      "Emoji",
+      "Mention",
+      "Channel",
+      "Image",
+      ...ENGLISH_FORMAT_ORDER,
+    ]);
+    const sepEn = rootEn.querySelector(".tg-toolbar-separator");
+    expect(sepEn).not.toBeNull();
+    expect(sepEn?.getAttribute("aria-hidden")).toBe("true");
+    disposeEn();
+    rootEn.remove();
+
+    // Chinese
+    setBrowserLanguage("zh-CN");
+    const rootZh = document.createElement("div");
+    document.body.append(rootZh);
+    const disposeZh = render(
+      () => (
+        <RichTextProvider editor={createRichTextEditor({ adapterFactory: () => fake.adapter })}>
+          <RichTextToolbar
+            visibleInsertActions={["emoji", "mention", "channel", "image"]}
+            onRequestEmoji={() => undefined}
+            onRequestMention={() => undefined}
+            onRequestChannel={() => undefined}
+            onRequestImage={() => undefined}
+          />
+        </RichTextProvider>
+      ),
+      rootZh,
+    );
+
+    expect(itemLabels(rootZh)).toEqual(["表情", "提及", "频道", "图片", ...CHINESE_FORMAT_ORDER]);
+    disposeZh();
+    rootZh.remove();
+  });
+
+  it("enforces fixed order and deduplicates/ignores unknown insert actions", () => {
+    const fake = createFakeAdapter();
+    const root = document.createElement("div");
+    document.body.append(root);
+
+    const dispose = render(
+      () => (
+        <RichTextProvider editor={createRichTextEditor({ adapterFactory: () => fake.adapter })}>
+          <RichTextToolbar
+            visibleInsertActions={["image", "unknown" as any, "emoji", "image"]}
+            onRequestEmoji={() => undefined}
+            onRequestImage={() => undefined}
+          />
+        </RichTextProvider>
+      ),
+      root,
+    );
+
+    expect(itemLabels(root)).toEqual(["Emoji", "Image", ...ENGLISH_FORMAT_ORDER]);
+    expect(root.querySelector(".tg-toolbar-separator")).not.toBeNull();
+
+    dispose();
+    root.remove();
+  });
+
+  it("disables insert actions when corresponding callback is missing or when title is focused", () => {
+    const fake = createFakeAdapter();
+    const [titleFocused, setTitleFocused] = createSignal(false);
+    const root = document.createElement("div");
+    document.body.append(root);
+
+    const onRequestEmoji = vi.fn();
+
+    const dispose = render(
+      () => (
+        <RichTextProvider editor={createRichTextEditor({ adapterFactory: () => fake.adapter })}>
+          <RichTextToolbar
+            visibleInsertActions={["emoji", "mention"]}
+            onRequestEmoji={onRequestEmoji}
+            titleFocused={titleFocused}
+          />
+          <RichTextEditor />
+        </RichTextProvider>
+      ),
+      root,
+    );
+
+    const emojiButton = root.querySelector<HTMLButtonElement>('button[aria-label="Emoji"]');
+    const mentionButton = root.querySelector<HTMLButtonElement>('button[aria-label="Mention"]');
+
+    // Emoji has callback -> enabled; Mention has no callback -> disabled
+    expect(emojiButton?.disabled).toBe(false);
+    expect(mentionButton?.disabled).toBe(true);
+
+    // Title focused -> both disabled
+    setTitleFocused(true);
+    expect(emojiButton?.disabled).toBe(true);
+    expect(mentionButton?.disabled).toBe(true);
+
+    emojiButton?.click();
+    expect(onRequestEmoji).not.toHaveBeenCalled();
+
+    dispose();
+    root.remove();
+  });
+
+  it("passes current editor selection to insert action callbacks and does not restore focus", () => {
+    const fake = createFakeAdapter();
+    const focus = vi.fn();
+    fake.adapter.focus = focus;
+    let controller!: SolidRichTextController;
+
+    const onRequestEmoji = vi.fn();
+    const onRequestImage = vi.fn();
+
+    const root = document.createElement("div");
+    document.body.append(root);
+
+    const dispose = render(() => {
+      controller = createRichTextEditor({ adapterFactory: () => fake.adapter });
+      return (
+        <RichTextProvider editor={controller}>
+          <RichTextToolbar
+            visibleInsertActions={["emoji", "image"]}
+            onRequestEmoji={onRequestEmoji}
+            onRequestImage={onRequestImage}
+          />
+          <RichTextEditor />
+        </RichTextProvider>
+      );
+    }, root);
+
+    fake.emit({
+      type: "state-change",
+      state: {
+        ...initialState,
+        focused: true,
+        selection: { start: 2, end: 5 },
+      },
+    });
+
+    const emojiButton = root.querySelector<HTMLButtonElement>('button[aria-label="Emoji"]');
+    emojiButton?.click();
+
+    expect(onRequestEmoji).toHaveBeenCalledTimes(1);
+    expect(onRequestEmoji).toHaveBeenCalledWith({ start: 2, end: 5 });
+    expect(focus).not.toHaveBeenCalled();
+
+    fake.emit({
+      type: "state-change",
+      state: {
+        ...initialState,
+        focused: false,
+        selection: null,
+      },
+    });
+
+    const imageButton = root.querySelector<HTMLButtonElement>('button[aria-label="Image"]');
+    imageButton?.click();
+
+    expect(onRequestImage).toHaveBeenCalledTimes(1);
+    expect(onRequestImage).toHaveBeenCalledWith(null);
+    expect(focus).not.toHaveBeenCalled();
+
+    dispose();
+    root.remove();
   });
 });

@@ -125,6 +125,10 @@ const _eventTypes = <String>{
   'title_blur',
   'state_change',
   'request_close',
+  'request_emoji',
+  'request_mention',
+  'request_channel',
+  'request_image',
 };
 
 /// Encode a protocol message to a JSON string.
@@ -468,6 +472,38 @@ ProtocolParseResult<ProtocolMessage> _parseEvent(ProtocolJsonMap map) {
       );
     case 'request_close':
       event = RequestCloseEvent(version: version);
+    case 'request_emoji':
+      final selectionRaw = payloadMap['selection'];
+      event = RequestEmojiEvent(
+        version: version,
+        selection: selectionRaw == null
+            ? null
+            : ProtocolSelection.fromJson(_asJsonMap(selectionRaw as Map)),
+      );
+    case 'request_mention':
+      final selectionRaw = payloadMap['selection'];
+      event = RequestMentionEvent(
+        version: version,
+        selection: selectionRaw == null
+            ? null
+            : ProtocolSelection.fromJson(_asJsonMap(selectionRaw as Map)),
+      );
+    case 'request_channel':
+      final selectionRaw = payloadMap['selection'];
+      event = RequestChannelEvent(
+        version: version,
+        selection: selectionRaw == null
+            ? null
+            : ProtocolSelection.fromJson(_asJsonMap(selectionRaw as Map)),
+      );
+    case 'request_image':
+      final selectionRaw = payloadMap['selection'];
+      event = RequestImageEvent(
+        version: version,
+        selection: selectionRaw == null
+            ? null
+            : ProtocolSelection.fromJson(_asJsonMap(selectionRaw as Map)),
+      );
     default:
       return _fail(
         ProtocolErrorCode.invalidMessage,
@@ -1057,6 +1093,10 @@ List<ProtocolValidationIssue> _validateEventPayload(
       }
       return _validateSnapshotContainer(_asJsonMap(payload), r'$.payload');
     case 'selection_change':
+    case 'request_emoji':
+    case 'request_mention':
+    case 'request_channel':
+    case 'request_image':
       return _validateSelectionContainer(
         payload is Map ? _asJsonMap(payload) : null,
         r'$.payload',

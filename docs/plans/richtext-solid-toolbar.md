@@ -94,7 +94,7 @@ Flutter WebView Runtime 默认只挂载 `RichTextEditor`，不安装或打包 To
 - active/disabled 状态派生
 - pointer/mousedown selection 保留
 
-暂不实现 EmojiPicker、Image Upload、Mention/Channel/Video UI 和图标主题。
+暂不实现 EmojiPicker、Image Upload、Mention/Channel/Video UI 和图标主题（按钮在 toolbar，选择器仍归宿主，见 ADR 0005）。
 
 ## Todo List
 

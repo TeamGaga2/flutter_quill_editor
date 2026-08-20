@@ -67,6 +67,7 @@ String buildRichTextTransportBootstrapJs({
   RichTextBridgeChannelKind bridgeChannelKind = RichTextBridgeChannelKind.javaScriptChannel,
   int? mediaMaxSize,
   String? toolbarMode,
+  List<String>? visibleInsertActions = const <String>[],
   bool? showTitleInput,
   bool? showCloseButton,
   String? titlePlaceholder,
@@ -80,6 +81,7 @@ String buildRichTextTransportBootstrapJs({
   final mode = toolbarMode ?? richTextWebToolbarModeFor(isDesktopRichTextSurface: false);
   final showTitle = showTitleInput ?? kRichTextWebShowTitleInput;
   final closeButton = showCloseButton ?? true;
+  final insertActionsJson = jsonEncode(visibleInsertActions ?? const <String>[]);
   final titleHint = jsonEncode(titlePlaceholder ?? 'Enter a title');
   // Flutter l10n is source of truth; fall back matches runtime default.
   final bodyPlaceholder = jsonEncode(placeholder ?? 'Enter text');
@@ -127,6 +129,7 @@ String buildRichTextTransportBootstrapJs({
     theme: "$themeMode",
     locale: existing.locale,
     mediaMaxSize: $maxSize,
+    visibleInsertActions: $insertActionsJson,
     // Flutter host is source of truth for body placeholder (l10n).
     placeholder: $bodyPlaceholder,
     showTitleInput: $showTitle,

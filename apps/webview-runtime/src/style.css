@@ -431,6 +431,16 @@ body {
   min-width: 8px;
 }
 
+.tg-webview-toolbar .tg-toolbar-separator {
+  flex: 0 0 auto;
+  width: 1px;
+  height: 16px;
+  margin: 0 6px;
+  background: var(--tgg-divider-low, #e3e8e5);
+  border: none;
+  align-self: center;
+}
+
 .tg-webview-toolbar .tg-toolbar-icon-btn {
   box-sizing: border-box;
   display: inline-flex;

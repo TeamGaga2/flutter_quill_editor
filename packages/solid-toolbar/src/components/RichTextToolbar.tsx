@@ -10,21 +10,46 @@ import {
   IconBlockquote,
   IconBold,
   IconBulletedList,
+  IconChannel,
   IconClose,
   IconDividingLine,
+  IconEmoji,
+  IconImage,
   IconItalic,
   IconLeftIndent,
   IconLink,
+  IconMention,
   IconNumberedList,
   IconRightIndent,
   IconUnderline,
 } from "./icons/ToolbarIcons";
+
+export type InsertAction = "emoji" | "mention" | "channel" | "image";
+
+const INSERT_ACTION_ORDER: readonly InsertAction[] = [
+  "emoji",
+  "mention",
+  "channel",
+  "image",
+] as const;
 
 export interface RichTextToolbarProps {
   editor?: SolidRichTextController;
   id?: string;
   class?: string;
   "aria-label"?: string;
+  /**
+   * Visible insert actions. When omitted or empty, no insert buttons are rendered.
+   */
+  visibleInsertActions?: readonly InsertAction[];
+  /** Host callback for requesting emoji picker. */
+  onRequestEmoji?: (selection: { start: number; end: number } | null) => void;
+  /** Host callback for requesting mention selector. */
+  onRequestMention?: (selection: { start: number; end: number } | null) => void;
+  /** Host callback for requesting channel selector. */
+  onRequestChannel?: (selection: { start: number; end: number } | null) => void;
+  /** Host callback for requesting media/image picker. */
+  onRequestImage?: (selection: { start: number; end: number } | null) => void;
   /**
    * Open the in-WebView link popover / modal.
    */
@@ -54,6 +79,18 @@ export function RichTextToolbar(props: RichTextToolbarProps): JSX.Element {
       return props.titleFocused;
     },
   });
+
+  const isTitleFocused = (): boolean =>
+    typeof props.titleFocused === "function" ? props.titleFocused() : Boolean(props.titleFocused);
+
+  const activeInsertActions = (): InsertAction[] => {
+    const set = new Set(props.visibleInsertActions ?? []);
+    return INSERT_ACTION_ORDER.filter((action) => set.has(action));
+  };
+
+  const isInsertActionDisabled = (
+    handler?: (selection: { start: number; end: number } | null) => void,
+  ): boolean => !controller.editor() || isTitleFocused() || handler === undefined;
   const run =
     (command: (editor: RichTextEditor) => void, options?: { restoreFocus?: boolean }) =>
     (): void => {
@@ -118,6 +155,57 @@ export function RichTextToolbar(props: RichTextToolbarProps): JSX.Element {
       role="toolbar"
       aria-label={props["aria-label"] ?? "Text formatting"}
     >
+      <Show when={activeInsertActions().includes("emoji")}>
+        <ToolbarButton
+          label={labels.emoji}
+          tooltip={labels.emoji}
+          disabled={isInsertActionDisabled(props.onRequestEmoji)}
+          onPress={run((editor) => props.onRequestEmoji?.(editor.getState().selection), {
+            restoreFocus: false,
+          })}
+        >
+          <IconEmoji size={20} />
+        </ToolbarButton>
+      </Show>
+      <Show when={activeInsertActions().includes("mention")}>
+        <ToolbarButton
+          label={labels.mention}
+          tooltip={labels.mention}
+          disabled={isInsertActionDisabled(props.onRequestMention)}
+          onPress={run((editor) => props.onRequestMention?.(editor.getState().selection), {
+            restoreFocus: false,
+          })}
+        >
+          <IconMention size={20} />
+        </ToolbarButton>
+      </Show>
+      <Show when={activeInsertActions().includes("channel")}>
+        <ToolbarButton
+          label={labels.channel}
+          tooltip={labels.channel}
+          disabled={isInsertActionDisabled(props.onRequestChannel)}
+          onPress={run((editor) => props.onRequestChannel?.(editor.getState().selection), {
+            restoreFocus: false,
+          })}
+        >
+          <IconChannel size={20} />
+        </ToolbarButton>
+      </Show>
+      <Show when={activeInsertActions().includes("image")}>
+        <ToolbarButton
+          label={labels.image}
+          tooltip={labels.image}
+          disabled={isInsertActionDisabled(props.onRequestImage)}
+          onPress={run((editor) => props.onRequestImage?.(editor.getState().selection), {
+            restoreFocus: false,
+          })}
+        >
+          <IconImage size={20} />
+        </ToolbarButton>
+      </Show>
+      <Show when={activeInsertActions().length > 0}>
+        <span class="tg-toolbar-separator" aria-hidden="true" />
+      </Show>
       <HeaderStyleMenu
         label={labels.header}
         value={headerValue()}

@@ -52,7 +52,12 @@ export type {
   ProtocolEditorFormats,
   ProtocolEditorState,
   ReadyEvent,
+  RequestChannelEvent,
   RequestCloseEvent,
+  RequestEmojiEvent,
+  RequestImageEvent,
+  RequestInsertSelectionPayload,
+  RequestMentionEvent,
   SelectionChangeEvent,
   StateChangeEvent,
 } from "./events";

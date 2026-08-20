@@ -74,7 +74,14 @@ host-web
 - `selection_change`
 - `focus`
 - `blur`
+- `title_focus`
+- `title_blur`
 - `state_change`
+- `request_close`
+- `request_emoji`
+- `request_mention`
+- `request_channel`
+- `request_image`
 
 ### Web → Flutter 响应
 

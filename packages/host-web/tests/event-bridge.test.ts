@@ -5,7 +5,11 @@ import { MockEditorAdapter } from "@teamgaga/richtext-testing";
 import {
   bindEditorEventBridge,
   createProtocolReadyEvent,
+  createProtocolRequestChannelEvent,
   createProtocolRequestCloseEvent,
+  createProtocolRequestEmojiEvent,
+  createProtocolRequestImageEvent,
+  createProtocolRequestMentionEvent,
 } from "../src/events/editor-event-bridge";
 
 describe("editor event bridge", () => {
@@ -84,12 +88,36 @@ describe("editor event bridge", () => {
     editor.destroy();
   });
 
-  it("builds request_close events", () => {
+  it("builds request_close and request insert events", () => {
     expect(createProtocolRequestCloseEvent()).toEqual({
       version: PROTOCOL_VERSION,
       kind: "event",
       type: "request_close",
       payload: {},
+    });
+    expect(createProtocolRequestEmojiEvent({ start: 0, end: 0 })).toEqual({
+      version: PROTOCOL_VERSION,
+      kind: "event",
+      type: "request_emoji",
+      payload: { selection: { start: 0, end: 0 } },
+    });
+    expect(createProtocolRequestMentionEvent(null)).toEqual({
+      version: PROTOCOL_VERSION,
+      kind: "event",
+      type: "request_mention",
+      payload: { selection: null },
+    });
+    expect(createProtocolRequestChannelEvent({ start: 2, end: 5 })).toEqual({
+      version: PROTOCOL_VERSION,
+      kind: "event",
+      type: "request_channel",
+      payload: { selection: { start: 2, end: 5 } },
+    });
+    expect(createProtocolRequestImageEvent(null)).toEqual({
+      version: PROTOCOL_VERSION,
+      kind: "event",
+      type: "request_image",
+      payload: { selection: null },
     });
   });
 

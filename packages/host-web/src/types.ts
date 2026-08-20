@@ -1,6 +1,7 @@
 import type { JSX } from "solid-js";
 import type { RichTextEditor } from "@teamgaga/richtext-core";
 import type { RichTextAdapterFactory } from "@teamgaga/richtext-solid";
+import type { ProtocolSelection } from "@teamgaga/richtext-protocol";
 import type { HostTransport } from "./bridge/transport";
 import type { HostUIController } from "./dispatcher/command-dispatcher";
 import type { RichTextHostError } from "./errors";
@@ -35,6 +36,14 @@ export interface RichTextHost {
   readonly ready: Promise<void>;
   /** Emit a Web→Flutter `request_close` event when the host is ready. */
   requestClose(): void;
+  /** Emit a Web→Flutter `request_emoji` event with current selection. */
+  requestEmoji(selection: ProtocolSelection | null): void;
+  /** Emit a Web→Flutter `request_mention` event with current selection. */
+  requestMention(selection: ProtocolSelection | null): void;
+  /** Emit a Web→Flutter `request_channel` event with current selection. */
+  requestChannel(selection: ProtocolSelection | null): void;
+  /** Emit a Web→Flutter `request_image` event with current selection. */
+  requestImage(selection: ProtocolSelection | null): void;
   destroy(): void;
 }
 

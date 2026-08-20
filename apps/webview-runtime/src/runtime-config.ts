@@ -1,3 +1,5 @@
+import type { InsertAction } from "@teamgaga/richtext-solid-toolbar";
+
 /**
  * Runtime config injected by the Flutter shell (or URL query in dev).
  *
@@ -13,6 +15,8 @@ export type MediaMaxSize = 240 | 320;
 export interface RuntimeConfig {
   toolbarMode: ToolbarMode;
   mediaMaxSize: MediaMaxSize;
+  /** Visible insert actions for desktop toolbar. When omitted or empty, no insert buttons render. */
+  visibleInsertActions?: InsertAction[];
   /** When true, render a title textarea above the Quill body (Flutter PC shell). */
   showTitleInput?: boolean;
   /** When false, hide the toolbar close button (defaults to true). */
@@ -46,6 +50,25 @@ const DEFAULT_CONFIG: RuntimeConfig = {
   toolbarMode: "none",
   mediaMaxSize: 240,
 };
+
+const ALLOWED_INSERT_ACTIONS = new Set<InsertAction>(["emoji", "mention", "channel", "image"]);
+
+function isInsertAction(value: unknown): value is InsertAction {
+  return typeof value === "string" && ALLOWED_INSERT_ACTIONS.has(value as InsertAction);
+}
+
+function parseInsertActionsList(raw: unknown): InsertAction[] | undefined {
+  if (!Array.isArray(raw) || raw.length === 0) return undefined;
+  const set = new Set<InsertAction>();
+  const actions: InsertAction[] = [];
+  for (const item of raw) {
+    if (isInsertAction(item) && !set.has(item)) {
+      set.add(item);
+      actions.push(item);
+    }
+  }
+  return actions.length > 0 ? actions : undefined;
+}
 
 function isToolbarMode(value: unknown): value is ToolbarMode {
   return value === "none" || value === "desktop";
@@ -121,10 +144,15 @@ function readInjectedConfig(): InjectedRuntimeConfig {
     next.emojiDefinitions = emojiDefinitions;
   }
 
+  const visibleInsertActions = parseInsertActionsList(raw.visibleInsertActions);
+  if (visibleInsertActions) {
+    next.visibleInsertActions = visibleInsertActions;
+  }
+
   return next;
 }
 
-/** Dev-only URL query: `?toolbarMode=desktop&theme=dark&locale=en&mediaMaxSize=320&showTitleInput=1&showCloseButton=0`. */
+/** Dev-only URL query: `?toolbarMode=desktop&theme=dark&locale=en&mediaMaxSize=320&showTitleInput=1&showCloseButton=0&visibleInsertActions=emoji,mention,channel,image`. */
 function readDevQueryConfig(): InjectedRuntimeConfig {
   if (!import.meta.env.DEV) {
     return {};
@@ -178,6 +206,18 @@ function readDevQueryConfig(): InjectedRuntimeConfig {
     next.locale = locale;
   }
 
+  const insertActionsRaw = params.get("visibleInsertActions") ?? params.get("insertActions");
+  if (insertActionsRaw !== null) {
+    const split = insertActionsRaw
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const parsed = parseInsertActionsList(split);
+    if (parsed) {
+      next.visibleInsertActions = parsed;
+    }
+  }
+
   return next;
 }
 
@@ -188,6 +228,7 @@ export function resolveRuntimeConfig(): RuntimeConfig {
   return {
     toolbarMode: injected.toolbarMode ?? query.toolbarMode ?? DEFAULT_CONFIG.toolbarMode,
     mediaMaxSize: injected.mediaMaxSize ?? query.mediaMaxSize ?? DEFAULT_CONFIG.mediaMaxSize,
+    visibleInsertActions: injected.visibleInsertActions ?? query.visibleInsertActions,
     showTitleInput: injected.showTitleInput ?? query.showTitleInput,
     showCloseButton: injected.showCloseButton ?? query.showCloseButton,
     titlePlaceholder: injected.titlePlaceholder ?? query.titlePlaceholder,

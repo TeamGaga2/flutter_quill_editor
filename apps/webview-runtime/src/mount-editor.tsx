@@ -152,6 +152,11 @@ async function resolveDesktopChrome(
     <RichTextToolbar
       class="tg-webview-toolbar"
       aria-label="Rich text formatting"
+      visibleInsertActions={config.visibleInsertActions}
+      onRequestEmoji={(selection) => hostRef.current?.requestEmoji(selection)}
+      onRequestMention={(selection) => hostRef.current?.requestMention(selection)}
+      onRequestChannel={(selection) => hostRef.current?.requestChannel(selection)}
+      onRequestImage={(selection) => hostRef.current?.requestImage(selection)}
       onOpenLinkForm={openLinkForm}
       onRequestClose={() => hostRef.current?.requestClose()}
       showCloseButton={config.showCloseButton}

@@ -630,4 +630,74 @@ describe("createRichTextHost lifecycle", () => {
     expect(transport.sent.length).toBe(before);
     root.remove();
   });
+
+  it("emits request_close and request insert events when ready and no-ops when destroyed", async () => {
+    const transport = createMemoryTransport();
+    const root = document.createElement("div");
+    document.body.append(root);
+    const host = createRichTextHostInternal({
+      root,
+      transport,
+      adapterFactory: () => createFakeAdapter().adapter,
+    });
+
+    // Before ready: no-op
+    host.requestEmoji({ start: 0, end: 1 });
+    expect(transport.sent).toHaveLength(0);
+
+    await host.ready;
+    await flush();
+
+    const before = transport.sent.length;
+    host.requestClose();
+    host.requestEmoji({ start: 0, end: 1 });
+    host.requestMention(null);
+    host.requestChannel({ start: 3, end: 3 });
+    host.requestImage({ start: 5, end: 10 });
+    await flush();
+
+    const events = parseSent(transport)
+      .slice(before)
+      .filter((message) => message.kind === "event");
+
+    expect(events).toEqual([
+      {
+        version: PROTOCOL_VERSION,
+        kind: "event",
+        type: "request_close",
+        payload: {},
+      },
+      {
+        version: PROTOCOL_VERSION,
+        kind: "event",
+        type: "request_emoji",
+        payload: { selection: { start: 0, end: 1 } },
+      },
+      {
+        version: PROTOCOL_VERSION,
+        kind: "event",
+        type: "request_mention",
+        payload: { selection: null },
+      },
+      {
+        version: PROTOCOL_VERSION,
+        kind: "event",
+        type: "request_channel",
+        payload: { selection: { start: 3, end: 3 } },
+      },
+      {
+        version: PROTOCOL_VERSION,
+        kind: "event",
+        type: "request_image",
+        payload: { selection: { start: 5, end: 10 } },
+      },
+    ]);
+
+    host.destroy();
+    const countAfterDestroy = transport.sent.length;
+    host.requestEmoji({ start: 0, end: 1 });
+    expect(transport.sent.length).toBe(countAfterDestroy);
+
+    root.remove();
+  });
 });

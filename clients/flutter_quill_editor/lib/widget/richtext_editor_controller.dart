@@ -39,6 +39,10 @@ class RichTextEditorController {
   final _eventController = StreamController<ProtocolEvent>.broadcast();
   final _selectionController = StreamController<SelectionChangeEvent>.broadcast();
   final _requestCloseController = StreamController<RequestCloseEvent>.broadcast();
+  final _requestEmojiController = StreamController<RequestEmojiEvent>.broadcast();
+  final _requestMentionController = StreamController<RequestMentionEvent>.broadcast();
+  final _requestChannelController = StreamController<RequestChannelEvent>.broadcast();
+  final _requestImageController = StreamController<RequestImageEvent>.broadcast();
 
   StreamSubscription<String>? _inboundSub;
   ProtocolEditorState? _latestState;
@@ -65,7 +69,19 @@ class RichTextEditorController {
   /// Host should dismiss the composition panel (Web→Flutter UI intent).
   Stream<RequestCloseEvent> get onRequestClose => _requestCloseController.stream;
 
-  /// All protocol events (including ready/focus/blur/request_close).
+  /// Host should open emoji picker (Web→Flutter UI intent).
+  Stream<RequestEmojiEvent> get onRequestEmoji => _requestEmojiController.stream;
+
+  /// Host should open mention selector (Web→Flutter UI intent).
+  Stream<RequestMentionEvent> get onRequestMention => _requestMentionController.stream;
+
+  /// Host should open channel selector (Web→Flutter UI intent).
+  Stream<RequestChannelEvent> get onRequestChannel => _requestChannelController.stream;
+
+  /// Host should open media picker (Web→Flutter UI intent).
+  Stream<RequestImageEvent> get onRequestImage => _requestImageController.stream;
+
+  /// All protocol events (including ready/focus/blur/request_close/request_*).
   Stream<ProtocolEvent> get onEvent => _eventController.stream;
 
   // ---------------------------------------------------------------------------
@@ -367,6 +383,10 @@ class RichTextEditorController {
     await _eventController.close();
     await _selectionController.close();
     await _requestCloseController.close();
+    await _requestEmojiController.close();
+    await _requestMentionController.close();
+    await _requestChannelController.close();
+    await _requestImageController.close();
   }
 
   // ---------------------------------------------------------------------------
@@ -482,6 +502,22 @@ class RichTextEditorController {
       case RequestCloseEvent():
         if (!_requestCloseController.isClosed) {
           _requestCloseController.add(event);
+        }
+      case RequestEmojiEvent():
+        if (!_requestEmojiController.isClosed) {
+          _requestEmojiController.add(event);
+        }
+      case RequestMentionEvent():
+        if (!_requestMentionController.isClosed) {
+          _requestMentionController.add(event);
+        }
+      case RequestChannelEvent():
+        if (!_requestChannelController.isClosed) {
+          _requestChannelController.add(event);
+        }
+      case RequestImageEvent():
+        if (!_requestImageController.isClosed) {
+          _requestImageController.add(event);
         }
       case FocusEvent():
       case BlurEvent():

@@ -37,6 +37,15 @@ export type TitleBlurEvent = ProtocolEvent<"title_blur", Record<string, never>>;
 export type StateChangeEvent = ProtocolEvent<"state_change", { state: ProtocolEditorState }>;
 /** Web→Flutter UI intent: close the host editor shell. */
 export type RequestCloseEvent = ProtocolEvent<"request_close", Record<string, never>>;
+export type RequestInsertSelectionPayload = { selection: ProtocolSelection | null };
+/** Web→Flutter UI intent: request host to open emoji picker. */
+export type RequestEmojiEvent = ProtocolEvent<"request_emoji", RequestInsertSelectionPayload>;
+/** Web→Flutter UI intent: request host to open mention selector. */
+export type RequestMentionEvent = ProtocolEvent<"request_mention", RequestInsertSelectionPayload>;
+/** Web→Flutter UI intent: request host to open channel selector. */
+export type RequestChannelEvent = ProtocolEvent<"request_channel", RequestInsertSelectionPayload>;
+/** Web→Flutter UI intent: request host to open media picker. */
+export type RequestImageEvent = ProtocolEvent<"request_image", RequestInsertSelectionPayload>;
 
 export type EditorEventMessage =
   | ReadyEvent
@@ -47,6 +56,10 @@ export type EditorEventMessage =
   | TitleFocusEvent
   | TitleBlurEvent
   | StateChangeEvent
-  | RequestCloseEvent;
+  | RequestCloseEvent
+  | RequestEmojiEvent
+  | RequestMentionEvent
+  | RequestChannelEvent
+  | RequestImageEvent;
 
 export type EditorEventType = EditorEventMessage["type"];

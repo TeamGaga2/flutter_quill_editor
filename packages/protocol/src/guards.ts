@@ -80,6 +80,10 @@ const EVENT_TYPES = new Set([
   "title_blur",
   "state_change",
   "request_close",
+  "request_emoji",
+  "request_mention",
+  "request_channel",
+  "request_image",
 ]);
 const ERROR_CODES = new Set<ProtocolErrorCode>([
   "invalid_json",
@@ -324,6 +328,10 @@ function validateEventPayload(type: string, payload: unknown): ProtocolValidatio
         ? validateSnapshotValue(payload, "$.payload", "snapshot")
         : [issue("invalid_payload", "$.payload", "Event payload must be an object.")];
     case "selection_change":
+    case "request_emoji":
+    case "request_mention":
+    case "request_channel":
+    case "request_image":
       return validateNullableSelectionContainer(payload, "$.payload");
     case "focus":
     case "blur":

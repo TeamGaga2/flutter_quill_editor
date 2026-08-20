@@ -4,6 +4,7 @@ export { buildLinkRequestContext, callIndent, callOutdent, getSelectedPlainText 
 export type {
   HeaderStyleMenuProps,
   HeaderStyleValue,
+  InsertAction,
   RichTextToolbarProps,
   ToolbarButtonProps,
 } from "./components";

@@ -86,6 +86,7 @@ class RichTextWebView extends StatefulWidget {
     this.placeholder,
     this.emojiDefinitions = const <RichTextEmojiDefinition>[],
     this.isDesktopRichTextSurface = false,
+    this.visibleInsertActions = const <String>[],
     this.showCloseButton = true,
     this.windowsHostCreator,
     this.failedPlaceholderBuilder,
@@ -141,6 +142,10 @@ class RichTextWebView extends StatefulWidget {
   /// in-web desktop chrome (`toolbarMode: desktop`, larger media
   /// box) instead of the editor-only mobile configuration.
   final bool isDesktopRichTextSurface;
+
+  /// Visible insert action buttons for the desktop toolbar.
+  /// When omitted or empty, no insert buttons are rendered.
+  final List<String> visibleInsertActions;
 
   /// Whether to display the toolbar close button (defaults to true).
   final bool showCloseButton;
@@ -266,7 +271,8 @@ class RichTextWebViewState extends State<RichTextWebView> {
         oldWidget.backgroundColor != widget.backgroundColor ||
         oldWidget.titlePlaceholder != widget.titlePlaceholder ||
         oldWidget.placeholder != widget.placeholder ||
-        oldWidget.showCloseButton != widget.showCloseButton) {
+        oldWidget.showCloseButton != widget.showCloseButton ||
+        !listEquals(oldWidget.visibleInsertActions, widget.visibleInsertActions)) {
       _scheduleThemeSync();
     }
   }
@@ -611,6 +617,7 @@ class RichTextWebViewState extends State<RichTextWebView> {
             bridgeToken: _capability.token,
             mediaMaxSize: _mediaMaxSize,
             toolbarMode: _toolbarMode,
+            visibleInsertActions: widget.visibleInsertActions,
             showCloseButton: widget.showCloseButton,
             bridgeChannelKind: _bridgeChannelKindFor(_hostKind),
             theme: theme,
@@ -665,6 +672,7 @@ class RichTextWebViewState extends State<RichTextWebView> {
           bridgeToken: _capability.token,
           mediaMaxSize: _mediaMaxSize,
           toolbarMode: _toolbarMode,
+          visibleInsertActions: widget.visibleInsertActions,
           showCloseButton: widget.showCloseButton,
           bridgeChannelKind: _bridgeChannelKindFor(_hostKind),
           theme: brightness == Brightness.dark ? 'dark' : 'light',
@@ -866,6 +874,7 @@ class RichTextWebViewState extends State<RichTextWebView> {
         emojiDefinitions: widget.emojiDefinitions,
         mediaMaxSize: _mediaMaxSize,
         toolbarMode: _toolbarMode,
+        visibleInsertActions: widget.visibleInsertActions,
         showTitleInput: kRichTextWebShowTitleInput,
         showCloseButton: widget.showCloseButton,
         titlePlaceholder: widget.titlePlaceholder,
@@ -999,6 +1008,7 @@ class RichTextWebViewState extends State<RichTextWebView> {
     final config = <String, Object?>{
       'toolbarMode': _toolbarMode,
       'mediaMaxSize': _mediaMaxSize,
+      'visibleInsertActions': widget.visibleInsertActions,
       'showTitleInput': kRichTextWebShowTitleInput,
       'showCloseButton': widget.showCloseButton,
       'titlePlaceholder': widget.titlePlaceholder,

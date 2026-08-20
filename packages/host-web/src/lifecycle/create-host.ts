@@ -11,7 +11,11 @@ import { createHostError, toDestroyError, toMountError, type RichTextHostError }
 import {
   bindEditorEventBridge,
   createProtocolReadyEvent,
+  createProtocolRequestChannelEvent,
   createProtocolRequestCloseEvent,
+  createProtocolRequestEmojiEvent,
+  createProtocolRequestImageEvent,
+  createProtocolRequestMentionEvent,
   type EditorEventBridge,
 } from "../events/editor-event-bridge";
 import {
@@ -105,6 +109,58 @@ export function createRichTextHostInternal(options: CreateRichTextHostOptions): 
       } catch {
         reportError(
           createHostError("event", "encode_failed", "Failed to encode request_close event."),
+        );
+      }
+    },
+    requestEmoji(selection) {
+      if (state !== "ready" || !editor) {
+        return;
+      }
+
+      try {
+        enqueueEncoded(encodeProtocolMessage(createProtocolRequestEmojiEvent(selection)));
+      } catch {
+        reportError(
+          createHostError("event", "encode_failed", "Failed to encode request_emoji event."),
+        );
+      }
+    },
+    requestMention(selection) {
+      if (state !== "ready" || !editor) {
+        return;
+      }
+
+      try {
+        enqueueEncoded(encodeProtocolMessage(createProtocolRequestMentionEvent(selection)));
+      } catch {
+        reportError(
+          createHostError("event", "encode_failed", "Failed to encode request_mention event."),
+        );
+      }
+    },
+    requestChannel(selection) {
+      if (state !== "ready" || !editor) {
+        return;
+      }
+
+      try {
+        enqueueEncoded(encodeProtocolMessage(createProtocolRequestChannelEvent(selection)));
+      } catch {
+        reportError(
+          createHostError("event", "encode_failed", "Failed to encode request_channel event."),
+        );
+      }
+    },
+    requestImage(selection) {
+      if (state !== "ready" || !editor) {
+        return;
+      }
+
+      try {
+        enqueueEncoded(encodeProtocolMessage(createProtocolRequestImageEvent(selection)));
+      } catch {
+        reportError(
+          createHostError("event", "encode_failed", "Failed to encode request_image event."),
         );
       }
     },

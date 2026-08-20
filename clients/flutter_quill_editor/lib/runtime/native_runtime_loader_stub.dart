@@ -17,6 +17,7 @@ class _UnsupportedNativeRuntimeLoader implements NativeRuntimeLoader {
     required List<RichTextEmojiDefinition> emojiDefinitions,
     required int mediaMaxSize,
     required String toolbarMode,
+    List<String>? visibleInsertActions = const <String>[],
     required bool showTitleInput,
     bool showCloseButton = true,
     String? titlePlaceholder,

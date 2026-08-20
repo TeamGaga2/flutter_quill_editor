@@ -188,7 +188,31 @@
         }
       }
     },
-    { "version": 2, "kind": "event", "type": "request_close", "payload": {} }
+    { "version": 2, "kind": "event", "type": "request_close", "payload": {} },
+    {
+      "version": 2,
+      "kind": "event",
+      "type": "request_emoji",
+      "payload": { "selection": { "start": 0, "end": 0 } }
+    },
+    {
+      "version": 2,
+      "kind": "event",
+      "type": "request_mention",
+      "payload": { "selection": { "start": 1, "end": 4 } }
+    },
+    {
+      "version": 2,
+      "kind": "event",
+      "type": "request_channel",
+      "payload": { "selection": null }
+    },
+    {
+      "version": 2,
+      "kind": "event",
+      "type": "request_image",
+      "payload": { "selection": { "start": 2, "end": 2 } }
+    }
   ],
   "responses": [
     {

@@ -76,6 +76,16 @@ h2 {
   min-width: 8px;
 }
 
+.toolbar .tg-toolbar-separator {
+  flex: 0 0 auto;
+  width: 1px;
+  height: 16px;
+  margin: 0 6px;
+  background: #e5e7eb;
+  border: none;
+  align-self: center;
+}
+
 .toolbar .tg-toolbar-icon-btn {
   box-sizing: border-box;
   display: inline-flex;

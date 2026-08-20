@@ -203,5 +203,19 @@ void main() {
       );
       expect(hiddenJs, contains('showCloseButton: false'));
     });
+
+    test('bakes visibleInsertActions into injected config', () {
+      final defaultJs = buildRichTextTransportBootstrapJs(bridgeToken: 'tok');
+      expect(defaultJs, contains('visibleInsertActions: []'));
+
+      final populatedJs = buildRichTextTransportBootstrapJs(
+        bridgeToken: 'tok',
+        visibleInsertActions: const ['emoji', 'mention', 'channel', 'image'],
+      );
+      expect(
+        populatedJs,
+        contains('visibleInsertActions: ["emoji","mention","channel","image"]'),
+      );
+    });
   });
 }
