@@ -20,11 +20,21 @@ export function LinkPopover(props: LinkPopoverProps): JSX.Element {
       isOpen,
       (open, prevOpen) => {
         if (open && !prevOpen) {
-          // Focus URL input only when transitioning from closed to open
-          requestAnimationFrame(() => {
-            urlInputRef?.focus();
-            urlInputRef?.select();
-          });
+          const focusInput = (): void => {
+            if (urlInputRef && document.activeElement !== urlInputRef) {
+              try {
+                urlInputRef.focus({ preventScroll: true });
+              } catch {
+                urlInputRef.focus();
+              }
+              urlInputRef.select();
+            }
+          };
+
+          // Synchronous focus attempt in current turn for mobile IME activation
+          focusInput();
+          // Fallback on next animation frame
+          requestAnimationFrame(focusInput);
 
           const handleGlobalKeyDown = (e: KeyboardEvent): void => {
             if (e.key === "Escape") {
@@ -137,12 +147,21 @@ export function LinkPopover(props: LinkPopoverProps): JSX.Element {
                 id="tg-link-url-input"
                 class="tg-link-popover-input"
                 type="text"
+                autofocus
                 aria-label={labels().urlPlaceholder}
                 placeholder={labels().urlPlaceholder}
                 value={url()}
                 onInput={(e) => props.controller.setUrl(e.currentTarget.value)}
                 ref={(el) => {
                   urlInputRef = el;
+                  if (isOpen()) {
+                    try {
+                      el.focus({ preventScroll: true });
+                    } catch {
+                      el.focus();
+                    }
+                    el.select();
+                  }
                 }}
               />
             </div>

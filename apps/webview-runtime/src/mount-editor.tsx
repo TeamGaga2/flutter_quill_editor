@@ -338,7 +338,7 @@ export async function mountEditor(options: MountEditorOptions): Promise<MountedE
   const wakeEditingSession = (wakeOptions?: { keepTitle?: boolean }): void => {
     // Flutter owns focus while an overlay is up (link TextFields, menus).
     // Auto-reclaiming `.ql-editor` here steals the caret from host inputs.
-    if (interactionBlocked) {
+    if (interactionBlocked || linkPopoverController?.isOpen()) {
       return;
     }
 
@@ -416,6 +416,16 @@ export async function mountEditor(options: MountEditorOptions): Promise<MountedE
     // focus move a click should have made, and the keeper below must restore
     // the field the user aimed at rather than the one they left.
     const target = event.target;
+    if (
+      target instanceof Element &&
+      (target.closest("#tg-link-popover-root") ||
+        target.closest(".tg-link-popover") ||
+        target.closest(".tg-link-popover-scrim"))
+    ) {
+      windowFocused = true;
+      editingSessionCold = false;
+      return;
+    }
     const titleEl = titleInput?.element;
     const inToolbar = target instanceof Element && target.closest(".tg-webview-toolbar") !== null;
     if (titleEl && target instanceof Node && (target === titleEl || titleEl.contains(target))) {
@@ -444,6 +454,14 @@ export async function mountEditor(options: MountEditorOptions): Promise<MountedE
   // field the user is editing and put focus back whenever it lands on nothing.
   const onFocusIn = (event: FocusEvent): void => {
     const target = event.target;
+    if (
+      target instanceof Element &&
+      (target.closest("#tg-link-popover-root") ||
+        target.closest(".tg-link-popover") ||
+        target.closest(".tg-link-popover-scrim"))
+    ) {
+      return;
+    }
     const titleEl = titleInput?.element;
     if (titleEl && target === titleEl) {
       editingSessionCold = false;
@@ -457,12 +475,21 @@ export async function mountEditor(options: MountEditorOptions): Promise<MountedE
   };
 
   const onFocusOut = (): void => {
-    if (destroyed || interactionBlocked || lastEditingField === null) return;
+    if (
+      destroyed ||
+      interactionBlocked ||
+      lastEditingField === null ||
+      linkPopoverController?.isOpen()
+    ) {
+      return;
+    }
     // focusout runs before the next target is focused — settle on a frame so a
     // genuine title↔body handoff is not mistaken for a dropped caret.
     cancelAnimationFrame(focusKeeperFrame);
     focusKeeperFrame = requestAnimationFrame(() => {
-      if (destroyed || interactionBlocked || !windowFocused) return;
+      if (destroyed || interactionBlocked || !windowFocused || linkPopoverController?.isOpen()) {
+        return;
+      }
       const field = lastEditingField;
       if (field === null) return;
       const active = document.activeElement;
