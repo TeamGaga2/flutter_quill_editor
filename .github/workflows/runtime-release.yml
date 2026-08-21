@@ -85,6 +85,7 @@ jobs:
           node-version: "24"
           cache: true
       - run: vp install --frozen-lockfile --prefer-offline
+      - run: vp run --filter './packages/*' build
       - run: vp check
       - run: vp test scripts/runtime-artifact.test.mjs --run
       - name: Create distribution-neutral runtime artifact
