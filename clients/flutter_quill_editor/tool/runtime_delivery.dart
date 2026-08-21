@@ -1345,7 +1345,11 @@ String canonicalContentSha256(Directory root) {
         final relativePath = p
             .relative(entity.path, from: root.path)
             .replaceAll('\\', '/');
-        _assertRuntimeRelativePath(relativePath, 'runtime content path');
+        try {
+          _assertRuntimeRelativePath(relativePath, 'runtime content path');
+        } on FormatException catch (error) {
+          throw StateError(error.toString());
+        }
         files.add(MapEntry(relativePath, File(entity.path)));
       } else {
         throw StateError('runtime content contains an unsupported entry');
