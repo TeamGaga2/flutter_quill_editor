@@ -72,7 +72,7 @@ jobs:
           TG_SOURCE_COMMIT: ${{ inputs.sourceCommit }}
           TG_BUILD_ID: ${{ inputs.sourceCommit }}
           TG_BUILD_AT: ${{ steps.build_metadata.outputs.build_at }}
-        run: vp run --filter webview-runtime... build
+        run: vp run --no-cache --filter webview-runtime... build
 
       - name: Verify and create artifact contract
         env:

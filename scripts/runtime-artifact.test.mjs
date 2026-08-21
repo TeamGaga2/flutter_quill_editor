@@ -566,6 +566,7 @@ test("promotion workflow has an exact source commit and split permissions", () =
   expect(publishJob).toContain("contents: write");
   expect(publishJob).not.toContain("ref: ${{ inputs.sourceCommit }}");
   expect(workflow).toContain("vp install --frozen-lockfile --prefer-offline");
+  expect(workflow).toContain("vp run --no-cache --filter webview-runtime... build");
   expect(workflow).toContain("actions/download-artifact@v8");
   expect(workflow).toContain("node scripts/promote-runtime-artifact.mjs");
   expect(workflow).toContain("TG_ARTIFACT_DIR: runtime-artifact");
@@ -579,6 +580,7 @@ test("promotion workflow has an exact source commit and split permissions", () =
     "utf8",
   );
   expect(legacyWorkflow).toContain("vp install --frozen-lockfile --prefer-offline");
+  expect(legacyWorkflow).toContain("vp run --no-cache --filter webview-runtime... build");
   expect(legacyWorkflow).toContain(".github/workflows/runtime-artifact-promotion.yml");
 });
 

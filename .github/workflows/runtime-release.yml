@@ -57,7 +57,7 @@ jobs:
           TG_SOURCE_COMMIT: ${{ github.sha }}
           TG_BUILD_ID: ${{ github.sha }}
           TG_BUILD_AT: ${{ steps.build_metadata.outputs.build_at }}
-        run: vp run --filter webview-runtime... build
+        run: vp run --no-cache --filter webview-runtime... build
       - run: vp check
       - run: vp test scripts/runtime-release.test.mjs --run
       - run: node scripts/verify-runtime-dist.mjs
