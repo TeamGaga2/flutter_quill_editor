@@ -754,11 +754,10 @@ PR-1 的 Node/Dart 共享 golden fixture 只冻结 canonical `contentSha256` 的
 #### 当前执行状态（本工作树）
 
 锁模型、exact artifact 消费、离线 verifier、canonical digest、HTML/兼容性
-校验、atomic materialize 和本地未发布 artifact 测试框架已经实现；但当前
-浅克隆没有对应的 `webview-runtime-artifact-<sourceCommit>` 远端 Release/tag
-可供回读证明。因此本工作树不提交 `richtext-runtime.lock.json`，也不把本地
-构造的三文件 artifact 冒充正式 pin。正式迁移仍待管理员完成 promotion、
-远端 metadata/archive 逐字节复核后，再一次性提交 lock、vendor 和 manifest。
+校验、atomic materialize 和本地未发布 artifact 测试框架已经实现。首个
+exact source commit 已完成 protected promotion、远端 metadata/archive/sidecar
+逐字节复核，并已提交 `richtext-runtime.lock.json`、vendor 和 manifest。
+后续更新仍必须重复同一 exact promotion 与远端证据流程。
 
 范围：
 
@@ -779,14 +778,10 @@ Release assets 的逐字节一致性，不在发布阶段解包 archive 或重�
 `contentSha256`，并将该结果与 metadata、lock 和真实 vendored tree 对比；这
 是进入 PR-3 前的强制门槛。
 
-本次 PR-2 工作树的首个 pin 使用当前已提交 vendored tree 生成的受控本地
-三文件 artifact 作为迁移输入。它证明了 `runtime-version.json`、archive
-bytes、`contentSha256` 与 manifest 的一致性，但没有声称对应的
-`webview-runtime-artifact-0133c3b1c97fd3cd5ea504a7a11f5b708745780a` Release
-已经存在。正式启用远端 `--update` 前，必须由 PR-1 promotion workflow 对
-同一 source commit 完成 exact promotion，并让远端 metadata/archive SHA 与
-该 lock 逐字一致；否则 update/供应链复核应失败。受控 artifact 不提交仓库，
-只用于构造可离线验证的初始 lock/vendor identity。
+本次 PR-2 工作树的首个 pin 已由 promotion workflow 对 exact source commit
+完成，并通过远端 metadata、archive 和 sidecar 的逐字节复核；随后使用
+`--update --release-tag ...` 生成并提交 lock、vendor 和 manifest。受控
+`--from-artifact` 仍仅用于本地迁移/测试，不构成正式 pin 证据。
 
 验收：
 

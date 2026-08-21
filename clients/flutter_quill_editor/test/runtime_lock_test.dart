@@ -46,12 +46,18 @@ void main() {
     },
   );
 
-  test('formal lock is not fabricated before remote promotion proof', () {
+  test('formal lock records the remotely promoted exact artifact', () async {
     final packageRoot = Directory.current;
-    expect(
-      File(p.join(packageRoot.path, kRuntimeLockName)).existsSync(),
-      isFalse,
+    final lockFile = File(p.join(packageRoot.path, kRuntimeLockName));
+    expect(lockFile.existsSync(), isTrue);
+    final lock = RuntimeLock.fromJson(
+      jsonDecode(await lockFile.readAsString()),
+      expectedRepository: kDefaultRuntimeRepository,
     );
+    expect(lock.releaseTag, startsWith('webview-runtime-artifact-'));
+    expect(lock.sourceCommit, hasLength(40));
+    expect(lock.archiveSha256, hasLength(64));
+    expect(lock.contentSha256, hasLength(64));
   });
 
   test('--allow-unpublished is local-only at the CLI policy boundary', () {

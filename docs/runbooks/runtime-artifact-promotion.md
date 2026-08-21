@@ -1,10 +1,9 @@
 # WebView runtime artifact promotion, pin, verification, and rollback
 
-> **Migration status:** this is an operational draft for the staged migration.
-> PR-2 is not complete: this checkout has the exact-artifact consumer and
-> verifier scaffolding, but it has no proved promoted Release and therefore no
-> committed `richtext-runtime.lock.json`. The legacy `dev` Release path remains
-> the current production path. Do not interpret this runbook as a cutover.
+> **Migration status:** PR-2 is complete for the first exact promoted artifact:
+> the remote Release was byte-verified and the lock, vendored runtime, and
+> generated manifest are committed together. PR-3/PR-4 are still pending, so the
+> legacy `dev` Release path remains available and this is not a full cutover.
 
 This runbook covers the three explicit maintenance actions in the target
 model:
@@ -345,15 +344,15 @@ multi-file update.
 
 ## 7. Current migration boundary
 
-Until PR-3 and PR-4 are accepted:
+After the first PR-2 exact pin, and until PR-3 and PR-4 are accepted:
 
 - `dev` push and the legacy branch Release workflow remain current production
   behavior;
 - `richtext-runtime-channel.json` and legacy latest code are not removed by
   this runbook;
 - ADR 0007 stays `proposed` and ADR 0003 is not marked `superseded`;
-- the absence of a formal lock in this checkout is intentional until an exact
-  promoted Release has been remotely proved;
+- `richtext-runtime.lock.json` is the committed selector for the promoted
+  artifact; new updates must repeat the exact promotion and remote byte proof;
 - a successful local `--from-artifact` or `--local` run is not a promotion or
   lock-update proof.
 

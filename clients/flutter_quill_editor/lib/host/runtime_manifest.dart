@@ -18,6 +18,7 @@ class RichTextRuntimeManifest {
     this.pipelineId,
     this.pipelineIid,
     this.archiveSha256,
+    this.contentSha256,
   });
 
   final int protocolVersion;
@@ -32,6 +33,7 @@ class RichTextRuntimeManifest {
   final int? pipelineId;
   final int? pipelineIid;
   final String? archiveSha256;
+  final String? contentSha256;
 
   String get webEntryAssetPath => 'assets/packages/flutter_quill_editor/assets/richtext_webview_runtime/$webEntry';
 }
@@ -39,14 +41,15 @@ class RichTextRuntimeManifest {
 const RichTextRuntimeManifest kRichTextRuntimeManifest = RichTextRuntimeManifest(
   protocolVersion: 2,
   hostEnvelopeVersion: 1,
-  buildId: "2026-08-21T03:20:18.654Z",
-  webEntry: "iframe.27f3691033b220dd.html",
-  webEntrySha256: "27f3691033b220ddf5a712b6207f15ee8a5c72f7e0d4e6a655b820fb49fb5db2",
-  sourceCommit: "0133c3b1c97fd3cd5ea504a7a11f5b708745780a",
-  branch: "dev",
-  branchIdentity: "ef260e9aa3c673af240d17a2660480361a8e081d1ffeca2a5ed0e3219fc18567",
-  releaseTag: "webview-runtime-channel-dev-ef260e9aa3c673af-1",
-  pipelineId: 1,
-  pipelineIid: 1,
-  archiveSha256: "6adf64908f428be33834567a3655c3f48aceaacd2e71b4b2b2412580b38e3471",
+  buildId: "9e9b2fe7ff2f71504f51c843492654855e7f8509",
+  webEntry: "iframe.7cc7090ca296df73.html",
+  webEntrySha256: "7cc7090ca296df736abd6304d679810cef9d0715c207106517e8745d98c4ce3d",
+  sourceCommit: "9e9b2fe7ff2f71504f51c843492654855e7f8509",
+  branch: null,
+  branchIdentity: null,
+  releaseTag: "webview-runtime-artifact-9e9b2fe7ff2f71504f51c843492654855e7f8509",
+  pipelineId: null,
+  pipelineIid: null,
+  archiveSha256: "a144ca43f6f659f5e428132a3a1db1a1220a5737a19c390d2416c9bbeabae8f2",
+  contentSha256: "702911c928d974ef0109d7adc0aa795e24a05944920ff3d514e2d942674fd82e",
 );
