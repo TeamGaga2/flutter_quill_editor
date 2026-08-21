@@ -2,6 +2,8 @@
 status: accepted
 ---
 
+> Proposed replacement: [ADR 0007](./0007-flutter-package-locks-immutable-runtime-artifact.md)。PR-0 尚未切换实现；本 ADR 及下述 branch/latest 流程仍记录当前生产行为。迁移完成后再由 PR-4 将本 ADR 标记为 superseded。
+
 # Client 构建跟随指定分支的最新 runtime Release
 
 `teamgaga-client` 不再提交从 sibling `flutter_quill_editor` 仓库手工同步的 WebView runtime。client 改为配置一个运行时发布通道，并在显式 pre-build 阶段解析该 richtext 分支最新一次成功发布的 GitHub Release，下载和校验其预制包，再作为 Flutter assets 打进 App。
