@@ -98,6 +98,7 @@ function createMockGithub({
   assetRedirectUrl = null,
   patchResponse = null,
   patchRereadRelease = null,
+  missingTagWhileDraft = false,
 }) {
   const requests = [];
   const state = {
@@ -125,6 +126,9 @@ function createMockGithub({
     const method = options.method || "GET";
     requests.push({ url, options });
     if (url.pathname === `/repos/${mockRepository}/git/ref/tags/${tag}`) {
+      if (missingTagWhileDraft && state.currentRelease?.draft === true) {
+        return mockResponse(404);
+      }
       const next =
         state.tagResponses.length > 0
           ? state.tagResponses.shift()
@@ -786,6 +790,27 @@ describe("runtime artifact promotion behavior", () => {
       expect(
         mock.requests.filter((request) => request.url.pathname.includes("/releases/tags/")).length,
       ).toBe(2);
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
+  test("allows a new draft before GitHub materializes its exact tag ref", async () => {
+    const fixture = artifactFixture();
+    try {
+      const tag = runtimeArtifactTag(fixture.sourceCommit);
+      const mock = createMockGithub({
+        sourceCommit: fixture.sourceCommit,
+        tag,
+        assetBytes: expectedAssetBytes(fixture),
+        missingTagWhileDraft: true,
+      });
+      const result = await publisherFor(mock).promote({
+        sourceCommit: fixture.sourceCommit,
+        artifactDir: fixture.artifactDir,
+      });
+      expect(result.alreadyPublished).toBe(false);
+      expect(mock.state.patchCount).toBe(1);
     } finally {
       fixture.cleanup();
     }

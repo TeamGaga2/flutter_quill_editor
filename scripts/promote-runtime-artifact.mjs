@@ -266,7 +266,12 @@ export function createRuntimeArtifactPublisher({
     release.assets = [...release.assets, asset];
   }
 
-  async function assertReleaseIdentity(release, tag, sourceCommit) {
+  async function assertReleaseIdentity(
+    release,
+    tag,
+    sourceCommit,
+    { allowMissingDraftTag = false } = {},
+  ) {
     if (release?.tag_name !== tag) throw new Error("GitHub Release has an unexpected tag");
     if (
       release.target_commitish &&
@@ -276,6 +281,14 @@ export function createRuntimeArtifactPublisher({
       throw new Error("GitHub Release points to a different commit");
     }
     const tagCommit = await tagTargetCommit(tag);
+    if (
+      tagCommit === null &&
+      allowMissingDraftTag &&
+      release.draft === true &&
+      release.target_commitish?.toLowerCase() === sourceCommit
+    ) {
+      return;
+    }
     if (tagCommit !== sourceCommit) {
       throw new Error("GitHub artifact tag does not point to sourceCommit");
     }
@@ -328,7 +341,9 @@ export function createRuntimeArtifactPublisher({
     }
     let release = await releaseByTag(tag);
     if (!release) release = await createDraftRelease(tag, metadata);
-    await assertReleaseIdentity(release, tag, normalizedSourceCommit);
+    await assertReleaseIdentity(release, tag, normalizedSourceCommit, {
+      allowMissingDraftTag: release.draft === true,
+    });
     if (release.draft !== true) {
       await verifyReleaseAssets(release, expected);
       logger.log(`runtime artifact already published ${tag} (${metadata.archiveSha256})`);
