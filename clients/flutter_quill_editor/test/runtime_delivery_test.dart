@@ -13,7 +13,8 @@ import 'package:http/http.dart' as http;
 
 import '../tool/runtime_delivery.dart';
 
-String repeated(String value, int count) => List<String>.filled(count, value).join();
+String repeated(String value, int count) =>
+    List<String>.filled(count, value).join();
 
 class _RedirectClient extends http.BaseClient {
   final requests = <http.BaseRequest>[];
@@ -25,7 +26,44 @@ class _RedirectClient extends http.BaseClient {
       return http.StreamedResponse(
         Stream<List<int>>.value(utf8.encode('redirect')),
         302,
-        headers: const <String, String>{'location': 'https://mirror.example/releases'},
+        headers: const <String, String>{
+          'location': 'https://mirror.example/releases',
+        },
+        request: request,
+      );
+    }
+    return http.StreamedResponse(
+      Stream<List<int>>.value(utf8.encode('[]')),
+      200,
+      request: request,
+    );
+  }
+}
+
+class _CrossOriginRedirectClient extends http.BaseClient {
+  final requests = <http.BaseRequest>[];
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    requests.add(request);
+    if (request.url.host == 'api.github.com' && requests.length == 1) {
+      return http.StreamedResponse(
+        Stream<List<int>>.value(utf8.encode('redirect')),
+        302,
+        headers: const <String, String>{
+          'location': 'https://github.com/runtime-assets/start',
+        },
+        request: request,
+      );
+    }
+    if (request.url.host == 'github.com') {
+      return http.StreamedResponse(
+        Stream<List<int>>.value(utf8.encode('redirect')),
+        302,
+        headers: const <String, String>{
+          'location':
+              'https://api.github.com/repos/TeamGaga2/flutter_quill_editor/releases',
+        },
         request: request,
       );
     }
@@ -39,17 +77,23 @@ class _RedirectClient extends http.BaseClient {
 
 void main() {
   test('branch identity and latest release selection are deterministic', () {
-    final channel = RuntimeChannelConfig.fromJson(<String, Object?>{'branch': 'dev'});
+    final channel = RuntimeChannelConfig.fromJson(<String, Object?>{
+      'branch': 'dev',
+    });
     final host = Uri.parse('https://api.github.com');
     RuntimeReleaseCandidate candidate(int iid) => RuntimeReleaseCandidate(
-      tag: 'webview-runtime-channel-dev-${channel.branchIdentity.substring(0, 16)}-$iid',
+      tag:
+          'webview-runtime-channel-dev-${channel.branchIdentity.substring(0, 16)}-$iid',
       pipelineIid: iid,
       metadataUrl: Uri.parse('https://api.github.com/runtime-$iid.json'),
       archiveUrl: Uri.parse('https://api.github.com/runtime-$iid.tar.gz'),
       checksumUrl: Uri.parse('https://api.github.com/runtime-$iid.sha256'),
     );
     expect(
-      selectLatestRuntimeRelease(<RuntimeReleaseCandidate>[candidate(2), candidate(7)]).pipelineIid,
+      selectLatestRuntimeRelease(<RuntimeReleaseCandidate>[
+        candidate(2),
+        candidate(7),
+      ]).pipelineIid,
       7,
     );
     expect(
@@ -98,9 +142,42 @@ void main() {
       client.resolveLatest(const RuntimeChannelConfig(branch: 'dev')),
       throwsStateError,
     );
-    expect(transport.requests[0].headers['Authorization'], 'Bearer secret-token');
-    expect(transport.requests[1].headers.containsKey('Authorization'), isFalse);
+    expect(
+      transport.requests[0].headers['Authorization'],
+      'Bearer secret-token',
+    );
+    expect(transport.requests, hasLength(1));
   });
+
+  test(
+    'redirecting back to the API does not reattach the private token',
+    () async {
+      final transport = _CrossOriginRedirectClient();
+      final client = GitHubRuntimeReleaseClient(
+        apiBase: Uri.parse('https://api.github.com'),
+        project: 'TeamGaga2/flutter_quill_editor',
+        token: 'secret-token',
+        httpClient: transport,
+      );
+      await expectLater(
+        client.resolveLatest(const RuntimeChannelConfig(branch: 'dev')),
+        throwsStateError,
+      );
+      expect(transport.requests, hasLength(3));
+      expect(
+        transport.requests[0].headers['Authorization'],
+        'Bearer secret-token',
+      );
+      expect(
+        transport.requests[1].headers.containsKey('Authorization'),
+        isFalse,
+      );
+      expect(
+        transport.requests[2].headers.containsKey('Authorization'),
+        isFalse,
+      );
+    },
+  );
 
   test('metadata rejects an archive identity mismatch', () {
     expect(
@@ -130,7 +207,8 @@ void main() {
         'sourceCommit': repeated('a', 40),
         'pipelineId': 1,
         'pipelineIid': 1,
-        'releaseTag': 'webview-runtime-channel-dev-${identity.substring(0, 16)}-1',
+        'releaseTag':
+            'webview-runtime-channel-dev-${identity.substring(0, 16)}-1',
         'archiveName': kRuntimeArchiveName,
         'archiveSha256': repeated('b', 64),
         'protocolVersion': kRichTextProtocolVersion + 1,
@@ -148,10 +226,15 @@ void main() {
       throwsStateError,
     );
     expect(
-      () => validateArchiveEntries(<ArchiveFile>[ArchiveFile.symlink('index.html', '../outside')]),
+      () => validateArchiveEntries(<ArchiveFile>[
+        ArchiveFile.symlink('index.html', '../outside'),
+      ]),
       throwsStateError,
     );
     expect(normalizeArchivePath('./assets/main.js'), 'assets/main.js');
+    expect(() => normalizeArchivePath('bad\\name.js'), throwsStateError);
+    expect(() => normalizeArchivePath('café.js'), throwsStateError);
+    expect(() => normalizeArchivePath('한글.js'), throwsStateError);
   });
 
   test('archive limits fail closed before materialization', () {
@@ -165,9 +248,9 @@ void main() {
       throwsStateError,
     );
     expect(
-      () => validateArchiveEntries(
-        <ArchiveFile>[ArchiveFile('large.bin', kRuntimeMaxArchiveFileBytes + 1, <int>[])],
-      ),
+      () => validateArchiveEntries(<ArchiveFile>[
+        ArchiveFile('large.bin', kRuntimeMaxArchiveFileBytes + 1, <int>[]),
+      ]),
       throwsStateError,
     );
   });
@@ -207,7 +290,8 @@ void main() {
       'sourceCommit': repeated('a', 40),
       'pipelineId': 10,
       'pipelineIid': 11,
-      'releaseTag': 'webview-runtime-channel-dev-${identity.substring(0, 16)}-11',
+      'releaseTag':
+          'webview-runtime-channel-dev-${identity.substring(0, 16)}-11',
       'archiveName': kRuntimeArchiveName,
       'archiveSha256': repeated('b', 64),
       'protocolVersion': kRichTextProtocolVersion,
@@ -215,12 +299,16 @@ void main() {
       'runtimeBuildId': 'build',
       'generatedAt': '2026-01-01T00:00:00.000Z',
     });
-    final temp = await Directory.systemTemp.createTemp('tg-runtime-verify-test-');
+    final temp = await Directory.systemTemp.createTemp(
+      'tg-runtime-verify-test-',
+    );
     addTearDown(() => temp.delete(recursive: true));
     const iframe = '<script src="./assets/main.js"></script>';
     await Directory('${temp.path}/assets').create();
     await File('${temp.path}/assets/main.js').writeAsString('ok');
-    await File('${temp.path}/index.html').writeAsString('<iframe src="./iframe.html"></iframe>');
+    await File(
+      '${temp.path}/index.html',
+    ).writeAsString('<iframe src="./iframe.html"></iframe>');
     await File('${temp.path}/iframe.html').writeAsString(iframe);
     await File('${temp.path}/runtime-version.json').writeAsString(
       jsonEncode(<String, Object?>{
@@ -237,12 +325,18 @@ void main() {
   });
 
   test('archive extraction rejects unsafe entries before writing', () async {
-    final archive = Archive()..addFile(ArchiveFile.bytes('../escape', <int>[1]));
-    final bytes = Uint8List.fromList(GZipEncoder().encodeBytes(TarEncoder().encode(archive)));
+    final archive = Archive()
+      ..addFile(ArchiveFile.bytes('../escape', <int>[1]));
+    final bytes = Uint8List.fromList(
+      GZipEncoder().encodeBytes(TarEncoder().encode(archive)),
+    );
     final temp = await Directory.systemTemp.createTemp('tg-runtime-test-');
     addTearDown(() => temp.delete(recursive: true));
     expect(
-      () => extractRuntimeArchive(bytes: bytes, destination: Directory('${temp.path}/out')),
+      () => extractRuntimeArchive(
+        bytes: bytes,
+        destination: Directory('${temp.path}/out'),
+      ),
       throwsStateError,
     );
   });
@@ -253,13 +347,16 @@ void main() {
       repeated('a', 64),
     );
     expect(
-      () => parseArchiveChecksum(jsonEncode(<String, String>{'token': 'secret'})),
+      () =>
+          parseArchiveChecksum(jsonEncode(<String, String>{'token': 'secret'})),
       throwsFormatException,
     );
   });
 
   test('content-addressed cache revalidates bytes before a hit', () async {
-    final temp = await Directory.systemTemp.createTemp('tg-runtime-cache-test-');
+    final temp = await Directory.systemTemp.createTemp(
+      'tg-runtime-cache-test-',
+    );
     addTearDown(() => temp.delete(recursive: true));
     final bytes = Uint8List.fromList(<int>[1, 2, 3]);
     final digest = sha256.convert(bytes).toString();
@@ -273,18 +370,25 @@ void main() {
     await cache.getOrStore(digest, download);
     await cache.getOrStore(digest, download);
     expect(downloads, 1);
-    await File('${temp.path}/$digest/$kRuntimeArchiveName').writeAsBytes(<int>[9]);
+    await File(
+      '${temp.path}/$digest/$kRuntimeArchiveName',
+    ).writeAsBytes(<int>[9]);
     await cache.getOrStore(digest, download);
     expect(downloads, 2);
   });
 
-  test('preparation temp directory is created beside the materialized output', () async {
-    final parent = await Directory.systemTemp.createTemp('tg-runtime-parent-test-');
-    addTearDown(() => parent.delete(recursive: true));
-    final outputParent = Directory('${parent.path}/assets');
-    await outputParent.create();
-    final temporary = await createRuntimePreparationDirectory(outputParent);
-    expect(temporary.parent.path, outputParent.path);
-    await temporary.delete(recursive: true);
-  });
+  test(
+    'preparation temp directory is created beside the materialized output',
+    () async {
+      final parent = await Directory.systemTemp.createTemp(
+        'tg-runtime-parent-test-',
+      );
+      addTearDown(() => parent.delete(recursive: true));
+      final outputParent = Directory('${parent.path}/assets');
+      await outputParent.create();
+      final temporary = await createRuntimePreparationDirectory(outputParent);
+      expect(temporary.parent.path, outputParent.path);
+      await temporary.delete(recursive: true);
+    },
+  );
 }

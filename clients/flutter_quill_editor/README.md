@@ -63,18 +63,24 @@ Hosts inject everything app-specific:
 
 ## Runtime assets
 
-`assets/richtext_webview_runtime/` is vendored from the
-`webview-runtime` release for the branch in `richtext-runtime-channel.json`.
-Maintainers refresh it with:
+`assets/richtext_webview_runtime/` is currently the legacy vendored runtime. The
+immutable-artifact consumer is implemented behind an explicit lock, but this
+checkout has no promoted artifact proof and therefore intentionally does not
+commit a formal `richtext-runtime.lock.json` yet. Until promotion is completed,
+maintainers must use the explicit legacy path:
 
 ```sh
 cd clients/flutter_quill_editor
-dart run tool/richtext_runtime_prepare.dart          # download + materialize
-dart run tool/richtext_runtime_prepare.dart --verify # verify vendored output
+dart run tool/richtext_runtime_prepare.dart --legacy
+dart run tool/richtext_runtime_prepare.dart --legacy --from-dist <distPath>
 ```
 
-The refresh regenerates `lib/host/runtime_manifest.dart`. CI checks that the
-manifest's protocol version matches the vendored `runtime-release.json`.
+For Flutter/runtime local integration use `--local <distPath>`; it never reads
+or writes a formal lock and prints an explicit non-publish warning. A controlled
+artifact directory may be used with `--from-artifact ... --allow-unpublished`
+only for local migration/tests; it also never writes a formal lock and cannot
+run in CI. Formal migration remains: exact promotion, remote byte proof,
+`--update --release-tag ...`, then offline locked verification.
 
 ## License
 
