@@ -12,6 +12,7 @@ on:
       - tsconfig.json
       - vite.config.ts
       - .github/workflows/runtime-release.yml
+      - .github/workflows/runtime-artifact-promotion.yml
   push:
     branches:
       - dev
@@ -26,6 +27,7 @@ on:
       - tsconfig.json
       - vite.config.ts
       - .github/workflows/runtime-release.yml
+      - .github/workflows/runtime-artifact-promotion.yml
 
 permissions:
   contents: read
@@ -44,21 +46,56 @@ jobs:
         with:
           node-version: "24"
           cache: true
-      - run: vp install
+      - run: vp install --frozen-lockfile --prefer-offline
+      - name: Resolve deterministic build timestamp
+        id: build_metadata
+        env:
+          SOURCE_COMMIT: ${{ github.sha }}
+        run: echo "build_at=$(git show -s --format=%cI "$SOURCE_COMMIT")" >> "$GITHUB_OUTPUT"
       - name: Build runtime
         env:
           TG_SOURCE_COMMIT: ${{ github.sha }}
           TG_BUILD_ID: ${{ github.sha }}
-          TG_BUILD_AT: ${{ github.event.head_commit.timestamp || github.event.pull_request.updated_at }}
+          TG_BUILD_AT: ${{ steps.build_metadata.outputs.build_at }}
         run: vp run --filter webview-runtime... build
       - run: vp check
       - run: vp test scripts/runtime-release.test.mjs --run
       - run: node scripts/verify-runtime-dist.mjs
       - uses: actions/upload-artifact@v7
-        if: github.event_name == 'push' && github.ref_name == 'dev'
         with:
           name: webview-runtime-dist
           path: apps/webview-runtime/dist
+          if-no-files-found: error
+          retention-days: 1
+
+  artifact-contract:
+    name: Verify runtime artifact contract
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: webview-runtime-dist
+          path: apps/webview-runtime/dist
+      - uses: voidzero-dev/setup-vp@v1.17.0
+        with:
+          node-version: "24"
+          cache: true
+      - run: vp install --frozen-lockfile --prefer-offline
+      - run: vp check
+      - run: vp test scripts/runtime-artifact.test.mjs --run
+      - name: Create distribution-neutral runtime artifact
+        env:
+          TG_SOURCE_COMMIT: ${{ github.sha }}
+          TG_ARTIFACT_DIR: runtime-artifact
+        run: node scripts/create-runtime-artifact.mjs
+      - uses: actions/upload-artifact@v7
+        with:
+          name: webview-runtime-artifact-contract
+          path: runtime-artifact
           if-no-files-found: error
           retention-days: 1
 

@@ -1,0 +1,124 @@
+name: Promote WebView runtime artifact
+
+on:
+  workflow_dispatch:
+    inputs:
+      sourceCommit:
+        description: "Full 40-character commit SHA to build and promote"
+        required: true
+        type: string
+
+concurrency:
+  group: webview-runtime-promotion-${{ inputs.sourceCommit }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build exact runtime artifact
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.sourceCommit }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate exact source commit and protected branch ancestry
+        env:
+          SOURCE_COMMIT: ${{ inputs.sourceCommit }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          if [[ ! "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "sourceCommit must be a full lowercase commit SHA" >&2
+            exit 1
+          fi
+          checked_out=$(git rev-parse HEAD)
+          if [[ "$checked_out" != "$SOURCE_COMMIT" ]]; then
+            echo "checkout did not resolve the requested sourceCommit" >&2
+            exit 1
+          fi
+          git -c "http.extraheader=AUTHORIZATION: bearer $GITHUB_TOKEN" fetch --no-tags origin \
+            +refs/heads/dev:refs/remotes/origin/dev \
+            +refs/heads/main:refs/remotes/origin/main
+          reachable=false
+          for protected_ref in refs/remotes/origin/dev refs/remotes/origin/main; do
+            if git merge-base --is-ancestor "$SOURCE_COMMIT" "$protected_ref"; then
+              reachable=true
+              break
+            fi
+          done
+          if [[ "$reachable" != true ]]; then
+            echo "sourceCommit must be reachable from origin/dev or origin/main" >&2
+            exit 1
+          fi
+
+      - uses: voidzero-dev/setup-vp@v1.17.0
+        with:
+          node-version: "24"
+          cache: true
+      - run: vp install --frozen-lockfile --prefer-offline
+
+      - name: Resolve deterministic build timestamp
+        id: build_metadata
+        env:
+          SOURCE_COMMIT: ${{ inputs.sourceCommit }}
+        run: echo "build_at=$(git show -s --format=%cI "$SOURCE_COMMIT")" >> "$GITHUB_OUTPUT"
+
+      - name: Build exact runtime
+        env:
+          TG_SOURCE_COMMIT: ${{ inputs.sourceCommit }}
+          TG_BUILD_ID: ${{ inputs.sourceCommit }}
+          TG_BUILD_AT: ${{ steps.build_metadata.outputs.build_at }}
+        run: vp run --filter webview-runtime... build
+
+      - name: Verify and create artifact contract
+        env:
+          TG_SOURCE_COMMIT: ${{ inputs.sourceCommit }}
+          TG_ARTIFACT_DIR: runtime-artifact
+        run: |
+          node scripts/verify-runtime-dist.mjs
+          node scripts/create-runtime-artifact.mjs
+
+      - name: Upload short-lived promotion input
+        uses: actions/upload-artifact@v7
+        with:
+          name: webview-runtime-promotion-${{ inputs.sourceCommit }}
+          path: runtime-artifact
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Publish immutable runtime artifact
+    needs: build
+    runs-on: ubuntu-latest
+    environment: runtime-artifact-promotion
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The write-capable job must execute publisher code from the
+          # workflow revision, not from the user-selected runtime source
+          # commit. The build job has already validated and uploaded the
+          # artifact for that exact source commit.
+          ref: ${{ github.workflow_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Download short-lived promotion input
+        uses: actions/download-artifact@v8
+        with:
+          name: webview-runtime-promotion-${{ inputs.sourceCommit }}
+          path: runtime-artifact
+
+      - name: Promote exact artifact
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_API_URL: ${{ github.api_url }}
+          TG_SOURCE_COMMIT: ${{ inputs.sourceCommit }}
+          TG_ARTIFACT_DIR: runtime-artifact
+        run: node scripts/promote-runtime-artifact.mjs

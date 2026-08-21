@@ -6,6 +6,8 @@
 - 当前阶段：GitHub Actions 发布与 client GitHub Release 消费代码已完成，等待 GitHub Actions 联调
 - 当前生产方式：分支 Release + client 显式 pre-build；上线顺序必须先 richtext 发布、后 client 消费
 
+> Proposed replacement: [WebView Runtime 构建产物同步机制改造实施方案](./webview-runtime-artifact-sync-implementation-plan.md) 与 [ADR 0007](../adr/0007-flutter-package-locks-immutable-runtime-artifact.md)。PR-0 尚未切换实现，以下 branch/latest 流程仍是当前生产行为；最终状态收口留给 PR-4。
+
 ## 目标流程
 
 ```text

@@ -10,6 +10,7 @@ lerna-debug.log*
 
 node_modules
 .runtime-release/
+runtime-artifact/
 dist
 dist-ssr
 *.local

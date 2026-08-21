@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "algorithm": "sha256(path + NUL + fileSha256 + LF)",
+  "files": [
+    {
+      "path": "assets/main.js",
+      "contentBase64": "Y29uc29sZS5sb2coImZpeHR1cmUiKTsK",
+      "sha256": "3385455a7d81f78e18978e877f84012edbf2471b613620c8dff01f154e5ec7d4"
+    },
+    {
+      "path": "index.html",
+      "contentBase64": "PHNjcmlwdCBzcmM9Ii4vYXNzZXRzL21haW4uanMiPjwvc2NyaXB0Pgo=",
+      "sha256": "716d857ff36e0e9451808bd400aaa4cb79d7644e4cabf01fa5661b2c52a5b20f"
+    },
+    {
+      "path": "nested/cafe.txt",
+      "contentBase64": "5YaF5a65Cg==",
+      "sha256": "11bcbf7c3f309bbcc27987eeb3fdf5c3f1eb99ebbcd8988dce793b384549d62e"
+    }
+  ],
+  "contentSha256": "e761c416bbcdd177d39e1e387ddc869b2f8e1cc57aba08d083ae628bd3a13c77"
+}
