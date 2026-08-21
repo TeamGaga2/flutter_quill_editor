@@ -515,3 +515,173 @@ html.dark .tgg-picker-footer {
   background: var(--tgg-fill01, #272727);
   border-color: var(--tgg-border01, #474747);
 }
+
+/* ==========================================================================
+   Inline Trigger Dropdown (Caret Anchored @Mention / #Channel)
+   ========================================================================== */
+
+.tgg-trigger-dropdown {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  width: 320px;
+  max-width: calc(100vw - 32px);
+  max-height: 320px;
+  border-radius: 12px;
+  background: var(--tgg-background03, #ffffff);
+  border: 1px solid var(--tgg-border01, #e3e3e3);
+  box-shadow: var(--tgg-shadow-primary, 0px 8px 30px 0px rgba(0, 0, 0, 0.16));
+  overflow: hidden;
+  z-index: 1000;
+  animation: tgg-trigger-popover-in 100ms cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+
+@keyframes tgg-trigger-popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.tgg-trigger-header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: var(--tgg-fill03, #fafafa);
+  border-bottom: 1px solid var(--tgg-border01, #e3e3e3);
+}
+
+.tgg-trigger-header-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--tgg-primary02, #009c64);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tgg-trigger-header-query {
+  font-size: 11px;
+  color: var(--tgg-text04, #acacac);
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tgg-trigger-list {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  max-height: 240px;
+  padding: 4px 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--tgg-fill10, #c7c7c7) transparent;
+}
+
+.tgg-trigger-group-title {
+  height: 22px;
+  line-height: 22px;
+  padding: 0 12px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--tgg-text04, #acacac);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 4px;
+}
+
+.tgg-trigger-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 38px;
+  padding: 0 12px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: background 60ms ease;
+  box-sizing: border-box;
+}
+
+.tgg-trigger-item:hover,
+.tgg-trigger-item.is-selected {
+  background: var(--tgg-state-layers-on-surface-variant-opacity-08, rgba(64, 73, 66, 0.08));
+}
+
+.tgg-trigger-item.is-selected {
+  position: relative;
+}
+
+.tgg-trigger-item.is-selected::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background: var(--tgg-primary02, #009c64);
+}
+
+.tgg-item-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.tgg-trigger-empty {
+  padding: 24px 12px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--tgg-text04, #acacac);
+}
+
+.tgg-trigger-footer {
+  flex: 0 0 auto;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: var(--tgg-text04, #acacac);
+  border-top: 1px solid var(--tgg-border01, #e3e3e3);
+  background: var(--tgg-fill03, #fafafa);
+}
+
+/* Dark Theme Overrides for Trigger Dropdown */
+html.tg-theme-dark .tgg-trigger-dropdown,
+html.dark .tgg-trigger-dropdown {
+  background: var(--tgg-background03, #272727);
+  border-color: var(--tgg-border01, #474747);
+  box-shadow: 0px 8px 30px 0px rgba(0, 0, 0, 0.4);
+}
+
+html.tg-theme-dark .tgg-trigger-header,
+html.dark .tgg-trigger-header {
+  background: var(--tgg-fill01, #1e1e1e);
+  border-color: var(--tgg-border01, #474747);
+}
+
+html.tg-theme-dark .tgg-trigger-item:hover,
+html.dark .tgg-trigger-item:hover,
+html.tg-theme-dark .tgg-trigger-item.is-selected,
+html.dark .tgg-trigger-item.is-selected {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+html.tg-theme-dark .tgg-trigger-footer,
+html.dark .tgg-trigger-footer {
+  background: var(--tgg-fill01, #1e1e1e);
+  border-color: var(--tgg-border01, #474747);
+}

@@ -11,6 +11,8 @@ import {
 } from "@teamgaga/richtext-solid";
 import { RichTextToolbar } from "@teamgaga/richtext-solid-toolbar";
 import { MockInsertPicker } from "./components/MockInsertPicker";
+import { TriggerDropdown } from "./components/TriggerDropdown";
+import { useTriggerDetection } from "./hooks/useTriggerDetection";
 import { createPlaygroundEmojiRegistry } from "./data/emojis";
 import "../../webview-runtime/src/theme.css";
 import "../../webview-runtime/src/style.css";
@@ -152,6 +154,7 @@ function App(): JSX.Element {
   });
   let linkController: LinkPopoverController | undefined;
   const [themeMode, setThemeMode] = createSignal<ThemeMode>(getInitialTheme());
+  const trigger = useTriggerDetection(() => editor.editor());
   const [pickerState, setPickerState] = createSignal<{
     isOpen: boolean;
     type: "mention" | "channel" | "emoji" | null;
@@ -282,6 +285,15 @@ function App(): JSX.Element {
             onControllerReady={(controller) => {
               linkController = controller;
             }}
+          />
+          <TriggerDropdown
+            isOpen={trigger.triggerState().isOpen}
+            type={trigger.triggerState().type}
+            query={trigger.triggerState().query}
+            anchor={trigger.triggerState().anchor}
+            onSelectMention={trigger.insertMention}
+            onSelectChannel={trigger.insertChannel}
+            onClose={trigger.closeTrigger}
           />
           <MockInsertPicker
             isOpen={pickerState().isOpen}
