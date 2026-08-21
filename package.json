@@ -11,10 +11,10 @@
     "runtime:publish": "node scripts/publish-runtime-release.mjs"
   },
   "devDependencies": {
-    "happy-dom": "^20.11.1",
-    "solid-js": "^1.9.14",
-    "vite": "catalog:",
-    "vite-plugin-solid": "^2.11.13",
+    "happy-dom": "^20.11.6",
+    "solid-js": "^1.9.15",
+    "vite": "npm:@voidzero-dev/vite-plus-core@0.2.6",
+    "vite-plugin-solid": "^2.11.14",
     "vite-plus": "catalog:"
   },
   "devEngines": {
