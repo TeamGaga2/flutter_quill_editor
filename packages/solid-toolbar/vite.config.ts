@@ -1,9 +1,8 @@
 // vite.config.ts
-import { defineConfig } from "vite-plus";
 import solid from "vite-plugin-solid";
 import solidRolldown from "unplugin-solid/rolldown";
 
-export default defineConfig({
+const config: Record<string, unknown> = {
   resolve: {
     tsconfigPaths: true,
   },
@@ -32,4 +31,6 @@ export default defineConfig({
   },
 
   fmt: {},
-});
+};
+
+export default config;

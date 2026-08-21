@@ -90,7 +90,7 @@ export function parseRuntimeArtifactTag(tag) {
 function assertSafeRelativePath(path, label) {
   const hasNonPortableAscii =
     typeof path === "string" &&
-    [...path].some((character) => {
+    Array.from(path).some((character) => {
       const codePoint = character.codePointAt(0);
       return codePoint < 0x20 || codePoint === 0x7f || codePoint > 0x7e;
     });

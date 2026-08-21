@@ -96,9 +96,9 @@ export function TriggerDropdown(props: TriggerDropdownProps): JSX.Element {
 
   // Reset selected index on query/type change
   createEffect(() => {
-    // depend on query and type
-    props.query;
-    props.type;
+    // Read both reactive props so Solid tracks them as dependencies.
+    void props.query;
+    void props.type;
     setSelectedIndex(0);
   });
 

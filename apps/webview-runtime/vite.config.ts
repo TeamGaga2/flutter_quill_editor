@@ -2,7 +2,7 @@ import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { defineConfig } from "vite-plus";
+import type { Plugin } from "vite-plus";
 import solid from "vite-plugin-solid";
 
 /** Keep in sync with `@teamgaga/richtext-protocol` PROTOCOL_VERSION. */
@@ -35,11 +35,55 @@ function resolveSourceCommit(): string | null {
   }
 }
 
+function createRuntimeVersionPlugin(buildId: string, builtAt: string): Plugin {
+  return {
+    name: "tg-runtime-version",
+    apply: "build",
+    generateBundle(_options, bundle) {
+      // Provisional manifest — finalize-iframe-entry.mjs rewrites webEntry*
+      // after hashing / renaming the emitted iframe HTML.
+      const iframeAsset = Object.values(bundle).find(
+        (item) => item.type === "asset" && item.fileName === "iframe.html",
+      );
+      let iframeSource = "";
+      if (iframeAsset && iframeAsset.type === "asset") {
+        if (typeof iframeAsset.source === "string") {
+          iframeSource = iframeAsset.source;
+        } else if (iframeAsset.source instanceof Uint8Array) {
+          iframeSource = Buffer.from(iframeAsset.source).toString("utf8");
+        }
+      }
+      const provisionalHash = iframeSource
+        ? createHash("sha256").update(iframeSource).digest("hex")
+        : "pending";
+
+      this.emitFile({
+        type: "asset",
+        fileName: "runtime-version.json",
+        source: `${JSON.stringify(
+          {
+            protocolVersion: PROTOCOL_VERSION,
+            hostEnvelopeVersion: HOST_ENVELOPE_VERSION,
+            buildId,
+            builtAt,
+            package: "webview-runtime",
+            sourceCommit: resolveSourceCommit(),
+            webEntry: "iframe.html",
+            webEntrySha256: provisionalHash,
+          },
+          null,
+          2,
+        )}\n`,
+      });
+    },
+  };
+}
+
 /**
  * Relative base so Flutter can load dist via file / asset URLs
  * (e.g. `file:///.../index.html` or WebView asset path) without absolute `/assets/...` breakage.
  */
-export default defineConfig(() => {
+export default () => {
   const builtAt = resolveBuildAt();
   const buildId = resolveBuildId(builtAt);
 
@@ -59,49 +103,6 @@ export default defineConfig(() => {
         },
       },
     },
-    plugins: [
-      solid(),
-      {
-        name: "tg-runtime-version",
-        apply: "build",
-        generateBundle(_options, bundle) {
-          // Provisional manifest — finalize-iframe-entry.mjs rewrites webEntry*
-          // after hashing / renaming the emitted iframe HTML.
-          const iframeAsset = Object.values(bundle).find(
-            (item) => item.type === "asset" && item.fileName === "iframe.html",
-          );
-          let iframeSource = "";
-          if (iframeAsset && iframeAsset.type === "asset") {
-            if (typeof iframeAsset.source === "string") {
-              iframeSource = iframeAsset.source;
-            } else if (iframeAsset.source instanceof Uint8Array) {
-              iframeSource = Buffer.from(iframeAsset.source).toString("utf8");
-            }
-          }
-          const provisionalHash = iframeSource
-            ? createHash("sha256").update(iframeSource).digest("hex")
-            : "pending";
-
-          this.emitFile({
-            type: "asset",
-            fileName: "runtime-version.json",
-            source: `${JSON.stringify(
-              {
-                protocolVersion: PROTOCOL_VERSION,
-                hostEnvelopeVersion: HOST_ENVELOPE_VERSION,
-                buildId,
-                builtAt,
-                package: "webview-runtime",
-                sourceCommit: resolveSourceCommit(),
-                webEntry: "iframe.html",
-                webEntrySha256: provisionalHash,
-              },
-              null,
-              2,
-            )}\n`,
-          });
-        },
-      },
-    ],
+    plugins: [solid(), createRuntimeVersionPlugin(buildId, builtAt)],
   };
-});
+};
