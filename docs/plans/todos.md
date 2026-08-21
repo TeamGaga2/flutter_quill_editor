@@ -4,7 +4,8 @@
 - 范围：`docs/plans` 中尚未完成的事项 + 推荐执行顺序
 - 说明：本文件是跨计划总览，细节仍以各专项计划为准
 - Flutter 客户端实现：`teamgaga-client` / `refactor-richtext`（`ca1de52e5` 起，含 Link/Divider Toolbar 接入）
-- 当前 Flutter 内置 runtime：`buildId` `2026-07-29T02:20:55.955Z`（已含 `insert_link` / `insert_divider`）
+- 当前 Flutter 内置 runtime：由 `clients/flutter_quill_editor/richtext-runtime.lock.json` 固定；
+  `buildId/sourceCommit` 为 `9e9b2fe7ff2f71504f51c843492654855e7f8509`，并含 `insert_link` / `insert_divider`
 
 ## 计划文档状态
 
@@ -74,12 +75,12 @@
 
 ### D. Link / Divider（本轮已完成）
 
-| 任务                                                             | 优先级     | 备注                                                                                              |
-| ---------------------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------- |
-| Protocol / Core / Host / Quill：`insert_link` / `insert_divider` | **已完成** | 选区替换链接、编辑已有链接；Divider 在当前或最后选区原子插入                                      |
-| TS / Dart fixture 同步与 golden                                  | **已完成** | `packages/protocol/fixtures/v1.json` 与 Flutter golden 已对齐                                     |
-| Flutter 原生 Toolbar 复用 More 面板 / LinkDialog                 | **已完成** | `MoreTabGridView`、Divider item、`QuillToolbarLinkStyleButton`、`LinkDialog`                      |
-| webview-runtime 重建并同步 Flutter assets                        | **已完成** | `app/assets/richtext_webview_runtime` ← `apps/webview-runtime/dist`（`2026-07-29T02:20:55.955Z`） |
+| 任务                                                             | 优先级     | 备注                                                                                          |
+| ---------------------------------------------------------------- | ---------- | --------------------------------------------------------------------------------------------- |
+| Protocol / Core / Host / Quill：`insert_link` / `insert_divider` | **已完成** | 选区替换链接、编辑已有链接；Divider 在当前或最后选区原子插入                                  |
+| TS / Dart fixture 同步与 golden                                  | **已完成** | `packages/protocol/fixtures/v1.json` 与 Flutter golden 已对齐                                 |
+| Flutter 原生 Toolbar 复用 More 面板 / LinkDialog                 | **已完成** | `MoreTabGridView`、Divider item、`QuillToolbarLinkStyleButton`、`LinkDialog`                  |
+| webview-runtime 重建并同步 Flutter assets                        | **已完成** | 通过 exact promotion 更新 `richtext-runtime.lock.json`、vendored assets 与 generated manifest |
 
 ### E. 内联嵌入剪贴板（ADR 0006）
 
@@ -152,7 +153,7 @@ Flutter App（已接入）
 6. Link / Divider 全链路 — 已完成（自动化 + runtime 已同步）
    复用 More 面板 Divider item 与 QuillToolbarLinkStyleButton / LinkDialog
    insert_link 支持选区替换与编辑已有链接；insert_divider 原子插入
-   Flutter 内置 runtime buildId 2026-07-29T02:20:55.955Z
+   Flutter 内置 runtime 由 exact lock 固定，sourceCommit/buildId 为 `9e9b2fe7ff2f71504f51c843492654855e7f8509`
 
 7. 桌面插入操作第一刀 — 已完成
    Solid 工具栏 request_* + visibleInsertActions；选择器仍归宿主（ADR 0005）
@@ -220,7 +221,7 @@ Flutter App（已接入）
 3. ~~**PROTOCOL-16 / PROTOCOL-17 Dart 模型与 golden**~~ → **已完成**。
 4. ~~**媒体 / Mention / Channel 协议与 Core 命令**~~ → **已完成（自动化）**。
 5. ~~**Flutter 原生 Toolbar 接入 Mention / Channel / 图片 / 视频**~~ → **已完成**，现有样式与面板保持不变。
-6. ~~**Link / Divider 全链路 + runtime 同步**~~ → **已完成**（`2026-07-29T02:20:55.955Z`）。
+6. ~~**Link / Divider 全链路 + runtime 同步**~~ → **已完成**（exact promotion + lock/vendor）。
 7. ~~**桌面插入操作第一刀**~~ → **已完成**（ADR 0005；Circle 接线仍在 teamgaga-client）。
 8. ~~**内联嵌入剪贴板**~~（`docs/plans/richtext-inline-embed-clipboard.md`，ADR 0006） → **已完成**：保住提及/频道/表情实体，剔除正文媒体与分割线。
 9. **挂起：Android 标题 / WebView 焦点与滑动抖动**。

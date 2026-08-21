@@ -14,7 +14,6 @@ import { gzipSync } from "node:zlib";
 
 const COMMIT_PATTERN = /^[0-9a-f]{40}$/;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/;
-const RELEASE_TAG_PREFIX = "webview-runtime-channel-";
 const ARTIFACT_TAG_PREFIX = "webview-runtime-artifact-";
 const ARCHIVE_NAME = "webview-runtime.tar.gz";
 const ARTIFACT_METADATA_NAME = "runtime-artifact.json";
@@ -33,43 +32,8 @@ function pathWithin(root, path) {
   return path === root || path.startsWith(`${root}${sep}`);
 }
 
-export function branchIdentity(branch) {
-  if (typeof branch !== "string" || branch.length === 0 || branch.length > 255) {
-    throw new Error("branch must be a non-empty string no longer than 255 characters");
-  }
-  return createHash("sha256").update(branch, "utf8").digest("hex");
-}
-
-export function branchSlug(branch) {
-  const slug = branch
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 48);
-  if (!slug) throw new Error(`branch cannot produce a release slug: ${branch}`);
-  return slug;
-}
-
-export function releaseTag({ branch, pipelineIid }) {
-  if (!Number.isInteger(pipelineIid) || pipelineIid <= 0) {
-    throw new Error("pipelineIid must be a positive integer");
-  }
-  return `${RELEASE_TAG_PREFIX}${branchSlug(branch)}-${branchIdentity(branch).slice(0, 16)}-${pipelineIid}`;
-}
-
-export function parseReleaseTag(tag) {
-  if (typeof tag !== "string") return null;
-  const match = new RegExp(`^${RELEASE_TAG_PREFIX}(.+)-([0-9a-f]{16})-([1-9][0-9]*)$`).exec(tag);
-  if (!match) return null;
-  return { branchSlug: match[1], branchIdentity: match[2], pipelineIid: Number(match[3]) };
-}
-
 /**
  * Return the immutable promotion tag for one exact runtime source commit.
- *
- * The legacy branch/pipeline helpers above intentionally remain available for
- * the PR-1 compatibility window. New promotion code must use this helper so
- * that a tag has no moving branch or CI-run component.
  */
 export function runtimeArtifactTag(sourceCommit) {
   if (typeof sourceCommit !== "string" || !COMMIT_PATTERN.test(sourceCommit)) {
@@ -546,39 +510,4 @@ export function createArchive(distDir, archivePath) {
   writeFileSync(archivePath, gzipSync(Buffer.concat(chunks), { level: 9, mtime: 0 }));
 }
 
-export function makeReleaseMetadata({
-  branch,
-  sourceCommit,
-  pipelineId,
-  pipelineIid,
-  tag,
-  archiveSha256,
-  runtimeVersion,
-}) {
-  if (!COMMIT_PATTERN.test(sourceCommit)) throw new Error("sourceCommit must be a full commit SHA");
-  if (!Number.isInteger(pipelineId) || pipelineId <= 0)
-    throw new Error("pipelineId must be positive");
-  if (!Number.isInteger(pipelineIid) || pipelineIid <= 0)
-    throw new Error("pipelineIid must be positive");
-  if (!SHA256_PATTERN.test(archiveSha256))
-    throw new Error("archiveSha256 must be a lowercase SHA-256");
-  if (tag !== releaseTag({ branch, pipelineIid }))
-    throw new Error("release tag does not match branch and pipeline IID");
-  return {
-    schemaVersion: 1,
-    branch,
-    branchIdentity: branchIdentity(branch),
-    sourceCommit,
-    pipelineId,
-    pipelineIid,
-    releaseTag: tag,
-    archiveName: ARCHIVE_NAME,
-    archiveSha256,
-    protocolVersion: runtimeVersion.protocolVersion,
-    hostEnvelopeVersion: runtimeVersion.hostEnvelopeVersion,
-    runtimeBuildId: runtimeVersion.buildId,
-    generatedAt: runtimeVersion.builtAt,
-  };
-}
-
-export { ARCHIVE_NAME, ARTIFACT_METADATA_NAME, ARTIFACT_TAG_PREFIX, RELEASE_TAG_PREFIX };
+export { ARCHIVE_NAME, ARTIFACT_METADATA_NAME, ARTIFACT_TAG_PREFIX };

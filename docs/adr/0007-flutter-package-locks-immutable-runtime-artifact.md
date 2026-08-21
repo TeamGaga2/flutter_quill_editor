@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 ---
 
 # 0007：Flutter package 显式锁定并 vendor immutable runtime artifact
@@ -8,13 +8,14 @@ status: proposed
 
 ## 状态
 
-Proposed。本 ADR 拟替代 [ADR 0003](./0003-client-follows-branch-runtime-release.md)，但 PR-0 不改变 ADR 0003 的状态或当前生产流程。迁移完成并通过 PR-4 验收后，才将本 ADR 标记为 accepted，并将 ADR 0003 标记为 superseded。
+Accepted。本 ADR 已完成 PR-2 的 exact lock/vendor 迁移以及 PR-3/PR-4
+的生产路径和文档收口；它 supersede 了 [ADR 0003](./0003-client-follows-branch-runtime-release.md)。
 
 ## 背景
 
-当前 Flutter package 通过 `richtext-runtime-channel.json` 指定 `dev` 分支，并在 prepare 阶段解析该通道的最新 runtime Release。该模型把分支上下文、Release 发布、依赖选择和 vendoring 混在一起：同一 Flutter package commit 在不同时间可能解析到不同 runtime bytes，缓存也不能成为可审查的版本锁定。
+历史上 Flutter package 通过 `richtext-runtime-channel.json` 指定 `dev` 分支，并在 prepare 阶段解析该通道的最新 runtime Release。该模型把分支上下文、Release 发布、依赖选择和 vendoring 混在一起：同一 Flutter package commit 在不同时间可能解析到不同 runtime bytes，缓存也不能成为可审查的版本锁定；PR-3/PR-4 已删除这条生产路径。
 
-Flutter package 需要继续随 package 发布完整的 WebView runtime assets，使消费方无需 Node.js、运行时无需联网并支持离线加载。因此本次决策只重构 artifact 的身份、选择和同步边界，不改变 vendored runtime 的交付方向，也不在 PR-0 改动生产流程。
+Flutter package 继续随 package 发布完整的 WebView runtime assets，使消费方无需 Node.js、运行时无需联网并支持离线加载。因此本次决策重构 artifact 的身份、选择和同步边界，不改变 vendored runtime 的交付方向。
 
 ## 决策
 
@@ -73,20 +74,22 @@ clients/flutter_quill_editor/lib/host/runtime_manifest.dart
 
 ## 基线记录
 
-PR-0 以提交 `0ecde5d` 为文档基线。当前实现和验证入口包括：
+PR-0 以提交 `0ecde5d` 为文档基线。迁移完成后的实现和验证入口包括：
 
-- `.github/workflows/runtime-release.yml`：`dev` push 验证后创建 branch Release；PR/`main` 仅验证；
-- `scripts/runtime-release.mjs`、`scripts/publish-runtime-release.mjs`：runtime dist 校验、归档和 Release 发布；
-- `clients/flutter_quill_editor/tool/richtext_runtime_prepare.dart`、`tool/runtime_delivery.dart`：channel/latest 解析、下载、安全解压、materialize 和 manifest codegen；
-- `clients/flutter_quill_editor/test/runtime_delivery_test.dart` 与 `scripts/runtime-release.test.mjs`：latest 选择、token redirect、checksum、协议和 archive 安全测试。
+- `.github/workflows/runtime-release.yml`：普通 PR/branch 验证并上传短期 Actions artifact，不创建 Release；
+- `.github/workflows/runtime-artifact-promotion.yml`：受保护的 exact source commit promotion；
+- `scripts/runtime-release.mjs`、`scripts/promote-runtime-artifact.mjs`：artifact contract 和 immutable promotion；
+- `clients/flutter_quill_editor/tool/richtext_runtime_prepare.dart`、`tool/runtime_delivery.dart`：locked verify、local materialize、exact update 和 manifest codegen；
+- `clients/flutter_quill_editor/test/runtime_lock_test.dart` 与 `scripts/runtime-artifact.test.mjs`：exact lock、token redirect、checksum、协议、content digest 和 archive 安全测试。
 
-这些现状入口在后续 PR-1 至 PR-3 中分阶段替换；PR-0 不修改生产代码、workflow、assets 或生成文件。
+旧 channel/latest/publisher 入口已在 PR-3/PR-4 删除；历史 branch Release
+仍保留在 GitHub 供审计，但不再参与选择。
 
 ## 迁移边界
 
-本 ADR 只冻结目标契约。具体实施由[构建产物同步机制改造实施方案](../plans/webview-runtime-artifact-sync-implementation-plan.md)按 PR-0 至 PR-4 推进：先建立 artifact contract，再引入 lock/exact vendor，随后停止 floating 发布与解析，最后收口历史文档和兼容代码。
+本 ADR 的实施由[构建产物同步机制改造实施方案](../plans/webview-runtime-artifact-sync-implementation-plan.md)按 PR-0 至 PR-4 完成：先建立 artifact contract，再引入 lock/exact vendor，随后停止 floating 发布与解析，最后收口历史文档和兼容代码。
 
-在新消费路径可用并通过验证前，不删除旧路径；PR-0 不切换现有生产流程。后续迁移期间旧路径仍是当前生产行为，直至 PR-4 完成收口。
+PR-4 已完成收口。当前生产路径是 exact promotion → explicit lock update/vendor → offline locked verify；旧 branch/latest 路径仅作为历史文档保留。
 
 PR-1 提供跨语言共享的 `scripts/fixtures/runtime-content-sha256.json`，用于冻结 canonical content digest 算法。Dart verifier 对该 fixture 的消费和真实 vendored tree 校验是 PR-2 的强制门槛；PR-1 不提前改 Flutter consumer。
 
@@ -99,4 +102,4 @@ PR-1 提供跨语言共享的 `scripts/fixtures/runtime-content-sha256.json`，�
 ## 相关文档
 
 - 目标实施计划：[WebView Runtime 构建产物同步机制改造实施方案](../plans/webview-runtime-artifact-sync-implementation-plan.md)
-- 拟由本 ADR 替代的现行决策：[ADR 0003](./0003-client-follows-branch-runtime-release.md)
+- 被本 ADR supersede 的历史决策：[ADR 0003](./0003-client-follows-branch-runtime-release.md)

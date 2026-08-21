@@ -21,7 +21,7 @@
 - 浮层确认后由运行时直接执行 editor.commands.insertLink，不经协议往返；prepareWebTextLink 预填逻辑迁移进 web。
 - 行为怪癖原样保留：URL 必须显式 scheme（不自动补 https）、无错误文案（无效即禁用提交）、Enter 不绑定提交、无 Escape 绑定、无取消链接入口。
 - 验收：CSS 变量值契约测试 + 截图视觉测试（两形态 x 明暗），对照参考文档测量级比对。
-- 发布：跨两仓原子变更；运行时资产重构建、走分支发布通道（ADR 0003）。
+- 发布：跨两仓变更完成后，通过 exact runtime promotion 和 Flutter lock/vendor 更新；详见 ADR 0007。
 
 ## 参考行为规格（实施逐项对照）
 

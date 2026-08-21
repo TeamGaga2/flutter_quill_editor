@@ -1,9 +1,9 @@
 # WebView runtime artifact promotion, pin, verification, and rollback
 
-> **Migration status:** PR-2 is complete for the first exact promoted artifact:
-> the remote Release was byte-verified and the lock, vendored runtime, and
-> generated manifest are committed together. PR-3/PR-4 are still pending, so the
-> legacy `dev` Release path remains available and this is not a full cutover.
+> **Migration status:** PR-2, PR-3 and PR-4 are complete. The remote Release was
+> byte-verified, the lock/vendor/manifest are committed together, ordinary
+> runtime CI no longer publishes Releases, and Flutter consumes only the
+> committed exact lock.
 
 This runbook covers the three explicit maintenance actions in the target
 model:
@@ -16,11 +16,10 @@ exact source commit
   -> package release
 ```
 
-It deliberately does not change ADR status. [ADR 0007](../adr/0007-flutter-package-locks-immutable-runtime-artifact.md)
-remains `proposed`, and [ADR 0003](../adr/0003-client-follows-branch-runtime-release.md)
-remains the historical/current decision until the later migration PRs are
-accepted. See the [implementation plan](../plans/webview-runtime-artifact-sync-implementation-plan.md)
-and [current release behavior](../runtime-release.md) for the boundaries.
+[ADR 0007](../adr/0007-flutter-package-locks-immutable-runtime-artifact.md) is
+accepted and [ADR 0003](../adr/0003-client-follows-branch-runtime-release.md)
+is superseded. See the [implementation plan](../plans/webview-runtime-artifact-sync-implementation-plan.md)
+and [runtime release contract](../runtime-release.md) for the boundaries.
 
 ## 1. Preconditions and authority
 
@@ -278,10 +277,9 @@ flutter analyze
 flutter test
 ```
 
-The default/no-argument path is intentionally read-only locked verification in
-the new consumer. If the lock is absent in this migration window, use the
-explicit legacy path documented in the package README; do not make a missing
-lock look like a successful formal update.
+The default/no-argument path is intentionally read-only locked verification.
+If the lock is absent, verification fails; there is no legacy fallback or
+implicit network selection path.
 
 The PR description must include old/new values for source commit, exact tag,
 archive SHA, content SHA, protocol version, and host envelope version. It must
@@ -316,8 +314,8 @@ so reviewers can check the identity table and the three tracked output groups.
 ### 6.2 Lock/vendor PR not merged
 
 Close or revert the unmerged working-tree change. Keep the known-good
-committed vendor and legacy production path intact. A local materialization is
-not a rollback and must not be committed as a formal pin.
+committed vendor intact. A local materialization is not a rollback and must not
+be committed as a formal pin.
 
 ### 6.3 Lock/vendor change merged but package not released
 
@@ -344,19 +342,15 @@ multi-file update.
 
 ## 7. Current migration boundary
 
-After the first PR-2 exact pin, and until PR-3 and PR-4 are accepted:
+The migration is complete:
 
-- `dev` push and the legacy branch Release workflow remain current production
-  behavior;
-- `richtext-runtime-channel.json` and legacy latest code are not removed by
-  this runbook;
-- ADR 0007 stays `proposed` and ADR 0003 is not marked `superseded`;
-- `richtext-runtime.lock.json` is the committed selector for the promoted
-  artifact; new updates must repeat the exact promotion and remote byte proof;
+- ordinary `dev`/`main` runtime workflows upload only short-lived Actions
+  artifacts and never create Releases;
+- only the explicit protected promotion workflow creates immutable exact-tag
+  Releases;
+- `richtext-runtime.lock.json` is the only runtime selector and all normal
+  Flutter commands use committed vendor assets offline;
+- the old channel file, latest resolver and legacy publisher are removed;
+- historical branch Releases remain available for audit but are not selectable;
 - a successful local `--from-artifact` or `--local` run is not a promotion or
   lock-update proof.
-
-The migration is complete only after the implementation plan's PR-3/PR-4
-gates are met, including stopping floating Release publication/selection,
-accepting ADR 0007, preserving the legacy history without using it as a
-selector, and exercising this rollback procedure.

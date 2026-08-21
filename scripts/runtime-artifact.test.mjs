@@ -584,18 +584,19 @@ test("promotion workflow has an exact source commit and split permissions", () =
   expect(legacyWorkflow).toContain(".github/workflows/runtime-artifact-promotion.yml");
 });
 
-test("legacy dev Release workflow does not depend on the artifact job", () => {
+test("ordinary runtime workflow never publishes a GitHub Release", () => {
   const workflow = readFileSync(
     resolve(process.cwd(), ".github/workflows/runtime-release.yml"),
     "utf8",
   );
-  expect(workflow).toContain("node scripts/publish-runtime-release.mjs");
-  expect(workflow).toContain("TG_SOURCE_BRANCH");
-  expect(workflow).toContain("TG_PIPELINE_IID");
+  expect(workflow).toContain("actions/upload-artifact@v7");
+  expect(workflow).toContain("retention-days: 7");
   expect(workflow).toContain("artifact-contract:");
-  const legacyRelease = workflow.slice(workflow.indexOf("  release:"));
-  expect(legacyRelease).toContain("needs: verify");
-  expect(legacyRelease).not.toContain("artifact-contract");
+  expect(workflow).not.toContain("  release:");
+  expect(workflow).not.toContain("publish-runtime-release.mjs");
+  expect(workflow).not.toContain("TG_SOURCE_BRANCH");
+  expect(workflow).not.toContain("TG_PIPELINE_IID");
+  expect(workflow).not.toContain("contents: write");
 });
 
 describe("runtime artifact promotion behavior", () => {

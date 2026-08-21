@@ -59,14 +59,14 @@ jobs:
           TG_BUILD_AT: ${{ steps.build_metadata.outputs.build_at }}
         run: vp run --no-cache --filter webview-runtime... build
       - run: vp check
-      - run: vp test scripts/runtime-release.test.mjs --run
+      - run: vp test scripts/runtime-artifact.test.mjs --run
       - run: node scripts/verify-runtime-dist.mjs
       - uses: actions/upload-artifact@v7
         with:
           name: webview-runtime-dist
           path: apps/webview-runtime/dist
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 7
 
   artifact-contract:
     name: Verify runtime artifact contract
@@ -98,31 +98,4 @@ jobs:
           name: webview-runtime-artifact-contract
           path: runtime-artifact
           if-no-files-found: error
-          retention-days: 1
-
-  release:
-    name: Publish runtime release
-    if: github.event_name == 'push' && github.ref_name == 'dev'
-    needs: verify
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/download-artifact@v8
-        with:
-          name: webview-runtime-dist
-          path: apps/webview-runtime/dist
-      - uses: voidzero-dev/setup-vp@v1.17.0
-        with:
-          node-version: "24"
-      - name: Publish GitHub Release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          GITHUB_API_URL: ${{ github.api_url }}
-          TG_SOURCE_BRANCH: ${{ github.ref_name }}
-          TG_SOURCE_COMMIT: ${{ github.sha }}
-          TG_PIPELINE_ID: ${{ github.run_id }}
-          TG_PIPELINE_IID: ${{ github.run_number }}
-        run: node scripts/publish-runtime-release.mjs
+          retention-days: 7

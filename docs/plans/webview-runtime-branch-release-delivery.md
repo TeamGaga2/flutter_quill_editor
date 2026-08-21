@@ -3,10 +3,10 @@
 ## 状态
 
 - 决策：[ADR 0003](../adr/0003-client-follows-branch-runtime-release.md)
-- 当前阶段：GitHub Actions 发布与 client GitHub Release 消费代码已完成，等待 GitHub Actions 联调
-- 当前生产方式：分支 Release + client 显式 pre-build；上线顺序必须先 richtext 发布、后 client 消费
+- 状态：Superseded by [ADR 0007](../adr/0007-flutter-package-locks-immutable-runtime-artifact.md)
+- 当前生产方式：exact promotion + committed lock/vendor + offline Flutter verify
 
-> Proposed replacement: [WebView Runtime 构建产物同步机制改造实施方案](./webview-runtime-artifact-sync-implementation-plan.md) 与 [ADR 0007](../adr/0007-flutter-package-locks-immutable-runtime-artifact.md)。PR-0 尚未切换实现，以下 branch/latest 流程仍是当前生产行为；最终状态收口留给 PR-4。
+> 本文保留 branch/latest 方案作为历史记录。新的生产流程、维护命令和回滚边界以实施方案、ADR 0007 和 promotion runbook 为准；本文不再描述当前可执行入口。
 
 ## 目标流程
 

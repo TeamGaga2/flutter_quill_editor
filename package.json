@@ -7,8 +7,7 @@
     "ready": "vp run -r build && vp check && vp run -r test",
     "dev": "vp run webview-runtime#dev",
     "prepare": "vp config",
-    "runtime:verify": "node scripts/verify-runtime-dist.mjs",
-    "runtime:publish": "node scripts/publish-runtime-release.mjs"
+    "runtime:verify": "node scripts/verify-runtime-dist.mjs"
   },
   "devDependencies": {
     "happy-dom": "^20.11.6",

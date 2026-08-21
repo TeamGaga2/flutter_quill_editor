@@ -194,7 +194,7 @@ Matcher 必须产出 **Quill 侧** embed value（对象），不能直接写 can
 - [x] `vp check` / `vp test`（至少 `packages/quill`）
 - [x] playground 人工：插入提及、频道引用、表情后复制到同一编辑器、再复制到备忘录看纯文本/HTML；贴回仍是实体；复制含图段落贴回图消失；从备忘录贴 `@Alice` 仍是字
 - [x] 不要求本 PR 改 `teamgaga-client`
-- [x] webview-runtime：Quill 变更随 `vp run -r build` 打进 runtime；Flutter 内置资产是否立刻同步走既有 ADR 0003 通道，不在本计划另开发布流程
+- [x] webview-runtime：Quill 变更随 `vp run -r build` 打进 runtime；Flutter 内置资产通过 ADR 0007 的 exact promotion、lock/vendor 流程同步
 
 ## 完成定义
 

@@ -1,8 +1,8 @@
 ---
-status: accepted
+status: superseded
 ---
 
-> Proposed replacement: [ADR 0007](./0007-flutter-package-locks-immutable-runtime-artifact.md)。PR-0 尚未切换实现；本 ADR 及下述 branch/latest 流程仍记录当前生产行为。迁移完成后再由 PR-4 将本 ADR 标记为 superseded。
+> Superseded by [ADR 0007](./0007-flutter-package-locks-immutable-runtime-artifact.md)。本文保留 branch/latest Release 方案作为历史记录；当前生产流程使用 exact promoted artifact、committed lock 和 vendored runtime。
 
 # Client 构建跟随指定分支的最新 runtime Release
 

@@ -1,5 +1,3 @@
-// ignore_for_file: prefer_const_declarations, prefer_const_constructors
-
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -7,7 +5,6 @@ import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 import 'package:crypto/crypto.dart';
-import 'package:flutter_quill_editor/protocol/protocol_version.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 
@@ -22,137 +19,23 @@ class _RedirectClient extends http.BaseClient {
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
     requests.add(request);
-    if (request.url.host == 'api.github.com') {
-      return http.StreamedResponse(
-        Stream<List<int>>.value(utf8.encode('redirect')),
-        302,
-        headers: const <String, String>{
-          'location': 'https://mirror.example/releases',
-        },
-        request: request,
-      );
-    }
     return http.StreamedResponse(
-      Stream<List<int>>.value(utf8.encode('[]')),
-      200,
-      request: request,
-    );
-  }
-}
-
-class _CrossOriginRedirectClient extends http.BaseClient {
-  final requests = <http.BaseRequest>[];
-
-  @override
-  Future<http.StreamedResponse> send(http.BaseRequest request) async {
-    requests.add(request);
-    if (request.url.host == 'api.github.com' && requests.length == 1) {
-      return http.StreamedResponse(
-        Stream<List<int>>.value(utf8.encode('redirect')),
-        302,
-        headers: const <String, String>{
-          'location': 'https://github.com/runtime-assets/start',
-        },
-        request: request,
-      );
-    }
-    if (request.url.host == 'github.com') {
-      return http.StreamedResponse(
-        Stream<List<int>>.value(utf8.encode('redirect')),
-        302,
-        headers: const <String, String>{
-          'location':
-              'https://api.github.com/repos/TeamGaga2/flutter_quill_editor/releases',
-        },
-        request: request,
-      );
-    }
-    return http.StreamedResponse(
-      Stream<List<int>>.value(utf8.encode('[]')),
-      200,
+      Stream<List<int>>.value(utf8.encode('redirect')),
+      302,
+      headers: const <String, String>{
+        'location': 'https://mirror.example/releases',
+      },
       request: request,
     );
   }
 }
 
 void main() {
-  test('branch identity and latest release selection are deterministic', () {
-    final channel = RuntimeChannelConfig.fromJson(<String, Object?>{
-      'branch': 'dev',
-    });
-    final host = Uri.parse('https://api.github.com');
-    RuntimeReleaseCandidate candidate(int iid) => RuntimeReleaseCandidate(
-      tag:
-          'webview-runtime-channel-dev-${channel.branchIdentity.substring(0, 16)}-$iid',
-      pipelineIid: iid,
-      metadataUrl: Uri.parse('https://api.github.com/runtime-$iid.json'),
-      archiveUrl: Uri.parse('https://api.github.com/runtime-$iid.tar.gz'),
-      checksumUrl: Uri.parse('https://api.github.com/runtime-$iid.sha256'),
-    );
-    expect(
-      selectLatestRuntimeRelease(<RuntimeReleaseCandidate>[
-        candidate(2),
-        candidate(7),
-      ]).pipelineIid,
-      7,
-    );
-    expect(
-      releaseCandidateFromGitHubJson(
-        <String, Object?>{
-          'tag_name': candidate(7).tag,
-          'assets': <Object?>[
-            <String, Object?>{
-              'name': kRuntimeMetadataName,
-              'url': candidate(7).metadataUrl.toString(),
-            },
-            <String, Object?>{
-              'name': kRuntimeArchiveName,
-              'url': candidate(7).archiveUrl.toString(),
-            },
-            <String, Object?>{
-              'name': kRuntimeChecksumName,
-              'url': candidate(7).checksumUrl.toString(),
-            },
-          ],
-        },
-        branchIdentity: channel.branchIdentity,
-        expectedHost: host,
-      )!.pipelineIid,
-      7,
-    );
-    expect(
-      releaseCandidateFromGitHubJson(
-        <String, Object?>{'tag_name': candidate(8).tag, 'draft': true},
-        branchIdentity: channel.branchIdentity,
-        expectedHost: host,
-      ),
-      isNull,
-    );
-  });
-
-  test('redirects never forward the private token across origins', () async {
-    final transport = _RedirectClient();
-    final client = GitHubRuntimeReleaseClient(
-      apiBase: Uri.parse('https://api.github.com'),
-      project: 'TeamGaga2/flutter_quill_editor',
-      token: 'secret-token',
-      httpClient: transport,
-    );
-    await expectLater(
-      client.resolveLatest(const RuntimeChannelConfig(branch: 'dev')),
-      throwsStateError,
-    );
-    expect(
-      transport.requests[0].headers['Authorization'],
-      'Bearer secret-token',
-    );
-    expect(transport.requests, hasLength(1));
-  });
-
   test(
-    'redirecting back to the API does not reattach the private token',
+    'exact artifact requests never forward a token across origins',
     () async {
-      final transport = _CrossOriginRedirectClient();
+      final transport = _RedirectClient();
+      final sourceCommit = repeated('a', 40);
       final client = GitHubRuntimeReleaseClient(
         apiBase: Uri.parse('https://api.github.com'),
         project: 'TeamGaga2/flutter_quill_editor',
@@ -160,63 +43,16 @@ void main() {
         httpClient: transport,
       );
       await expectLater(
-        client.resolveLatest(const RuntimeChannelConfig(branch: 'dev')),
+        client.fetchExactArtifact(runtimeArtifactTag(sourceCommit)),
         throwsStateError,
       );
-      expect(transport.requests, hasLength(3));
+      expect(transport.requests, hasLength(1));
       expect(
-        transport.requests[0].headers['Authorization'],
+        transport.requests.single.headers['Authorization'],
         'Bearer secret-token',
-      );
-      expect(
-        transport.requests[1].headers.containsKey('Authorization'),
-        isFalse,
-      );
-      expect(
-        transport.requests[2].headers.containsKey('Authorization'),
-        isFalse,
       );
     },
   );
-
-  test('metadata rejects an archive identity mismatch', () {
-    expect(
-      () => RuntimeReleaseMetadata.fromJson(<String, Object?>{
-        'branch': 'dev',
-        'branchIdentity': runtimeBranchIdentity('dev'),
-        'sourceCommit': repeated('a', 40),
-        'pipelineId': 1,
-        'pipelineIid': 1,
-        'releaseTag':
-            'webview-runtime-channel-dev-${runtimeBranchIdentity('dev').substring(0, 16)}-1',
-        'archiveName': kRuntimeArchiveName,
-        'archiveSha256': 'not-a-sha',
-        'protocolVersion': kRichTextProtocolVersion,
-        'hostEnvelopeVersion': 1,
-      }),
-      throwsStateError,
-    );
-  });
-
-  test('metadata rejects a runtime protocol newer than the client', () {
-    final identity = runtimeBranchIdentity('dev');
-    expect(
-      () => RuntimeReleaseMetadata.fromJson(<String, Object?>{
-        'branch': 'dev',
-        'branchIdentity': identity,
-        'sourceCommit': repeated('a', 40),
-        'pipelineId': 1,
-        'pipelineIid': 1,
-        'releaseTag':
-            'webview-runtime-channel-dev-${identity.substring(0, 16)}-1',
-        'archiveName': kRuntimeArchiveName,
-        'archiveSha256': repeated('b', 64),
-        'protocolVersion': kRichTextProtocolVersion + 1,
-        'hostEnvelopeVersion': 1,
-      }),
-      throwsStateError,
-    );
-  });
 
   test('archive path validation rejects traversal and symlinks', () {
     expect(
@@ -253,75 +89,6 @@ void main() {
       ]),
       throwsStateError,
     );
-  });
-
-  test('manifest generation preserves release provenance', () {
-    final branch = 'dev';
-    final metadata = RuntimeReleaseMetadata(
-      branch: branch,
-      branchIdentity: runtimeBranchIdentity(branch),
-      sourceCommit: repeated('a', 40),
-      pipelineId: 10,
-      pipelineIid: 11,
-      releaseTag:
-          'webview-runtime-channel-dev-${runtimeBranchIdentity(branch).substring(0, 16)}-11',
-      archiveName: kRuntimeArchiveName,
-      archiveSha256: repeated('b', 64),
-      protocolVersion: 1,
-      hostEnvelopeVersion: 1,
-    );
-    final source = generateRuntimeManifest(metadata, <String, Object?>{
-      'protocolVersion': 1,
-      'hostEnvelopeVersion': 1,
-      'buildId': 'build',
-      'webEntry': 'iframe.abc.html',
-      'webEntrySha256': repeated('c', 64),
-    });
-    expect(source, contains('releaseTag: "${metadata.releaseTag}"'));
-    expect(source, contains('archiveSha256: "${metadata.archiveSha256}"'));
-  });
-
-  test('materialized runtime verifies the real release metadata', () async {
-    final branch = 'dev';
-    final identity = runtimeBranchIdentity(branch);
-    final metadata = RuntimeReleaseMetadata.fromJson(<String, Object?>{
-      'branch': branch,
-      'branchIdentity': identity,
-      'sourceCommit': repeated('a', 40),
-      'pipelineId': 10,
-      'pipelineIid': 11,
-      'releaseTag':
-          'webview-runtime-channel-dev-${identity.substring(0, 16)}-11',
-      'archiveName': kRuntimeArchiveName,
-      'archiveSha256': repeated('b', 64),
-      'protocolVersion': kRichTextProtocolVersion,
-      'hostEnvelopeVersion': 1,
-      'runtimeBuildId': 'build',
-      'generatedAt': '2026-01-01T00:00:00.000Z',
-    });
-    final temp = await Directory.systemTemp.createTemp(
-      'tg-runtime-verify-test-',
-    );
-    addTearDown(() => temp.delete(recursive: true));
-    const iframe = '<script src="./assets/main.js"></script>';
-    await Directory('${temp.path}/assets').create();
-    await File('${temp.path}/assets/main.js').writeAsString('ok');
-    await File(
-      '${temp.path}/index.html',
-    ).writeAsString('<iframe src="./iframe.html"></iframe>');
-    await File('${temp.path}/iframe.html').writeAsString(iframe);
-    await File('${temp.path}/runtime-version.json').writeAsString(
-      jsonEncode(<String, Object?>{
-        'package': 'webview-runtime',
-        'buildId': 'build',
-        'sourceCommit': metadata.sourceCommit,
-        'protocolVersion': metadata.protocolVersion,
-        'hostEnvelopeVersion': 1,
-        'webEntry': 'iframe.html',
-        'webEntrySha256': sha256.convert(utf8.encode(iframe)).toString(),
-      }),
-    );
-    verifyRuntimeDirectory(temp, metadata);
   });
 
   test('archive extraction rejects unsafe entries before writing', () async {
@@ -377,18 +144,15 @@ void main() {
     expect(downloads, 2);
   });
 
-  test(
-    'preparation temp directory is created beside the materialized output',
-    () async {
-      final parent = await Directory.systemTemp.createTemp(
-        'tg-runtime-parent-test-',
-      );
-      addTearDown(() => parent.delete(recursive: true));
-      final outputParent = Directory('${parent.path}/assets');
-      await outputParent.create();
-      final temporary = await createRuntimePreparationDirectory(outputParent);
-      expect(temporary.parent.path, outputParent.path);
-      await temporary.delete(recursive: true);
-    },
-  );
+  test('preparation temp directory is created beside the output', () async {
+    final parent = await Directory.systemTemp.createTemp(
+      'tg-runtime-parent-test-',
+    );
+    addTearDown(() => parent.delete(recursive: true));
+    final outputParent = Directory('${parent.path}/assets');
+    await outputParent.create();
+    final temporary = await createRuntimePreparationDirectory(outputParent);
+    expect(temporary.parent.path, outputParent.path);
+    await temporary.delete(recursive: true);
+  });
 }

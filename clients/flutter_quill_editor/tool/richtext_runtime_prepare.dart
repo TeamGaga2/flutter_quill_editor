@@ -3,37 +3,25 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:archive/archive.dart';
-import 'package:crypto/crypto.dart';
-
 import 'runtime_delivery.dart';
 import 'package:path/path.dart' as p;
 
 Directory _findPackageRoot() {
   final current = Directory.current;
-  if (File(p.join(current.path, kRuntimeLockName)).existsSync() ||
-      File(
-        p.join(current.path, 'richtext-runtime-channel.json'),
-      ).existsSync()) {
+  if (File(p.join(current.path, kRuntimeLockName)).existsSync()) {
     return current;
   }
   final subPackage = Directory(
     p.join(current.path, 'clients', 'flutter_quill_editor'),
   );
-  if (File(p.join(subPackage.path, kRuntimeLockName)).existsSync() ||
-      File(
-        p.join(subPackage.path, 'richtext-runtime-channel.json'),
-      ).existsSync()) {
+  if (File(p.join(subPackage.path, kRuntimeLockName)).existsSync()) {
     return subPackage;
   }
   if (Platform.script.scheme == 'file') {
     final scriptFile = File.fromUri(Platform.script);
     final scriptDir = scriptFile.parent;
     final parent = scriptDir.parent;
-    if (File(p.join(parent.path, kRuntimeLockName)).existsSync() ||
-        File(
-          p.join(parent.path, 'richtext-runtime-channel.json'),
-        ).existsSync()) {
+    if (File(p.join(parent.path, kRuntimeLockName)).existsSync()) {
       return parent;
     }
   }
@@ -112,7 +100,7 @@ Future<void> main(List<String> arguments) async {
     stdout.writeln('richtext runtime generated output cleaned');
     return;
   }
-  if (arguments.first == '--local' || arguments.first == '--from-dist') {
+  if (arguments.first == '--local') {
     if (arguments.length > 2)
       throw ArgumentError('--local accepts at most one dist path');
     final distPath = arguments.length == 2
@@ -145,7 +133,10 @@ Future<void> main(List<String> arguments) async {
       project: repository,
       token: token,
     );
-    final exact = await client.fetchExactArtifact(releaseTag);
+    final cache = RuntimeArchiveCache(
+      Directory(p.join(repoRoot.path, '.dart_tool', 'richtext-runtime')),
+    );
+    final exact = await client.fetchExactArtifact(releaseTag, cache: cache);
     await _materializeFormalArtifact(
       bundle: exact.bundle,
       releaseTag: releaseTag,
@@ -187,20 +178,9 @@ Future<void> main(List<String> arguments) async {
     );
     return;
   }
-  if (arguments.first == '--legacy') {
-    await _legacyMain(
-      arguments.sublist(1),
-      repoRoot: repoRoot,
-      output: output,
-      manifestFile: manifestFile,
-      appRoot: appRoot,
-    );
-    return;
-  }
   throw ArgumentError(
     'supported arguments are: --verify, --local [distPath], --update --release-tag <exactTag>, '
-    '--from-artifact <dir> --release-tag <exactTag> --allow-unpublished (local only), '
-    '--clean, or explicit --legacy',
+    '--from-artifact <dir> --release-tag <exactTag> --allow-unpublished (local only), or --clean',
   );
 }
 
@@ -606,81 +586,6 @@ Future<void> materializeUnpublishedRuntimeArtifact({
   }
 }
 
-Future<void> _legacyMain(
-  List<String> arguments, {
-  required Directory repoRoot,
-  required Directory output,
-  required File manifestFile,
-  required Directory appRoot,
-}) async {
-  final channelFile = File(
-    Platform.environment['TG_RICHTEXT_RUNTIME_CHANNEL_FILE'] ??
-        p.join(appRoot.path, 'richtext-runtime-channel.json'),
-  );
-  if (arguments.isNotEmpty && arguments.first == '--from-dist') {
-    if (arguments.length > 2)
-      throw ArgumentError('--legacy --from-dist [distPath]');
-    final distPath = arguments.length == 2
-        ? arguments[1]
-        : p.normalize(p.join(repoRoot.path, 'apps', 'webview-runtime', 'dist'));
-    await _prepareFromLocalDist(
-      distDir: Directory(distPath),
-      output: output,
-      manifestFile: manifestFile,
-      channelFile: channelFile,
-    );
-    stdout.writeln('legacy runtime prepared from local dist: $distPath');
-    return;
-  }
-  if (arguments.isNotEmpty)
-    throw ArgumentError(
-      'supported legacy argument: --legacy [--from-dist <path>]',
-    );
-  final config = RuntimeChannelConfig.fromJson(
-    jsonDecode(await channelFile.readAsString()),
-  );
-  final api = Uri.parse(
-    Platform.environment['TG_RICHTEXT_GITHUB_API_URL'] ??
-        'https://api.github.com',
-  );
-  const project = kDefaultRuntimeRepository;
-  final token = Platform.environment['TG_RICHTEXT_GITHUB_TOKEN'] ?? '';
-  final client = GitHubRuntimeReleaseClient(
-    apiBase: api,
-    project: project,
-    token: token,
-  );
-  final resolved = await client.resolveLatest(config);
-  final cache = RuntimeArchiveCache(
-    Directory(p.join(repoRoot.path, '.dart_tool', 'richtext-runtime')),
-  );
-  final archive = await cache.getOrStore(
-    resolved.archiveSha256,
-    () => client.downloadArchive(resolved),
-  );
-  final temporaryRoot = await _createPreparationParent(output);
-  try {
-    final extracted = Directory(p.join(temporaryRoot.path, 'runtime'));
-    await extractRuntimeArchive(bytes: archive, destination: extracted);
-    verifyRuntimeDirectory(extracted, resolved.metadata);
-    final version = readRuntimeVersion(
-      File(p.join(extracted.path, 'runtime-version.json')),
-    );
-    final manifest = generateRuntimeManifest(resolved.metadata, version);
-    await atomicallyMaterializeRuntime(
-      prepared: extracted,
-      destination: output,
-    );
-    await replaceFileAtomically(manifestFile, manifest);
-  } finally {
-    if (await temporaryRoot.exists())
-      await temporaryRoot.delete(recursive: true);
-  }
-  stdout.writeln(
-    'legacy latest runtime prepared: ${resolved.metadata.releaseTag}',
-  );
-}
-
 Future<void> cleanRuntimeGeneratedDebris({
   required Directory output,
   required File manifestFile,
@@ -715,122 +620,4 @@ Future<void> cleanRuntimeGeneratedDebris({
       }
     }
   }
-}
-
-String _branchSlug(String branch) {
-  final slug = branch
-      .toLowerCase()
-      .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
-      .replaceAll(RegExp(r'^-+|-+$'), '');
-  final trimmed = slug.length > 48 ? slug.substring(0, 48) : slug;
-  if (trimmed.isEmpty)
-    throw ArgumentError('branch cannot produce a release slug: $branch');
-  return trimmed;
-}
-
-Future<void> _prepareFromLocalDist({
-  required Directory distDir,
-  required Directory output,
-  required File manifestFile,
-  required File channelFile,
-}) async {
-  final versionFile = File(p.join(distDir.path, 'runtime-version.json'));
-  if (!await versionFile.exists()) {
-    throw StateError(
-      'runtime-version.json is missing in dist directory: ${distDir.path}',
-    );
-  }
-  final version =
-      jsonDecode(await versionFile.readAsString()) as Map<String, Object?>;
-  final config = RuntimeChannelConfig.fromJson(
-    jsonDecode(await channelFile.readAsString()),
-  );
-
-  final tarArchive = Archive();
-  for (final entity in distDir.listSync(recursive: true)) {
-    if (entity is File) {
-      final relativePath = p
-          .relative(entity.path, from: distDir.path)
-          .replaceAll(r'\', '/');
-      final bytes = await entity.readAsBytes();
-      tarArchive.addFile(ArchiveFile(relativePath, bytes.length, bytes));
-    }
-  }
-  final tarBytes = TarEncoder().encode(tarArchive);
-  final tarGzBytes = GZipEncoder().encode(tarBytes);
-  final archiveSha256 = sha256.convert(tarGzBytes).toString();
-
-  final branch = config.branch;
-  final branchId = config.branchIdentity;
-  final sourceCommit = (version['sourceCommit'] as String? ?? '').toLowerCase();
-  final releaseTag =
-      'webview-runtime-channel-${_branchSlug(branch)}-${branchId.substring(0, 16)}-1';
-
-  final metadata = RuntimeReleaseMetadata(
-    branch: branch,
-    branchIdentity: branchId,
-    sourceCommit: sourceCommit,
-    pipelineId: 1,
-    pipelineIid: 1,
-    releaseTag: releaseTag,
-    archiveName: kRuntimeArchiveName,
-    archiveSha256: archiveSha256,
-    protocolVersion: version['protocolVersion'] as int,
-    hostEnvelopeVersion: version['hostEnvelopeVersion'] as int,
-    runtimeBuildId: version['buildId'] as String?,
-    generatedAt: version['builtAt'] as String?,
-  );
-
-  final temporaryRoot = await createRuntimePreparationDirectory(output.parent);
-  try {
-    final extracted = Directory(p.join(temporaryRoot.path, 'runtime'));
-    await extracted.create(recursive: true);
-    for (final entity in distDir.listSync(recursive: true)) {
-      final relativePath = p.relative(entity.path, from: distDir.path);
-      final destPath = p.join(extracted.path, relativePath);
-      if (entity is Directory) {
-        await Directory(destPath).create(recursive: true);
-      } else if (entity is File) {
-        await File(destPath).parent.create(recursive: true);
-        await entity.copy(destPath);
-      }
-    }
-    verifyRuntimeDirectory(extracted, metadata);
-    await File(p.join(extracted.path, kRuntimeMetadataName)).writeAsString(
-      '${jsonEncode(<String, Object?>{'schemaVersion': 1, 'branch': metadata.branch, 'branchIdentity': metadata.branchIdentity, 'sourceCommit': metadata.sourceCommit, 'pipelineId': metadata.pipelineId, 'pipelineIid': metadata.pipelineIid, 'releaseTag': metadata.releaseTag, 'archiveName': metadata.archiveName, 'archiveSha256': metadata.archiveSha256, 'protocolVersion': metadata.protocolVersion, 'hostEnvelopeVersion': metadata.hostEnvelopeVersion, 'runtimeBuildId': metadata.runtimeBuildId, 'generatedAt': metadata.generatedAt})}\n',
-      flush: true,
-    );
-    final manifest = generateRuntimeManifest(metadata, version);
-    await atomicallyMaterializeRuntime(
-      prepared: extracted,
-      destination: output,
-    );
-    await replaceFileAtomically(manifestFile, manifest);
-  } finally {
-    if (await temporaryRoot.exists())
-      await temporaryRoot.delete(recursive: true);
-  }
-}
-
-Future<void> replaceFileAtomically(File destination, String contents) async {
-  final parent = destination.parent;
-  await parent.create(recursive: true);
-  final temporary = File(
-    p.join(parent.path, '.${p.basename(destination.path)}.tmp-$pid'),
-  );
-  final backup = File(
-    p.join(parent.path, '.${p.basename(destination.path)}.old-$pid'),
-  );
-  if (await temporary.exists()) await temporary.delete();
-  if (await backup.exists()) await backup.delete();
-  await temporary.writeAsString(contents, flush: true);
-  if (await destination.exists()) await destination.rename(backup.path);
-  try {
-    await temporary.rename(destination.path);
-  } catch (_) {
-    if (await backup.exists() && !await destination.exists())
-      await backup.rename(destination.path);
-    rethrow;
-  }
-  if (await backup.exists()) await backup.delete();
 }

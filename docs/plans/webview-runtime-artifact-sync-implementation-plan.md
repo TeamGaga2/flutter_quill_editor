@@ -2,7 +2,7 @@
 
 > 项目：`TeamGaga2/flutter_quill_editor`
 > 目标分支：`dev`
-> 文档状态：Proposed / 待评审
+> 文档状态：Accepted / PR-0 至 PR-4 已完成
 > 基线提交：`0ecde5d`（2026-08-21 本地核对）
 > 实施方式：分阶段 PR
 > 核心原则：**Build → Immutable Artifact → Explicit Lock → Vendor**
@@ -64,18 +64,18 @@
 
 ### 3.1 当前文件与职责
 
-| 文件                                                         | 当前职责                                                               | 改造结论                                             |
-| ------------------------------------------------------------ | ---------------------------------------------------------------------- | ---------------------------------------------------- |
-| `.github/workflows/runtime-release.yml`                      | PR/main 验证；`dev` push 验证后自动创建 Release                        | 拆分普通验证与显式 promotion                         |
-| `scripts/runtime-release.mjs`                                | dist 校验、branch tag、归档、Release metadata                          | 保留校验/确定性归档；移除 branch/pipeline identity   |
-| `scripts/publish-runtime-release.mjs`                        | 创建 draft Release、上传并回读三个 assets                              | 改为按 exact source commit promotion                 |
-| `clients/flutter_quill_editor/richtext-runtime-channel.json` | 指定 floating branch                                                   | 删除并由 lock 取代                                   |
-| `tool/richtext_runtime_prepare.dart`                         | latest 解析、下载、缓存、本地 materialize、codegen                     | 改为 verify、local materialize、exact update/vendor  |
-| `tool/runtime_delivery.dart`                                 | GitHub latest resolver、archive 安全、校验、缓存、materialize、codegen | 删除 branch/latest 逻辑；保留安全与 materialize 能力 |
-| `assets/richtext_webview_runtime/**`                         | 被提交并随 pub package 发布的 runtime                                  | 继续提交                                             |
-| `assets/.../runtime-release.json`                            | 当前 release provenance 的 vendored 副本                               | 迁移后删除，不再作为第二个 lock                      |
-| `lib/host/runtime_manifest.dart`                             | 供 Flutter loader 使用的生成代码                                       | 继续提交，由 lock + runtime version 生成             |
-| `docs/adr/0003-*`                                            | 接受 client 跟随 branch latest                                         | 由新 ADR supersede                                   |
+| 文件                                                         | 当前职责                                                              | 改造结论                                           |
+| ------------------------------------------------------------ | --------------------------------------------------------------------- | -------------------------------------------------- |
+| `.github/workflows/runtime-release.yml`                      | 普通 PR/branch 验证并上传短期 artifact                                | 不创建 Release；长期发布只走显式 promotion         |
+| `scripts/runtime-release.mjs`                                | dist 校验、确定性归档和 artifact metadata                             | artifact contract；无 branch/pipeline identity     |
+| `scripts/promote-runtime-artifact.mjs`                       | exact tag、幂等上传、Release 回读                                     | 受保护的 exact source commit promotion             |
+| `clients/flutter_quill_editor/richtext-runtime-channel.json` | 历史 floating selector                                                | 已删除，由 lock 取代                               |
+| `tool/richtext_runtime_prepare.dart`                         | locked verify、local materialize、exact update/vendor                 | 默认离线 verify；无 implicit update                |
+| `tool/runtime_delivery.dart`                                 | exact artifact fetch、archive 安全、校验、cache、materialize、codegen | 无 branch/latest 逻辑；保留安全与 materialize 能力 |
+| `assets/richtext_webview_runtime/**`                         | 被提交并随 pub package 发布的 runtime                                 | 继续提交                                           |
+| `assets/.../runtime-release.json`                            | 历史 release provenance 副本                                          | 已删除，不再作为第二个 lock                        |
+| `lib/host/runtime_manifest.dart`                             | 供 Flutter loader 使用的生成代码                                      | 继续提交，由 lock + runtime version 生成           |
+| `docs/adr/0003-*`                                            | 历史 branch/latest 决策                                               | 已标记 superseded                                  |
 
 ### 3.2 当前关键问题
 
@@ -676,18 +676,18 @@ runtime hostEnvelopeVersion == Flutter kHostEnvelopeVersion
 
 | 文件                                                           | 计划变更                                                                            |
 | -------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `.github/workflows/runtime-release.yml`                        | 普通验证不再发布；增加或调用显式 promotion job                                      |
-| `scripts/runtime-release.mjs`                                  | 抽离/重命名为 artifact contract；删除 branch/pipeline identity；增加 content digest |
-| `scripts/publish-runtime-release.mjs`                          | exact commit tag、幂等发布、无 branch allowlist/latest 语义                         |
-| `scripts/runtime-release.test.mjs`                             | 替换 branch tag 测试；增加 exact tag、content digest、重复构建测试                  |
+| `.github/workflows/runtime-release.yml`                        | 普通验证上传短期 artifact，不发布 Release                                           |
+| `scripts/runtime-release.mjs`                                  | artifact contract；删除 branch/pipeline identity；提供 content digest               |
+| `scripts/promote-runtime-artifact.mjs`                         | exact commit tag、幂等发布、受保护 promotion                                        |
+| `scripts/runtime-artifact.test.mjs`                            | exact tag、content digest、重复构建和 promotion 测试                                |
 | `clients/flutter_quill_editor/richtext-runtime.lock.json`      | 新增并提交                                                                          |
-| `clients/flutter_quill_editor/richtext-runtime-channel.json`   | 迁移完成后删除                                                                      |
+| `clients/flutter_quill_editor/richtext-runtime-channel.json`   | 已删除；不得重新引入                                                                |
 | `tool/richtext_runtime_prepare.dart`                           | 显式 verify/local/update/from-artifact；默认不联网更新                              |
-| `tool/richtext_runtime_prepare.dart` 的 package root detection | 从查找 channel 文件改为查找 lock/pubspec，避免迁移后从错误目录运行                  |
+| `tool/richtext_runtime_prepare.dart` 的 package root detection | 从查找 channel 文件改为查找 lock，避免迁移后从错误目录运行                          |
 | `tool/runtime_delivery.dart`                                   | 新增 lock/artifact model；删除 latest resolver；保留安全/materialize/codegen        |
 | `test/runtime_delivery_test.dart`                              | 删除 latest 选择测试；增加 lock、exact fetch、content digest、local/locked 模式测试 |
 | `assets/richtext_webview_runtime/**`                           | 由首个 lock 指向的 artifact 重新 vendor                                             |
-| `assets/.../runtime-release.json`                              | 删除；迁移窗口若保留则只允许生成                                                    |
+| `assets/.../runtime-release.json`                              | 已删除；不得重新引入                                                                |
 | `lib/host/runtime_manifest.dart`                               | 改由 lock + runtime-version codegen                                                 |
 | `.github/workflows/flutter-client.yml`                         | 使用完整 locked verify 取代只比较 protocol 的 shell 片段                            |
 | `clients/flutter_quill_editor/README.md`                       | 改为 explicit pin/vendor 维护说明                                                   |
@@ -768,7 +768,7 @@ exact source commit 已完成 protected promotion、远端 metadata/archive/side
 - codegen 改为 lock + runtime-version；
 - 用一个 promoted artifact 更新 lock、vendor、manifest；
 - CI 同时运行新 locked verify；
-- 旧 latest 路径暂时保留为 legacy，但不再是默认命令。
+- PR-3/PR-4 已删除旧 latest/channel/publisher 入口；历史 Releases 仅保留供审计。
 
 PR-2 必须读取 `scripts/fixtures/runtime-content-sha256.json`（或由同一 fixture 生成的受控副本），以 Dart 实现复算并验证至少一个真实 vendored runtime tree；否则 canonical digest 契约未完成，不能进入 PR-3。
 
@@ -791,7 +791,8 @@ Release assets 的逐字节一致性，不在发布阶段解包 archive 或重�
 - local materialization 不写 lock；
 - 首个 lock/vendor PR 可清楚审查来源和 bytes 变化。
 
-回滚：revert lock/vendor 迁移，旧路径仍在。
+回滚：revert lock/vendor 迁移或显式 pin 到已知良好的 promoted artifact；不得恢复
+floating selector 或修改既有 promoted artifact。
 
 ### PR-3：切换 CI，停止 floating 发布与解析
 
@@ -805,7 +806,7 @@ Release assets 的逐字节一致性，不在发布阶段解包 archive 或重�
 - 删除 Release 枚举、latest selection、branch identity 和 pipeline IID 逻辑；
 - 删除 `richtext-runtime-channel.json`；
 - Flutter publish job 强制 locked verify；
-- 删除不再使用的 `http` 依赖或 latest 专属代码。
+- 删除 latest 专属代码；保留 exact-tag 下载所需的 HTTPS client。
 
 验收：
 
@@ -814,7 +815,7 @@ Release assets 的逐字节一致性，不在发布阶段解包 archive 或重�
 - exact lock update 仍可成功；
 - latest API 不可用不影响使用已 vendor runtime 的普通 Flutter 构建。
 
-回滚：优先 revert PR-3 恢复 legacy 入口；不得修改已有 promoted artifact。
+回滚：优先 revert PR-3 的生产切换提交；不得修改已有 promoted artifact。
 
 ### PR-4：文档、ADR 与历史数据收口
 
@@ -829,6 +830,9 @@ Release assets 的逐字节一致性，不在发布阶段解包 archive 或重�
 - 删除 vendored `runtime-release.json` 及兼容代码；
 - 确认旧 channel Releases 的保留/归档策略，但不批量删除历史数据；
 - 增加 lock update PR 模板与维护 runbook。
+
+当前状态：已完成。历史 branch Release 不批量删除，但不再被任何选择器或
+workflow 使用。
 
 验收：
 
@@ -1008,17 +1012,17 @@ assets 目录、lock 和 Dart manifest 无法一次 rename。实现以“全部�
 
 ## 23. Definition of Done
 
-- [ ] 新 ADR accepted，ADR-0003 superseded。
-- [ ] `richtext-runtime-channel.json` 删除。
-- [ ] `resolveLatest` 与 branch/pipeline Release identity 删除。
-- [ ] `richtext-runtime.lock.json` 成为唯一 artifact selector。
-- [ ] `dev` push 不再创建 GitHub Release。
-- [ ] exact promotion workflow 幂等且不可覆盖。
-- [ ] lock、archive、content、runtime-version、manifest 完整校验通过。
-- [ ] local development、Flutter integration、formal publish 文档和命令互不混淆。
-- [ ] Flutter fresh checkout 使用 committed vendor，无 Node/runtime 下载步骤。
-- [ ] publish dry-run 与离线 App runtime 验证通过。
-- [ ] rollback runbook 已演练。
+- [x] 新 ADR accepted，ADR-0003 superseded。
+- [x] `richtext-runtime-channel.json` 删除。
+- [x] `resolveLatest` 与 branch/pipeline Release identity 删除。
+- [x] `richtext-runtime.lock.json` 成为唯一 artifact selector。
+- [x] `dev` push 不再创建 GitHub Release。
+- [x] exact promotion workflow 幂等且不可覆盖。
+- [x] lock、archive、content、runtime-version、manifest 完整校验通过。
+- [x] local development、Flutter integration、formal publish 文档和命令互不混淆。
+- [x] Flutter fresh checkout 使用 committed vendor，无 Node/runtime 下载步骤。
+- [x] publish dry-run 与离线 App runtime 验证通过。
+- [x] rollback runbook 已演练。
 
 ---
 

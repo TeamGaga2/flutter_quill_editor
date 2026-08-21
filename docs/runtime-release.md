@@ -1,47 +1,52 @@
 # WebView runtime release
 
-> Proposed replacement: [ADR 0007](adr/0007-flutter-package-locks-immutable-runtime-artifact.md)
-> and [the artifact sync implementation plan](plans/webview-runtime-artifact-sync-implementation-plan.md).
-> PR-0 has not switched implementation; the branch/latest workflow described
-> below remains the current production behavior until the migration is complete.
+The repository has two separate runtime workflows:
 
-The GitHub Actions workflow publishes an immutable GitHub Release for the
-`dev` branch after verification and the runtime build pass. Pull requests and
-the `main` branch run verification only.
+1. Ordinary pull-request and `dev`/`main` pushes run the runtime checks and
+   upload short-lived GitHub Actions artifacts for diagnostics. They never
+   create or update a GitHub Release.
+2. The protected `runtime-artifact-promotion.yml` workflow is manually
+   dispatched with one full `sourceCommit`. After the
+   `runtime-artifact-promotion` Environment approval, it builds that exact
+   commit and publishes the immutable Release tag
+   `webview-runtime-artifact-<sourceCommit>`.
 
-The release tag is
-`webview-runtime-channel-<branch-slug>-<branch-identity>-<run-number>`. The
-release contains `webview-runtime.tar.gz`, `runtime-release.json`, and the
-archive checksum. The metadata keeps the source commit, branch, GitHub run ID,
-run number, protocol versions, and archive SHA-256 together.
+The promoted Release contains exactly:
 
-The publishing job uses the workflow's `GITHUB_TOKEN` with `contents: write`.
-It verifies an existing release with the same tag before treating the run as
-successful. A new release stays as a draft while all three assets are uploaded
-and read back; it is published only after every byte matches the verified
-runtime build.
+- `webview-runtime.tar.gz`;
+- `runtime-artifact.json`;
+- `webview-runtime.tar.gz.sha256`.
 
-## PR-1 parallel promotion path
+The metadata contains only distribution-neutral runtime identity: source
+commit, build ID, protocol versions, entry information, archive SHA-256 and
+canonical content SHA-256. Branch names, pipeline numbers and latest ordering
+are not artifact identity.
 
-PR-1 adds `runtime-artifact-promotion.yml` without changing the legacy `dev`
-consumer path. Its build job has `contents: read`, checks an exact
-`sourceCommit` reachable from `origin/dev` or `origin/main`, and uploads a
-7-day Actions artifact. The publish job downloads only that three-file artifact
-and runs the exact-tag publisher with `contents: write` inside the protected
-`runtime-artifact-promotion` Environment. Repository administrators must
-configure that protected Environment in GitHub, including required reviewers
-and branch restrictions, before formally enabling promotion. PR-1 remains a
-parallel path and does not switch the current legacy behavior.
-The write-capable job checks out the workflow revision for the publisher; it
-does not execute JavaScript from the selected runtime source commit.
+## Flutter package updates
 
-The shared `scripts/fixtures/runtime-content-sha256.json` freezes the
-cross-language content digest. The PR-2 Dart verifier and local artifact
-materialization framework consume it, but this checkout deliberately does not
-commit `richtext-runtime.lock.json`: no promoted exact Release has been proved
-for the current vendored bytes. The legacy consumer therefore remains the
-working production path until the promotion and remote byte-readback gate is
-completed.
-Both builders use the same portable printable-ASCII runtime path rule
-(rejecting non-ASCII, control characters, backslashes and traversal); the
-canonical digest framing itself remains UTF-8.
+`clients/flutter_quill_editor/richtext-runtime.lock.json` is the only runtime
+selector. A formal update names an exact promoted tag:
+
+```sh
+cd clients/flutter_quill_editor
+dart run tool/richtext_runtime_prepare.dart \
+  --update \
+  --release-tag webview-runtime-artifact-<sourceCommit>
+```
+
+The update verifies the remote Release, safely extracts the archive, checks
+the runtime identity and content digest, and atomically updates the lock,
+vendored assets and generated manifest. Normal verification is offline:
+
+```sh
+dart run tool/richtext_runtime_prepare.dart --verify
+flutter analyze
+flutter test
+```
+
+For local Flutter integration, use `--local <distPath>`. It is ephemeral,
+does not write the formal lock and must not be published. There is no branch,
+latest or legacy fallback path.
+
+See the [promotion, pin, verification and rollback runbook](runbooks/runtime-artifact-promotion.md)
+and [ADR 0007](adr/0007-flutter-package-locks-immutable-runtime-artifact.md).

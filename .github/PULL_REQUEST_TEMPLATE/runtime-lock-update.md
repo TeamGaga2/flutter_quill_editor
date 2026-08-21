@@ -72,8 +72,9 @@ The formal update must review these three groups together:
 Also confirm:
 
 - [ ] `runtime-version.json` agrees with the new lock/runtime identity.
-- [ ] No `richtext-runtime-channel.json` or legacy Release history was deleted
-      as part of this PR unless a separately approved migration PR requires it.
+- [ ] Historical branch Releases were preserved; no historical data was deleted.
+- [ ] The committed lock is the only runtime selector; no channel/latest selector
+      was introduced.
 - [ ] No unrelated runtime, Flutter host, protocol, or generated files changed.
 - [ ] The generated manifest was produced by the tool and has no hand edits.
 

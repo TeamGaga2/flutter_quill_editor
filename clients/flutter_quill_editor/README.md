@@ -76,8 +76,8 @@ For Flutter/runtime local integration use `--local <distPath>`; it never reads
 or writes the formal lock and prints an explicit non-publish warning. A
 controlled artifact directory may be used with `--from-artifact ...
 --allow-unpublished` only for local migration/tests; it also never writes a
-formal lock and cannot run in CI. The `--legacy` path remains available only for
-compatibility during the staged migration and is not the lock selector.
+formal lock and cannot run in CI. Formal updates use only
+`--update --release-tag <exactTag>`.
 
 ## License
 

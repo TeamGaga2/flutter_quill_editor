@@ -185,7 +185,7 @@ Quill 会将连续引用行渲染为相邻的多个 `blockquote`。这些相邻�
 
 ## 发布与同步契约
 
-> 本节的手工同步方式已由 [ADR 0003](./0003-client-follows-branch-runtime-release.md) 取代；[ADR 0007](./0007-flutter-package-locks-immutable-runtime-artifact.md) 是该 branch/latest Release 方案的 proposed replacement，但 PR-0 尚未切换实现。在后续迁移完成前，现有代码仍暂时按 ADR-0003 方案运行。
+> 本节的手工同步方式历史上由 [ADR 0003](./0003-client-follows-branch-runtime-release.md) 取代；该方案现已由 accepted 的 [ADR 0007](./0007-flutter-package-locks-immutable-runtime-artifact.md) supersede。当前 runtime 资产通过 exact promotion、lock/vendor 和 offline verify 维护。
 
 runtime 源码和 App 内实际运行资产位于两个仓库：
 
