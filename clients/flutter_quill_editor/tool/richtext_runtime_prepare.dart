@@ -9,9 +9,46 @@ import 'package:crypto/crypto.dart';
 import 'runtime_delivery.dart';
 import 'package:path/path.dart' as p;
 
+Directory _findPackageRoot() {
+  final current = Directory.current;
+  if (File(p.join(current.path, 'richtext-runtime-channel.json')).existsSync()) {
+    return current;
+  }
+  final subPackage = Directory(p.join(current.path, 'clients', 'flutter_quill_editor'));
+  if (File(p.join(subPackage.path, 'richtext-runtime-channel.json')).existsSync()) {
+    return subPackage;
+  }
+  if (Platform.script.scheme == 'file') {
+    final scriptFile = File.fromUri(Platform.script);
+    final scriptDir = scriptFile.parent;
+    final parent = scriptDir.parent;
+    if (File(p.join(parent.path, 'richtext-runtime-channel.json')).existsSync()) {
+      return parent;
+    }
+  }
+  return current;
+}
+
+Directory _findRepoRoot(Directory packageRoot) {
+  var dir = packageRoot;
+  while (dir.path != dir.parent.path) {
+    if (File(p.join(dir.path, 'pnpm-workspace.yaml')).existsSync() ||
+        Directory(p.join(dir.path, 'apps', 'webview-runtime')).existsSync()) {
+      return dir;
+    }
+    dir = dir.parent;
+  }
+  final current = Directory.current;
+  if (File(p.join(current.path, 'pnpm-workspace.yaml')).existsSync() ||
+      Directory(p.join(current.path, 'apps', 'webview-runtime')).existsSync()) {
+    return current;
+  }
+  return Directory(p.normalize(p.join(packageRoot.path, '..', '..')));
+}
+
 Future<void> main(List<String> arguments) async {
-  final appRoot = Directory.current;
-  final repoRoot = appRoot;
+  final appRoot = _findPackageRoot();
+  final repoRoot = _findRepoRoot(appRoot);
   final output = Directory(p.join(appRoot.path, 'assets', 'richtext_webview_runtime'));
   final manifestFile = File(
     p.join(appRoot.path, 'lib', 'host', 'runtime_manifest.dart'),
@@ -43,7 +80,7 @@ Future<void> main(List<String> arguments) async {
   if (argument == '--local' || argument == '--from-dist') {
     final distPath = arguments.length > 1
         ? arguments[1]
-        : p.normalize(p.join(appRoot.path, '..', '..', 'apps', 'webview-runtime', 'dist'));
+        : p.normalize(p.join(repoRoot.path, 'apps', 'webview-runtime', 'dist'));
     final distDir = Directory(distPath);
     if (!await distDir.exists()) {
       throw StateError('dist directory does not exist: $distPath. Please build webview-runtime first.');

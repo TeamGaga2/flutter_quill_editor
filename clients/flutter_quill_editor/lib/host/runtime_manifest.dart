@@ -48,5 +48,5 @@ const RichTextRuntimeManifest kRichTextRuntimeManifest = RichTextRuntimeManifest
   releaseTag: "webview-runtime-channel-dev-ef260e9aa3c673af-1",
   pipelineId: 1,
   pipelineIid: 1,
-  archiveSha256: "0eef49c1c91ae2ff77d713bc383ce3c5fe1c7fd714b685547753ab02331ba3d8",
+  archiveSha256: "6adf64908f428be33834567a3655c3f48aceaacd2e71b4b2b2412580b38e3471",
 );
