@@ -11,6 +11,7 @@ on:
       - main
     paths:
       - clients/flutter_quill_editor/**
+      - .github/workflows/flutter-client.yml
     tags:
       - dart-v*
 
@@ -35,13 +36,8 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - name: Protocol version consistency
-        run: |
-          manifest_version=$(sed -n 's/.*kRichTextRuntimeProtocolVersion = \([0-9]*\);.*/\1/p' lib/host/runtime_manifest.dart)
-          runtime_version=$(sed -n 's/.*"protocolVersion"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/p' assets/richtext_webview_runtime/runtime-release.json)
-          echo "manifest protocol version: $manifest_version"
-          echo "runtime protocol version: $runtime_version"
-          test -n "$manifest_version" && test "$manifest_version" = "$runtime_version"
+      - name: Verify locked runtime
+        run: dart run tool/richtext_runtime_prepare.dart --verify
       - run: flutter analyze
       - run: flutter test
       - name: Verify example resolves
