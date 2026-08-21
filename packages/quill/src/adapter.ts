@@ -18,7 +18,7 @@ import {
   type RichTextSnapshotV1,
 } from "@teamgaga/richtext-delta";
 import { registerBlots } from "./blots/register";
-import { installTextOnlyClipboardPolicy } from "./clipboard/text-only-clipboard";
+import { installClipboardPolicy } from "./clipboard/clipboard-policy";
 import { quillDeltaToSnapshot, snapshotToQuillDelta } from "./converters";
 import { hydrateEmojiNodes } from "./emoji/renderer";
 import { MAX_INDENT_LEVEL } from "./blots/indent";
@@ -27,7 +27,7 @@ import type { QuillAdapter, QuillAdapterOptions } from "./types";
 
 export function createQuillAdapter(options: QuillAdapterOptions): QuillAdapter {
   registerBlots();
-  installTextOnlyClipboardPolicy();
+  installClipboardPolicy();
   const placeholder = options.placeholder?.trim() ?? "";
   const quill = new Quill(options.element, {
     theme: undefined,

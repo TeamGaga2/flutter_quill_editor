@@ -1,6 +1,12 @@
 export { createQuillAdapter } from "./adapter";
 
-export { installTextOnlyClipboardPolicy, stripEmbeds } from "./clipboard/text-only-clipboard";
+export {
+  installClipboardPolicy,
+  stripEmbeds,
+  extractPlainText,
+  rewriteCopyHtml,
+  stripPasteHtml,
+} from "./clipboard/clipboard-policy";
 
 export { quillDeltaToSnapshot, snapshotToQuillDelta } from "./converters";
 

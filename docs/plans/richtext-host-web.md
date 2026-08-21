@@ -44,6 +44,7 @@ apps/webview-runtime
 - 实现编辑器业务；由 Core/Quill 负责。
 - 实现 Toolbar UI；移动端由 Flutter 原生负责，Desktop/PC Web 由可选 `@teamgaga/richtext-solid-toolbar` 负责。
 - 上传图片或视频；由 Flutter/业务服务负责。
+- 剪贴板 / 拖放策略；由 `@teamgaga/richtext-quill` 负责（ADR 0006）。
 - 决定最终 HTML、CSP、资源路径和发布方式；由 `apps/webview-runtime` 负责。
 
 ## 前置条件与已知缺口
@@ -59,7 +60,7 @@ apps/webview-runtime
 - Undo/redo 及 `canUndo` / `canRedo` 状态。
 - ready/change/selection/focus/blur/state event。
 
-当前 Core 公共 API 已提供主动 `focus()` / `blur()` 与 Mention、Channel、Image、Video、Link、Divider 插入命令，Host 可完整路由当前 Protocol v1 命令。Host 仍不得直接操作 Quill 绕过 Core。
+当前 Core 公共 API 已提供主动 `focus()` / `blur()` 与 Mention、Channel、Image、Video、Link、Divider 插入命令，Host 可完整路由当前 Protocol 命令（现为 v2）。Host 仍不得直接操作 Quill 绕过 Core。剪贴板不经 Host、不经 Protocol。
 
 ## 设计原则
 

@@ -3,7 +3,7 @@
 ## 文档状态
 
 - 日期：2026-08-19
-- 状态：决策已确认（见 docs/adr/0004-link-popover-in-webview-runtime.md），本计划固化实施细节；尚未修改任何功能代码
+- 状态：运行时浮层已落地（见 docs/adr/0004-link-popover-in-webview-runtime.md）；teamgaga-client 宿主清理是否完成以该仓为准
 - 涉及仓库：flutter_quill_editor（运行时 TS 包 + Flutter 客户端 clients/flutter_quill_editor）与 teamgaga-client（宿主清理）
 - 验收依据：docs/plans/INSERT_LINK_LAYER_REFERENCE.md（参考规格全文与明暗色值表）
 

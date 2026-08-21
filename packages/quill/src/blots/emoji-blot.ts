@@ -1,4 +1,4 @@
-import { EmbedBlot } from "parchment";
+import { EmbedBlot, Scope } from "parchment";
 
 export interface EmojiValue {
   id: string;
@@ -26,6 +26,8 @@ export class EmojiBlot extends EmbedBlot {
   static tagName = "span";
 
   static className = "tgg-emoji";
+
+  static scope = Scope.INLINE_BLOT;
 
   static create(value: EmojiValue) {
     const node = super.create() as HTMLElement;

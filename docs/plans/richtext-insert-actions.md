@@ -3,7 +3,8 @@
 ## 文档状态
 
 - 日期：2026-08-20
-- 状态：grilling 决策已确认（见 `docs/adr/0005-host-owned-insert-actions.md`），本计划固化实施细节；尚未修改功能代码
+- 状态：第一刀已落地（见 `docs/adr/0005-host-owned-insert-actions.md`）；后续 teamgaga-client 接线仍待做
+- 相关：内联嵌入的复制/粘贴不在本计划，见 `docs/plans/richtext-inline-embed-clipboard.md` 与 ADR 0006
 - 涉及仓库：
   - 第一刀：仅 `flutter_quill_editor`（Solid 工具栏、协议、host-web、webview-runtime、Dart 客户端）
   - 后续：`teamgaga-client`（Circle 桌面接线 + 抽出插入操作宿主）
@@ -273,6 +274,8 @@ solid-toolbar 包继续不带 CSS。
 - [x] Dart：`flutter test`（codec、controller、bootstrap、golden）
 - [x] 人工：playground 四个按钮、分隔线、tooltip 中英文、点击日志带 selection；不传允许列表时与现在一模一样
 - [x] 不跑 teamgaga-client 的 Circle 发布页（第一刀接不上，按钮被默认隐藏）
+
+内联嵌入写入文档之后的复制/粘贴/拖放见 `docs/plans/richtext-inline-embed-clipboard.md`，不在本计划验收。
 
 ## 后续（teamgaga-client，第一刀禁止改）
 

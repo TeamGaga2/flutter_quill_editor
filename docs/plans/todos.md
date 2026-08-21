@@ -1,6 +1,6 @@
 # TeamGaga RichText 待办与下一阶段
 
-- 更新时间：2026-08-13
+- 更新时间：2026-08-21
 - 范围：`docs/plans` 中尚未完成的事项 + 推荐执行顺序
 - 说明：本文件是跨计划总览，细节仍以各专项计划为准
 - Flutter 客户端实现：`teamgaga-client` / `refactor-richtext`（`ca1de52e5` 起，含 Link/Divider Toolbar 接入）
@@ -8,14 +8,18 @@
 
 ## 计划文档状态
 
-| 文档                             | 状态                        | 说明                                                                         |
-| -------------------------------- | --------------------------- | ---------------------------------------------------------------------------- |
-| `richtext-host-web-lifecycle.md` | 已完成                      | Host 生命周期、事件桥、webview-runtime 壳、浏览器开发闭环                    |
-| `richtext-host-web.md`           | Flutter 接入完成 / 真机未完 | Channel adapter、runtime 加载、Host ready 已落地；iOS/Android 人工联调待做   |
-| `richtext-flutter-bridge.md`     | 契约与客户端基线完成        | `webview_flutter`、inject 顺序、`TgRichTextBridge` adapter 已落地            |
-| `richtext-protocol.md`           | TS / Dart 对齐完成          | Protocol v1 Dart 模型、编解码与同源 fixture golden 已完成；含 Link/Divider   |
-| `richtext-solid-toolbar.md`      | 拆包完成 / 增强待做         | Desktop Toolbar 可独立使用；runtime 可选 `toolbarMode=desktop`；SVG 图标未完 |
-| Flutter 专项计划                 | 客户端基线完成              | `teamgaga-client` 已接入正文、原生 Toolbar、草稿和发送；完整 SDK 文档可扩展  |
+| 文档                                     | 状态                          | 说明                                                                             |
+| ---------------------------------------- | ----------------------------- | -------------------------------------------------------------------------------- |
+| `richtext-host-web-lifecycle.md`         | 已完成                        | Host 生命周期、事件桥、webview-runtime 壳、浏览器开发闭环                        |
+| `richtext-host-web.md`                   | Flutter 接入完成 / 真机未完   | Channel adapter、runtime 加载、Host ready 已落地；iOS/Android 人工联调待做       |
+| `richtext-flutter-bridge.md`             | 契约与客户端基线完成          | `webview_flutter`、inject 顺序、`TgRichTextBridge` adapter 已落地                |
+| `richtext-protocol.md`                   | TS / Dart 对齐完成            | Protocol v2；含 Link/Divider、`open_link_form`、插入操作 `request_*`             |
+| `richtext-solid-toolbar.md`              | 拆包完成 / 插入操作第一刀完成 | Desktop Toolbar 可独立使用；插入操作按钮已落地，选择器仍归宿主（ADR 0005）       |
+| `richtext-insert-actions.md`             | 第一刀已完成                  | Solid 工具栏插入操作 + 协议事件；`teamgaga-client` 接线仍待做                    |
+| `richtext-link-popover.md`               | 运行时已落地                  | 链接浮层在 WebView 内（ADR 0004）；宿主仓清理以 teamgaga-client 为准             |
+| `richtext-solid-toolbar-tooltip-i18n.md` | 代码已落地                    | 自定义 Tooltip + zh/en labels；文末完成定义仍作验收清单                          |
+| `richtext-inline-embed-clipboard.md`     | 已完成                        | 内联嵌入复制/粘贴/拖放（ADR 0006）；保住提及/频道/表情实体，剔除正文媒体与分割线 |
+| Flutter 专项计划                         | 客户端基线完成                | `teamgaga-client` 已接入正文、原生 Toolbar、草稿和发送；完整 SDK 文档可扩展      |
 
 ---
 
@@ -77,7 +81,18 @@
 | Flutter 原生 Toolbar 复用 More 面板 / LinkDialog                 | **已完成** | `MoreTabGridView`、Divider item、`QuillToolbarLinkStyleButton`、`LinkDialog`                      |
 | webview-runtime 重建并同步 Flutter assets                        | **已完成** | `app/assets/richtext_webview_runtime` ← `apps/webview-runtime/dist`（`2026-07-29T02:20:55.955Z`） |
 
-### E. 尚未成文的工作（建议单独开计划）
+### E. 内联嵌入剪贴板（ADR 0006）
+
+来源：`richtext-inline-embed-clipboard.md`
+
+| ID        | 任务                                                           | 优先级     | 备注                                               |
+| --------- | -------------------------------------------------------------- | ---------- | -------------------------------------------------- |
+| `CLIP-01` | 复制 HTML 重写：表情为 `:id:` 文本 span，剥离媒体/分割线/`src` | **已完成** | `rewriteCopyHtml` + `extractPlainText` 落地        |
+| `CLIP-02` | 粘贴/拖放 matcher + `stripEmbeds` 对齐残缺表                   | **已完成** | `ClipboardPolicy` + `stripEmbeds` 对齐残缺与降级表 |
+| `CLIP-03` | 纯文本不升格、未注册表情保留、剪切丢图有意缺口                 | **已完成** | 单测与 DOM 契约全量覆盖                            |
+| `CLIP-04` | `vp check` / `vp test` / runtime 构建与客户端同步              | **已完成** | 自动化测试与构建产物通过                           |
+
+### F. 尚未成文的工作（建议单独开计划）
 
 | 工作项                                            | 优先级               | 说明                                                                              |
 | ------------------------------------------------- | -------------------- | --------------------------------------------------------------------------------- |
@@ -87,7 +102,7 @@
 | 多编辑器实例路由                                  | P3                   | Host lifecycle 明确本阶段不做                                                     |
 | command/event 节流                                | P3                   | 无真实设备数据前不提前优化                                                        |
 
-### F. WebView 富文本视觉对齐（ADR 0002）
+### G. WebView 富文本视觉对齐（ADR 0002）
 
 | ID               | 任务                                                                        | 状态       | 完成定义                                                                            |
 | ---------------- | --------------------------------------------------------------------------- | ---------- | ----------------------------------------------------------------------------------- |
@@ -99,7 +114,7 @@
 
 ### 阶段目标
 
-端到端通信主链路已经打通。Mention、Channel、图片、视频、Link、Divider 已完成自动化验证并写入 Flutter 内置 runtime；Android 标题/WebView 焦点与滑动抖动、iOS/Android 真机联调按产品优先级暂时挂起。
+端到端通信主链路已经打通。Mention、Channel、图片、视频、Link、Divider、插入操作请求事件、内联嵌入剪贴板往返（ADR 0006）已完成自动化验证。Android 标题/WebView 焦点与滑动抖动、iOS/Android 真机联调按产品优先级暂时挂起。
 
 ```text
 Flutter App（已接入）
@@ -110,7 +125,7 @@ Flutter App（已接入）
   → Host → Core 编辑器
 ```
 
-上述链路及 Mention、Channel、媒体、Link、Divider 命令已有实现与自动化测试；iOS/Android 基础人工联调仍待恢复。
+上述链路及 Mention、Channel、媒体、Link、Divider 命令、剪贴板内联嵌入往返已有实现与自动化测试；iOS/Android 基础人工联调仍待恢复。
 
 ### 推荐顺序
 
@@ -139,13 +154,20 @@ Flutter App（已接入）
    insert_link 支持选区替换与编辑已有链接；insert_divider 原子插入
    Flutter 内置 runtime buildId 2026-07-29T02:20:55.955Z
 
-7. Android 焦点与键盘稳定性修复 — 挂起
+7. 桌面插入操作第一刀 — 已完成
+   Solid 工具栏 request_* + visibleInsertActions；选择器仍归宿主（ADR 0005）
+
+8. 内联嵌入剪贴板 — 已完成
+   见 `richtext-inline-embed-clipboard.md` / ADR 0006
+   复制/粘贴/拖放保住提及、频道引用、表情实体；继续剔除正文媒体与分割线
+
+9. Android 焦点与键盘稳定性修复 — 挂起
    标题聚焦时允许 WebView 滚动但不抢焦点
    仅真实正文点击触发 focus，等待 Web FocusEvent 后再切换 Flutter 焦点
 
-8. VERIFY-06 真机联调 — 挂起
-   ready / set_snapshot / get_snapshot / 格式 / focus-blur
-   Link / Divider 交互、中文 IME、Emoji、返回键、destroy 无泄漏
+10. VERIFY-06 真机联调 — 挂起
+    ready / set_snapshot / get_snapshot / 格式 / focus-blur
+    Link / Divider 交互、中文 IME、Emoji、剪贴板往返、返回键、destroy 无泄漏
 ```
 
 ### 阶段完成定义（DoD）
@@ -156,12 +178,13 @@ Flutter App（已接入）
 - [x] 每条 command 有关联 success/failure response
 - [x] Core 事件（除 Core ready 外）可发到 Flutter；Protocol ready 仅 Host 发一次
 - [x] Mention / Channel 支持 Toolbar 与键入 `@` / `#`，且复用现有 Flutter 选择面板
-- [x] 图片 / 视频支持本地预览、草稿 round-trip 与发送时上传；未知 token 不进入业务 Delta
+- [x] 图片 / video 支持本地预览、草稿 round-trip 与发送时上传；未知 token 不进入业务 Delta
 - [x] Link / Divider：Protocol → Core → Host → Quill → Flutter Toolbar；runtime assets 已同步
 - [x] Flutter Toolbar 图标按钮、间距、尺寸及激活面板组件保持现有样式；仅按功能需要补入已有 Channel 按钮
 - [ ] Android 标题 / WebView 焦点切换不因滑动造成键盘与页面抖动（挂起）
 - [ ] iOS 与 Android 完成清单内人工联调（挂起）
 - [x] Host 仍不直接依赖 Quill / Solid Toolbar；默认 runtime 为 editor-only（`toolbarMode: none`）
+- [x] 内联嵌入复制/粘贴/拖放按 ADR 0006 往返（见 `richtext-inline-embed-clipboard.md`）
 
 ### 明确不做（本阶段）
 
@@ -172,6 +195,7 @@ Flutter App（已接入）
 - 多编辑器实例协议
 - 当前恢复 Android 标题/WebView 焦点与滑动抖动修复
 - 当前执行 iOS/Android 真机联调
+- 经剪贴板搬正文媒体，或从纯文本推断提及/频道引用/表情
 
 ---
 
@@ -179,9 +203,11 @@ Flutter App（已接入）
 
 | 下一步                             | 主要文档                                  |
 | ---------------------------------- | ----------------------------------------- |
+| 内联嵌入复制/粘贴/拖放             | `richtext-inline-embed-clipboard.md`      |
 | 插件确认、channel inject、加载契约 | `richtext-flutter-bridge.md`              |
 | Host 生命周期与 runtime 壳         | `richtext-host-web.md` / lifecycle        |
 | Dart 模型与 golden                 | `richtext-protocol.md` § Flutter 对齐任务 |
+| Desktop Toolbar 插入操作           | `richtext-insert-actions.md`              |
 | Desktop Toolbar 增强               | `richtext-solid-toolbar.md`               |
 | 本总览                             | `todos.md`（本文）                        |
 
@@ -195,7 +221,7 @@ Flutter App（已接入）
 4. ~~**媒体 / Mention / Channel 协议与 Core 命令**~~ → **已完成（自动化）**。
 5. ~~**Flutter 原生 Toolbar 接入 Mention / Channel / 图片 / 视频**~~ → **已完成**，现有样式与面板保持不变。
 6. ~~**Link / Divider 全链路 + runtime 同步**~~ → **已完成**（`2026-07-29T02:20:55.955Z`）。
-7. **挂起：Android 标题 / WebView 焦点与滑动抖动**。
-8. **挂起：iOS / Android 真机联调 `VERIFY-06`**（恢复时一并验证 Link / Divider）。
-9. **可选 P2：修复 Desktop Solid Toolbar `vite-solid-svg` 与 `vp pack` 兼容性**（当前为文本按钮回退，不影响移动端）。
-10. **下一步：在恢复真机任务前，完成代码评审并由产品确认是否开启 WebView feature flag**。
+7. ~~**桌面插入操作第一刀**~~ → **已完成**（ADR 0005；Circle 接线仍在 teamgaga-client）。
+8. ~~**内联嵌入剪贴板**~~（`docs/plans/richtext-inline-embed-clipboard.md`，ADR 0006） → **已完成**：保住提及/频道/表情实体，剔除正文媒体与分割线。
+9. **挂起：Android 标题 / WebView 焦点与滑动抖动**。
+10. **挂起：iOS / Android 真机联调 `VERIFY-06`**（恢复时一并验证 Link / Divider / 剪贴板往返）。

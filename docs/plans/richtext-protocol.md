@@ -2,8 +2,8 @@
 
 ## 状态
 
-- 当前阶段：Protocol v1 跨端实现完成
-- 状态：TypeScript / Dart schema、guards、codec、同源 golden fixtures 与 Host 映射已完成
+- 当前阶段：Protocol v2 跨端实现完成（v1 fixture 保留、无兼容层）
+- 状态：TypeScript / Dart schema、guards、codec、同源 golden fixtures 与 Host 映射已完成；含 Link/Divider、`open_link_form`、插入操作 `request_*`
 - 目标：建立 Flutter 与 WebView Runtime 之间稳定、可版本化、可运行时校验的通信协议
 
 ## 定位
@@ -66,6 +66,10 @@ host-web
 - `redo`
 - `focus`
 - `blur`
+- `open_link_form`
+- `indent`
+- `outdent`
+- `get_caret_rect`
 
 ### Web → Flutter 事件
 
@@ -96,14 +100,15 @@ host-web
 - 上传进度协议
 - 多编辑器实例路由
 - 增量协同编辑或 OT/CRDT
-- Protocol v2 兼容层
+- v1 运行时兼容层（升 v2 时已否决，无双版本解码）
+- 剪贴板 / 拖放（运行时内文档写入，见 ADR 0006；不经 Protocol）
 
 后续命令仍须先在 Core/Quill 明确可执行语义，不能只在协议层提前声明空 API。
 
 ## 目标消息结构
 
 ```ts
-export const PROTOCOL_VERSION = 1 as const;
+export const PROTOCOL_VERSION = 2 as const;
 
 export interface ProtocolCommand<Type extends string, Payload> {
   version: typeof PROTOCOL_VERSION;

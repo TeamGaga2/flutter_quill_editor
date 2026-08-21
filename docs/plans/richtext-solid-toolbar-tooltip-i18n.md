@@ -3,11 +3,11 @@
 ## 文档状态
 
 - 日期：2026-08-11
-- 状态：需求与交互决策已确认，待实施
+- 状态：代码已落地（自定义 Tooltip + `ToolbarLabels` zh/en）；文末完成定义仍作验收清单
 - 目标仓库：`flutter_quill_editor`
 - 目标包：`packages/solid-toolbar`
 - 目标运行端：Desktop / PC Web 的 Solid Toolbar
-- 当前阶段：仅完成计划，尚未修改功能代码
+- 当前阶段：功能已在 `packages/solid-toolbar` 落地；以代码为准
 
 ## 背景
 

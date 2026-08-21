@@ -94,7 +94,7 @@ Flutter WebView Runtime 默认只挂载 `RichTextEditor`，不安装或打包 To
 - active/disabled 状态派生
 - pointer/mousedown selection 保留
 
-暂不实现 EmojiPicker、Image Upload、Mention/Channel/Video UI 和图标主题（按钮在 toolbar，选择器仍归宿主，见 ADR 0005）。
+插入操作按钮已在工具栏落地，选择器仍归宿主（ADR 0005）。不在 toolbar 内做 EmojiPicker、Mention 列表、频道列表或系统文件选择器。内联嵌入复制/粘贴见 ADR 0006。
 
 ## Todo List
 
@@ -112,7 +112,7 @@ Flutter WebView Runtime 默认只挂载 `RichTextEditor`，不安装或打包 To
 - [x] 当前 inline/block/emoji/history 命令通过 Core 公共 API 执行。
 - [x] 为 Host MVP 补齐主动 `focus` / `blur` 能力。
 - [x] 在明确 embed payload 后增加 image/mention/channel/video Core 命令（Desktop UI 仍按需实现）。
-- [x] 定义 `canUndo` / `canRedo` 状态语义，并纳入 Core 与 Protocol v1。
+- [x] 定义 `canUndo` / `canRedo` 状态语义，并纳入 Core 与 Protocol（现为 v2）。
 
 ### 可选 Desktop UI
 

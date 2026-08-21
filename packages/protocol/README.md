@@ -9,13 +9,13 @@ Protocol defines how the two sides communicate. It does not send messages or exe
 - Production dependency: `@teamgaga/richtext-delta` only.
 - No Solid, Solid Toolbar, Quill, DOM, Flutter plugin, or Host dependency.
 - Wire messages use stable `snake_case` names.
-- Protocol v1 recursively rejects unknown or missing fields.
+- Protocol v2 recursively rejects unknown or missing fields. v1 fixtures remain in-tree; there is no compatibility layer.
 - Snapshot validation delegates to the canonical Delta validator.
 - Core domain types and Protocol wire types intentionally remain separate.
 
 ## Messages
 
-Every message includes `version: 1` and a discriminating `kind`.
+Every message includes `version: 2` and a discriminating `kind`.
 
 Commands additionally include a non-empty request `id`, `type`, and object `payload`. Responses reuse the request `id`. Events contain `type` and object `payload`.
 
@@ -33,6 +33,7 @@ Supported commands:
 - `get_caret_rect`
 - `undo` / `redo`
 - `focus` / `blur`
+- `open_link_form`
 
 Mention, channel, and media insertion commands may include an optional `selection` range. The
 range is replaced atomically; mention insertion appends one plain space, while the other embeds
@@ -50,16 +51,18 @@ Supported events:
 - `change`
 - `selection_change`
 - `focus` / `blur`
+- `title_focus` / `title_blur`
 - `state_change`
-- `request_link`
+- `request_close`
+- `request_emoji` / `request_mention` / `request_channel` / `request_image`
 
-The v1 `state_change` payload includes `focused`, `selection`, `formats`, `canUndo`, and `canRedo`, so native and Web toolbars can derive history-button availability from the same state contract.
+The `state_change` payload includes `focused`, `selection`, `formats`, `canUndo`, and `canRedo`, so native and Web toolbars can derive history-button availability from the same state contract.
 
-`request_link` is a Web→Flutter UI intent (e.g. desktop Solid toolbar) asking the host to open
-its link dialog. Payload may include optional `selection` for the range to wrap.
+`request_emoji` / `request_mention` / `request_channel` / `request_image` ask the host to open the corresponding picker (ADR 0005). Link UI lives in the runtime (`open_link_form`, ADR 0004); there is no `request_link` event.
 
-Additive command/event types stay on `PROTOCOL_VERSION = 1`. Flutter golden fixtures should be
-updated when wire fixtures change.
+Clipboard paste/copy is not a protocol message (ADR 0006).
+
+Flutter golden fixtures should be updated when wire fixtures change.
 
 `focus` and `blur` are frozen in the wire contract and have corresponding Core/Quill APIs for Host dispatch.
 
