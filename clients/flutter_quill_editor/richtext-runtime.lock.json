@@ -2,17 +2,17 @@
   "schemaVersion": 1,
   "artifact": {
     "repository": "TeamGaga2/flutter_quill_editor",
-    "releaseTag": "webview-runtime-artifact-aec7124e147c5c9d8eaa347e4a183cd48bf127bc",
+    "releaseTag": "webview-runtime-artifact-a5e44a4f2c7a6c35fa8adcb298b643e50739644e",
     "archiveName": "webview-runtime.tar.gz",
-    "archiveSha256": "d015a8e189f7722da10f8d67e7ee539531021d60d628e6a6e88b1879450ebf00",
-    "contentSha256": "14595362aebdee06992129e1c04ce6d74f1cecd65cf758adaff17b865616acb3"
+    "archiveSha256": "d8998c609ef27df124168c1d9d113d02efdf308d053134aa1d53874dc055f2f2",
+    "contentSha256": "ee6b6738aff15dc2142d8c91d4f81240b067324da5b3cfeabd051d5d1360e80a"
   },
   "runtime": {
-    "sourceCommit": "aec7124e147c5c9d8eaa347e4a183cd48bf127bc",
-    "buildId": "aec7124e147c5c9d8eaa347e4a183cd48bf127bc",
+    "sourceCommit": "a5e44a4f2c7a6c35fa8adcb298b643e50739644e",
+    "buildId": "a5e44a4f2c7a6c35fa8adcb298b643e50739644e",
     "protocolVersion": 2,
     "hostEnvelopeVersion": 1,
-    "webEntry": "iframe.907328f459f2d81e.html",
-    "webEntrySha256": "907328f459f2d81e3933db147d1a6bb65740bb955839aa8a82436915f7a27d19"
+    "webEntry": "iframe.b66cde8a1056b695.html",
+    "webEntrySha256": "b66cde8a1056b69537829c431b1ce101ab42f664d98cc8c2775a6059bec5fd63"
   }
 }
