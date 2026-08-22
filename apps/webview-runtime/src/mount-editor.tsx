@@ -358,8 +358,8 @@ export async function mountEditor(options: MountEditorOptions): Promise<MountedE
     const titleEl = titleInput?.element;
     const keepTitle =
       wakeOptions?.keepTitle === true ||
-      lastEditingField === "title" ||
-      (titleEl != null && document.activeElement === titleEl);
+      (wakeOptions?.keepTitle !== false &&
+        (lastEditingField === "title" || (titleEl != null && document.activeElement === titleEl)));
 
     // Capture before clearing: double-rAF body focus must still know whether
     // this wake is a real app-switch (blur→focus) or a live-session no-op.
@@ -632,6 +632,12 @@ export async function mountEditor(options: MountEditorOptions): Promise<MountedE
       if (interactionBlocked) {
         setEditorFocusBlocked(true);
       }
+      editor.on("change", () => {
+        if (titleInput?.element && document.activeElement === titleInput.element) {
+          return;
+        }
+        lastEditingField = "body";
+      });
       titleInput?.bindEditor(editor);
     },
     onError: (error) => {
