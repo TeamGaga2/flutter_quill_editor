@@ -48,6 +48,7 @@ class WebViewFlutterRichTextHost extends RichTextWebViewHost {
   void _wireController(WebViewController controller) {
     controller
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..enableZoom(false)
       ..addJavaScriptChannel(
         kTgRichTextBridgeChannel,
         onMessageReceived: (message) {
@@ -78,6 +79,10 @@ class WebViewFlutterRichTextHost extends RichTextWebViewHost {
     } else if (controller.platform case final WebKitWebViewController webkit) {
       if (kDebugMode) {
         webkit.setInspectable(true);
+      }
+      if (defaultTargetPlatform == TargetPlatform.iOS) {
+        unawaited(webkit.setAllowsBackForwardNavigationGestures(false));
+        unawaited(webkit.setOverScrollMode(WebViewOverScrollMode.never));
       }
     }
   }

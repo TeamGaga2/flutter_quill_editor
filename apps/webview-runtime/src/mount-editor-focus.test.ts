@@ -179,4 +179,44 @@ describe("webview-runtime init focus", () => {
     expect(blurCount).toBeGreaterThan(0);
     expect(document.activeElement).toBe(editable);
   });
+
+  it("keeps title and body focus inside the fixed document viewport", async () => {
+    document.documentElement.scrollTop = 9;
+    document.documentElement.scrollLeft = 2;
+    document.body.scrollTop = 9;
+    document.body.scrollLeft = 2;
+
+    const app = document.createElement("div");
+    app.id = "app";
+    document.body.append(app);
+
+    const transport = createCallbackTransport({
+      send() {
+        return undefined;
+      },
+    });
+
+    mounted = await mountEditor({
+      config: { toolbarMode: "desktop", mediaMaxSize: 320, showTitleInput: true },
+      transport,
+    });
+
+    const editable = await waitForBodyEditor();
+    const title = document.querySelector<HTMLTextAreaElement>(".tg-webview-title-input");
+    expect(title).toBeTruthy();
+
+    title?.focus();
+    document.documentElement.scrollTop = 80;
+    document.body.scrollTop = 80;
+    document.dispatchEvent(new Event("scroll"));
+    expect(document.documentElement.scrollTop).toBe(9);
+    expect(document.body.scrollTop).toBe(9);
+
+    editable.focus();
+    document.documentElement.scrollTop = 80;
+    document.body.scrollTop = 80;
+    document.dispatchEvent(new Event("scroll"));
+    expect(document.documentElement.scrollTop).toBe(9);
+    expect(document.body.scrollTop).toBe(9);
+  });
 });

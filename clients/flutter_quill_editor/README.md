@@ -79,6 +79,14 @@ controlled artifact directory may be used with `--from-artifact ...
 formal lock and cannot run in CI. Formal updates use only
 `--update --release-tag <exactTag>`.
 
+## Local Flutter integration
+
+For the complete local integration flow with the TeamGaga Flutter client,
+including building the TypeScript runtime, switching the client to a local
+path dependency, checking the native runtime cache, and testing iOS focus
+scrolling, see the
+[Flutter client local integration runbook](../../docs/runbooks/flutter-local-integration.md).
+
 ## License
 
 MIT — see the repository [LICENSE](../../LICENSE).

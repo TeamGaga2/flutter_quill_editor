@@ -25,6 +25,67 @@ import { MAX_INDENT_LEVEL } from "./blots/indent";
 import { RICH_TEXT_FORMATS } from "./formats";
 import type { QuillAdapter, QuillAdapterOptions } from "./types";
 
+type ScrollRect = {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+};
+
+function readScrollPadding(value: string | undefined): number {
+  const parsed = Number.parseFloat(value ?? "");
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
+/**
+ * Scroll one explicitly-owned port just enough to reveal a viewport-relative
+ * Quill rect. This deliberately does not call Element#scrollIntoView: that API
+ * is allowed to walk ancestors and can hand ownership back to WKWebView.
+ */
+function scrollRectWithinContainer(container: HTMLElement, target: ScrollRect): void {
+  const containerRect = container.getBoundingClientRect();
+  if (
+    !Number.isFinite(containerRect.width) ||
+    !Number.isFinite(containerRect.height) ||
+    containerRect.width <= 0 ||
+    containerRect.height <= 0
+  ) {
+    return;
+  }
+
+  const style = container.ownerDocument.defaultView?.getComputedStyle(container);
+  const paddingTop = readScrollPadding(style?.scrollPaddingTop);
+  const paddingRight = readScrollPadding(style?.scrollPaddingRight);
+  const paddingBottom = Math.max(readScrollPadding(style?.scrollPaddingBottom), 16);
+  const paddingLeft = readScrollPadding(style?.scrollPaddingLeft);
+
+  const visibleTop = containerRect.top + paddingTop;
+  const visibleBottom = containerRect.bottom - paddingBottom;
+  const visibleLeft = containerRect.left + paddingLeft;
+  const visibleRight = containerRect.right - paddingRight;
+
+  let nextScrollTop = container.scrollTop;
+  if (target.top < visibleTop) {
+    nextScrollTop = container.scrollTop + (target.top - visibleTop);
+  } else if (target.bottom > visibleBottom) {
+    nextScrollTop = container.scrollTop + (target.bottom - visibleBottom);
+  }
+
+  let nextScrollLeft = container.scrollLeft;
+  if (target.left < visibleLeft) {
+    nextScrollLeft = container.scrollLeft + (target.left - visibleLeft);
+  } else if (target.right > visibleRight) {
+    nextScrollLeft = container.scrollLeft + (target.right - visibleRight);
+  }
+
+  if (Math.abs(nextScrollTop - container.scrollTop) >= 1) {
+    container.scrollTop = Math.max(0, nextScrollTop);
+  }
+  if (Math.abs(nextScrollLeft - container.scrollLeft) >= 1) {
+    container.scrollLeft = Math.max(0, nextScrollLeft);
+  }
+}
+
 export function createQuillAdapter(options: QuillAdapterOptions): QuillAdapter {
   registerBlots();
   installClipboardPolicy();
@@ -35,6 +96,18 @@ export function createQuillAdapter(options: QuillAdapterOptions): QuillAdapter {
     // Quill only writes data-placeholder when truthy; empty string keeps blank.
     placeholder,
   });
+  const scrollContainer = options.scrollContainer ?? options.element;
+  const nativeScrollRectIntoView = quill.scrollRectIntoView.bind(quill);
+  const scrollSelectionIntoEditor = (bounds: ScrollRect): void => {
+    scrollRectWithinContainer(scrollContainer, bounds);
+  };
+
+  // Quill's focus, keyboard, clipboard, and non-SILENT selection paths all
+  // call this method internally. Route that single seam through the explicit
+  // owner so a future Quill call cannot reintroduce document scrolling.
+  quill.scrollRectIntoView = (bounds) => {
+    scrollSelectionIntoEditor(bounds);
+  };
   let snapshotMetadata: Omit<RichTextSnapshotV1, "content"> = {};
   const listeners = new Set<(event: EditorAdapterEvent) => void>();
   let stateBatchDepth = 0;
@@ -184,7 +257,8 @@ export function createQuillAdapter(options: QuillAdapterOptions): QuillAdapter {
       return bounds;
     }
 
-    // Empty text nodes (new blank lines) cannot produce a client rect.
+    // Empty text nodes (new blank lines) cannot produce a client rect via getBounds.
+    // Fall back to line blot getBoundingClientRect() (viewport coordinates).
     try {
       const [line] = quill.getLine(start);
       const node = line?.domNode;
@@ -218,7 +292,7 @@ export function createQuillAdapter(options: QuillAdapterOptions): QuillAdapter {
 
         const bounds = resolveSelectionBounds(selection.start, selection.end);
         if (bounds) {
-          quill.scrollRectIntoView(bounds);
+          scrollSelectionIntoEditor(bounds);
         }
       });
     });
@@ -251,6 +325,10 @@ export function createQuillAdapter(options: QuillAdapterOptions): QuillAdapter {
       );
 
       emitFocusTransition();
+    }
+
+    if (quill.hasFocus()) {
+      ensureSelectionVisible();
     }
 
     emitState();
@@ -940,6 +1018,7 @@ export function createQuillAdapter(options: QuillAdapterOptions): QuillAdapter {
       quill.off("text-change", handleTextChange);
       quill.off("selection-change", handleSelectionChange);
       quill.off("editor-change", handleEditorChange);
+      quill.scrollRectIntoView = nativeScrollRectIntoView;
       listeners.clear();
       emojiObserver?.disconnect();
       options.element.innerHTML = "";

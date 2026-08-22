@@ -1,4 +1,4 @@
-# flutter_quill_editor example
+# Flutter RichText Playground
 
 Minimal editor harness for local iteration: embeds `RichTextWebView` with the
 package defaults (no emoji definitions, mobile-style config) plus a small

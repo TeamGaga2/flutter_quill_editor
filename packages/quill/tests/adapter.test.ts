@@ -21,6 +21,42 @@ function createMountedAdapter(
   return adapter;
 }
 
+function waitFrames(count: number): Promise<void> {
+  return new Promise((resolve) => {
+    const step = (remaining: number): void => {
+      if (remaining <= 0) {
+        resolve();
+        return;
+      }
+      requestAnimationFrame(() => step(remaining - 1));
+    };
+    step(count);
+  });
+}
+
+function makeScrollPortScrollable(container: HTMLElement): () => number {
+  let scrollTop = 0;
+  let writes = 0;
+  Object.defineProperty(container, "clientWidth", { configurable: true, value: 100 });
+  Object.defineProperty(container, "clientHeight", { configurable: true, value: 100 });
+  Object.defineProperty(container, "scrollTop", {
+    configurable: true,
+    get: () => scrollTop,
+    set: (next: number) => {
+      scrollTop = next;
+      writes += 1;
+    },
+  });
+  container.getBoundingClientRect = () =>
+    ({ top: 0, right: 100, bottom: 100, left: 0, width: 100, height: 100 }) as DOMRect;
+  return () => writes;
+}
+
+function setOutOfViewCaret(quill: InstanceType<typeof import("quill").default>): void {
+  quill.selection.getBounds = () =>
+    ({ top: 150, right: 20, bottom: 170, left: 10, width: 10, height: 20 }) as DOMRect;
+}
+
 afterEach(() => {
   document.body.innerHTML = "";
 });
@@ -48,6 +84,31 @@ describe("QuillAdapter placeholder", () => {
     const editor = element.querySelector(".ql-editor");
     expect(editor?.hasAttribute("data-placeholder")).toBe(false);
 
+    adapter.destroy();
+  });
+});
+
+describe("QuillAdapter scroll ownership", () => {
+  it("routes selection visibility to the editor scrollport instead of Quill's ancestor walk", async () => {
+    const { default: Quill } = await import("quill");
+    const element = document.createElement("div");
+    document.body.append(element);
+    const adapter = createQuillAdapter({ element });
+    adapter.setSnapshot(defaultSnapshot);
+    adapter.setSelection({ start: 2, end: 2 });
+
+    const quill = Quill.find(element) as InstanceType<typeof Quill>;
+    let quillScrollCalls = 0;
+    const nativeScrollRectIntoView = quill.scrollRectIntoView.bind(quill);
+    quill.scrollRectIntoView = (rect) => {
+      quillScrollCalls += 1;
+      nativeScrollRectIntoView(rect);
+    };
+
+    adapter.focus();
+    await waitFrames(3);
+
+    expect(quillScrollCalls).toBe(0);
     adapter.destroy();
   });
 });
@@ -1070,10 +1131,8 @@ describe("QuillAdapter block formats", () => {
 
     const Quill = (await import("quill")).default;
     const quill = Quill.find(container!) as InstanceType<typeof Quill>;
-    let scrollCalls = 0;
-    quill.scrollRectIntoView = () => {
-      scrollCalls += 1;
-    };
+    const scrollWrites = makeScrollPortScrollable(container!);
+    setOutOfViewCaret(quill);
 
     insert(adapter);
     // ensureSelectionVisible uses double rAF for post-layout geometry.
@@ -1081,7 +1140,7 @@ describe("QuillAdapter block formats", () => {
       requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
     );
 
-    expect(scrollCalls).toBeGreaterThan(0);
+    expect(scrollWrites()).toBeGreaterThan(0);
     adapter.destroy();
   });
 
@@ -1093,20 +1152,27 @@ describe("QuillAdapter block formats", () => {
 
     const Quill = (await import("quill")).default;
     const quill = Quill.find(container!) as InstanceType<typeof Quill>;
-    let scrollCalls = 0;
-    quill.scrollRectIntoView = () => {
-      scrollCalls += 1;
-    };
+    const scrollWrites = makeScrollPortScrollable(container!);
     // Simulate empty-line geometry failure that WKWebView hits after Enter.
     quill.selection.getBounds = () => null;
 
+    const nativeGetLine = quill.getLine.bind(quill);
+    quill.getLine = ((index: number) => {
+      const result = nativeGetLine(index);
+      const lineNode = result[0]?.domNode;
+      if (lineNode instanceof HTMLElement) {
+        lineNode.getBoundingClientRect = () =>
+          ({ top: 150, right: 20, bottom: 170, left: 10, width: 10, height: 20 }) as DOMRect;
+      }
+      return result;
+    }) as typeof quill.getLine;
     const root = document.querySelector<HTMLElement>(".ql-editor");
     root?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
     await new Promise<void>((resolve) =>
       requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
     );
 
-    expect(scrollCalls).toBeGreaterThan(0);
+    expect(scrollWrites()).toBeGreaterThan(0);
     adapter.destroy();
   });
 
@@ -1118,17 +1184,15 @@ describe("QuillAdapter block formats", () => {
 
     const Quill = (await import("quill")).default;
     const quill = Quill.find(container!) as InstanceType<typeof Quill>;
-    let scrollCalls = 0;
-    quill.scrollRectIntoView = () => {
-      scrollCalls += 1;
-    };
+    const scrollWrites = makeScrollPortScrollable(container!);
+    setOutOfViewCaret(quill);
 
     quill.insertText(5, "!", "user");
     await new Promise<void>((resolve) =>
       requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
     );
 
-    expect(scrollCalls).toBeGreaterThan(0);
+    expect(scrollWrites()).toBeGreaterThan(0);
     adapter.destroy();
   });
 
