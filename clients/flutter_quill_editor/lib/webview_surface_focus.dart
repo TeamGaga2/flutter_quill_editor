@@ -12,6 +12,9 @@ import 'package:flutter/widgets.dart';
 /// macOS WKWebView / mobile hole-punch hosts need the surface node itself so
 /// AppKit / Android firstResponder handoff still works.
 void requestRichTextWebViewSurfaceFocus(FocusNode surfaceFocusNode) {
+  if (defaultTargetPlatform == TargetPlatform.iOS) {
+    return;
+  }
   if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) {
     final descendant = firstFocusableFocusDescendant(surfaceFocusNode);
     if (descendant != null) {
@@ -45,8 +48,10 @@ Future<void> restoreRichTextWebViewEditorFocus({
   required FocusNode surfaceFocusNode,
   required Future<void> Function() focusEditor,
 }) async {
-  requestRichTextWebViewSurfaceFocus(surfaceFocusNode);
-  await Future<void>.delayed(const Duration(milliseconds: 50));
+  if (defaultTargetPlatform != TargetPlatform.iOS) {
+    requestRichTextWebViewSurfaceFocus(surfaceFocusNode);
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+  }
   await focusEditor();
 }
 

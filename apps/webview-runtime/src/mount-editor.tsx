@@ -32,6 +32,7 @@ import {
   resolveRegisteredMediaUri,
 } from "./media-registry";
 import { observeQuoteGroupBoundaries } from "./quote-boundaries";
+import { createViewportScrollLock } from "./viewport-scroll-lock";
 
 export interface MountEditorOptions {
   config: RuntimeConfig;
@@ -207,6 +208,7 @@ export async function mountEditor(options: MountEditorOptions): Promise<MountedE
       editorRef?.focus();
     },
   });
+  const viewportScrollLock = createViewportScrollLock();
 
   const linkPopoverRoot = document.createElement("div");
   linkPopoverRoot.id = "tg-link-popover-root";
@@ -241,6 +243,9 @@ export async function mountEditor(options: MountEditorOptions): Promise<MountedE
     ...(emojiRegistry ? { emojiRegistry } : {}),
     placeholder: config.placeholder ?? "Enter text",
   });
+  // RichTextEditor mounts the adapter directly into `.tg-richtext-host-editor`.
+  // The Quill adapter defaults its scroll owner to that mounted element, so
+  // the runtime does not make the package depend on any CSS selector.
 
   let editingSessionCold = false;
   /** Host overlay open (Flutter Menu / link dialog) — suppress wake reclaim. */
@@ -254,13 +259,17 @@ export async function mountEditor(options: MountEditorOptions): Promise<MountedE
   let focusKeeperFrame = 0;
   let windowFocused = true;
   let quoteGroupObserver: MutationObserver | undefined;
+  const isTouchDevice =
+    typeof navigator !== "undefined" &&
+    (navigator.maxTouchPoints > 0 || (typeof window !== "undefined" && "ontouchstart" in window));
 
   /**
    * AppKit / WKWebView only needs a blur→focus kick after the window was
-   * actually backgrounded. Doing it on a live caret leaves a stale native
-   * caret overlay (ghost caret that does not blink or scroll).
+   * actually backgrounded on desktop. On mobile (iOS / Android), doing blur→focus
+   * causes the virtual keyboard to glitch and scroll/jitter the viewport.
    */
-  const needsNativeFocusRestart = (): boolean => editingSessionCold || !windowFocused;
+  const needsNativeFocusRestart = (): boolean =>
+    !isTouchDevice && (editingSessionCold || !windowFocused);
 
   const markEditingSessionCold = (): void => {
     editingSessionCold = true;
@@ -311,34 +320,32 @@ export async function mountEditor(options: MountEditorOptions): Promise<MountedE
     const titleEl = titleInput?.element;
     if (!titleEl) return;
     if (document.activeElement === titleEl) {
-      if (!restartNativeFocus) return;
+      if (!restartNativeFocus) {
+        viewportScrollLock.restore();
+        return;
+      }
       titleEl.blur();
     }
-    try {
-      titleEl.focus({ preventScroll: true });
-    } catch {
-      titleEl.focus();
-    }
+    viewportScrollLock.focus(titleEl);
   };
 
   const focusBodyElement = (restartNativeFocus = needsNativeFocusRestart()): void => {
     if (interactionBlocked) return;
     const editable = editorRoot.querySelector<HTMLElement>(".ql-editor");
     if (editable && document.activeElement === editable) {
-      // Live caret — a same-turn blur+focus leaks a WKWebView caret overlay.
-      if (!restartNativeFocus) return;
+      if (!restartNativeFocus) {
+        viewportScrollLock.restore();
+        return;
+      }
       editable.blur();
     }
     if (boundAdapterFocus) {
       boundAdapterFocus();
+      viewportScrollLock.restore();
       return;
     }
     if (!editable) return;
-    try {
-      editable.focus({ preventScroll: true });
-    } catch {
-      editable.focus();
-    }
+    viewportScrollLock.focus(editable);
   };
 
   const wakeEditingSession = (wakeOptions?: { keepTitle?: boolean }): void => {
@@ -351,8 +358,8 @@ export async function mountEditor(options: MountEditorOptions): Promise<MountedE
     const titleEl = titleInput?.element;
     const keepTitle =
       wakeOptions?.keepTitle === true ||
-      lastEditingField === "title" ||
-      (titleEl != null && document.activeElement === titleEl);
+      (wakeOptions?.keepTitle !== false &&
+        (lastEditingField === "title" || (titleEl != null && document.activeElement === titleEl)));
 
     // Capture before clearing: double-rAF body focus must still know whether
     // this wake is a real app-switch (blur→focus) or a live-session no-op.
@@ -368,11 +375,15 @@ export async function mountEditor(options: MountEditorOptions): Promise<MountedE
     }
 
     // Focus body only.
-    requestAnimationFrame(() => {
+    if (isTouchDevice) {
+      focusBodyElement(restartNativeFocus);
+    } else {
       requestAnimationFrame(() => {
-        focusBodyElement(restartNativeFocus);
+        requestAnimationFrame(() => {
+          focusBodyElement(restartNativeFocus);
+        });
       });
-    });
+    }
   };
 
   (
@@ -399,6 +410,19 @@ export async function mountEditor(options: MountEditorOptions): Promise<MountedE
   const onFocus = (): void => {
     windowFocused = true;
     if (interactionBlocked) {
+      return;
+    }
+    const active = document.activeElement;
+    if (
+      active &&
+      (active === titleInput?.element ||
+        (active instanceof Element && active.closest(".ql-editor") !== null))
+    ) {
+      editingSessionCold = false;
+      return;
+    }
+    if (isTouchDevice) {
+      editingSessionCold = false;
       return;
     }
     if (editingSessionCold) {
@@ -436,17 +460,12 @@ export async function mountEditor(options: MountEditorOptions): Promise<MountedE
     }
 
     // A physical pointer-down proves the window is active. Reset the flag
-    // so the onFocusOut keeper is no longer blocked. macOS WKWebView may
-    // never fire window.onFocus after an app-switch, leaving windowFocused
-    // stuck at false and the caret dead. This is the primary fix.
+    // synchronously so downstream focus/click handlers do not trigger a
+    // cold-wake reclaim.
     windowFocused = true;
-
-    // Clear cold and let the click itself place the caret. Focusing or
-    // preventDefault-ing here ate the first caret placement on Windows
-    // WebView2 (the title↔body two-click bug).
     editingSessionCold = false;
   };
-  editorRoot.addEventListener("pointerdown", onPointerDown, true);
+  app.addEventListener("pointerdown", onPointerDown, true);
 
   // Windows WebView2 runs as a composition texture: every pointer event Flutter
   // routes into it re-runs the native focus path, which resets
@@ -479,6 +498,7 @@ export async function mountEditor(options: MountEditorOptions): Promise<MountedE
     if (
       destroyed ||
       interactionBlocked ||
+      isTouchDevice ||
       lastEditingField === null ||
       linkPopoverController?.isOpen()
     ) {
@@ -579,11 +599,7 @@ export async function mountEditor(options: MountEditorOptions): Promise<MountedE
         if (document.activeElement === textInput) {
           textInput?.focus();
         } else if (urlInput) {
-          try {
-            urlInput.focus({ preventScroll: true });
-          } catch {
-            urlInput.focus();
-          }
+          viewportScrollLock.focus(urlInput);
           urlInput.select();
         }
       },
@@ -616,6 +632,12 @@ export async function mountEditor(options: MountEditorOptions): Promise<MountedE
       if (interactionBlocked) {
         setEditorFocusBlocked(true);
       }
+      editor.on("change", () => {
+        if (titleInput?.element && document.activeElement === titleInput.element) {
+          return;
+        }
+        lastEditingField = "body";
+      });
       titleInput?.bindEditor(editor);
     },
     onError: (error) => {
@@ -658,11 +680,7 @@ export async function mountEditor(options: MountEditorOptions): Promise<MountedE
           if (destroyed || interactionBlocked) return;
           const editable = editorRoot.querySelector<HTMLElement>(".ql-editor");
           if (!editable || document.activeElement === editable) return;
-          try {
-            editable.focus({ preventScroll: true });
-          } catch {
-            editable.focus();
-          }
+          viewportScrollLock.focus(editable);
         });
       });
     })
@@ -680,11 +698,12 @@ export async function mountEditor(options: MountEditorOptions): Promise<MountedE
     window.removeEventListener("blur", onBlur);
     document.removeEventListener("visibilitychange", onVisibility);
     window.removeEventListener("focus", onFocus);
-    editorRoot.removeEventListener("pointerdown", onPointerDown, true);
+    app?.removeEventListener("pointerdown", onPointerDown, true);
     document.removeEventListener("focusin", onFocusIn);
     document.removeEventListener("focusout", onFocusOut);
     quoteGroupObserver?.disconnect();
     cancelAnimationFrame(focusKeeperFrame);
+    viewportScrollLock.destroy();
     delete (
       window as Window & {
         __TG_RICHTEXT_WAKE_EDITING_SESSION__?: (keepTitle?: boolean) => void;

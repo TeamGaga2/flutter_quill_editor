@@ -12,6 +12,13 @@ import type { EmojiRegistry } from "./emoji/types";
 export interface QuillAdapterOptions {
   element: HTMLElement;
 
+  /**
+   * The sole element the adapter may scroll to reveal a selection. The adapter
+   * never discovers or scrolls ancestors (especially the document viewport).
+   * Defaults to `element`.
+   */
+  scrollContainer?: HTMLElement;
+
   emojiRegistry?: EmojiRegistry;
 
   /**

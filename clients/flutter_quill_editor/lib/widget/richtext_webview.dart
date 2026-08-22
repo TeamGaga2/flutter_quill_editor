@@ -1111,7 +1111,12 @@ class RichTextWebViewState extends State<RichTextWebView> {
           focusNode: focusNode,
           // While Menu/link dialog is open, refuse focus so Chrome iframe
           // cannot win the caret back from overlay TextFields.
-          canRequestFocus: !focusBlocked && !windowsTextureHost,
+          // On iOS, refuse Flutter FocusManager focus requests to prevent
+          // WKWebView becomeFirstResponder from defaulting to the Title textarea.
+          canRequestFocus: focusNode.canRequestFocus &&
+              !focusBlocked &&
+              !windowsTextureHost &&
+              defaultTargetPlatform != TargetPlatform.iOS,
           child: child!,
         );
       },
