@@ -59,7 +59,7 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-describe("text and inline-embed clipboard/drop policy (ADR-0006)", () => {
+describe("text, inline-embed, and divider clipboard/drop policy (ADR-0007 / ADR-0006)", () => {
   describe("Paste / Drop", () => {
     it("pastes plain text at the caret", () => {
       const adapter = createMountedAdapter();
@@ -138,20 +138,21 @@ describe("text and inline-embed clipboard/drop policy (ADR-0006)", () => {
       adapter.destroy();
     });
 
-    it("pastes HTML with stripped dividers preserving paragraph structure", () => {
+    it("pastes HTML with preserved dividers (ADR-0007)", () => {
       const adapter = createMountedAdapter({ content: [{ insert: "\n" }] });
       adapter.setSelection({ start: 0, end: 0 });
 
       const clipboardData = new DataTransfer();
       clipboardData.setData(
         "text/html",
-        '<p><span class="tgg-mention" data-id="u1" data-sign="!" data-display="Alice">@Alice</span></p><hr><p><span class="tgg-channel" data-id="c1" data-display="general">#general</span></p>',
+        '<p><span class="tgg-mention" data-id="u1" data-sign="!" data-display="Alice">@Alice</span></p><hr class="tgg-divider"><p><span class="tgg-channel" data-id="c1" data-display="general">#general</span></p>',
       );
       dispatchPaste(clipboardData);
 
       expect(adapter.getSnapshot().content).toEqual([
         { insert: { mention: "u1" }, attributes: { sign: "!", displayText: "Alice" } },
         { insert: "\n" },
+        { insert: { divider: "true" } },
         { insert: { channel: "c1" }, attributes: { displayText: "general" } },
         { insert: "\n" },
       ]);
@@ -159,14 +160,31 @@ describe("text and inline-embed clipboard/drop policy (ADR-0006)", () => {
       adapter.destroy();
     });
 
-    it("drops mention, channel, and emoji inline embeds from HTML", () => {
+    it("pastes external HTML <hr> without class as a divider (ADR-0007)", () => {
+      const adapter = createMountedAdapter({ content: [{ insert: "\n" }] });
+      adapter.setSelection({ start: 0, end: 0 });
+
+      const clipboardData = new DataTransfer();
+      clipboardData.setData("text/html", "<p>Above</p><hr><p>Below</p>");
+      dispatchPaste(clipboardData);
+
+      expect(adapter.getSnapshot().content).toEqual([
+        { insert: "Above\n" },
+        { insert: { divider: "true" } },
+        { insert: "Below\n" },
+      ]);
+
+      adapter.destroy();
+    });
+
+    it("drops mention, channel, emoji, and divider embeds from HTML", () => {
       const adapter = createMountedAdapter({ content: [{ insert: "\n" }] });
       adapter.setSelection({ start: 0, end: 0 });
 
       const dataTransfer = new DataTransfer();
       dataTransfer.setData(
         "text/html",
-        '<p><span class="tgg-channel" data-id="c2" data-display="dev">#dev</span> <span class="tgg-emoji" data-emoji-id="star">:star:</span></p>',
+        '<p><span class="tgg-channel" data-id="c2" data-display="dev">#dev</span> <span class="tgg-emoji" data-emoji-id="star">:star:</span></p><hr><p>End</p>',
       );
       dispatchDrop(dataTransfer);
 
@@ -175,20 +193,24 @@ describe("text and inline-embed clipboard/drop policy (ADR-0006)", () => {
         { insert: " " },
         { insert: { emoji: "star" } },
         { insert: "\n" },
+        { insert: { divider: "true" } },
+        { insert: "End\n" },
       ]);
 
       adapter.destroy();
     });
 
-    it("does not upgrade plain text @Alice, #general, :tada: to embeds", () => {
+    it("does not upgrade plain text @Alice, #general, :tada:, or --- to embeds", () => {
       const adapter = createMountedAdapter({ content: [{ insert: "\n" }] });
       adapter.setSelection({ start: 0, end: 0 });
 
       const clipboardData = new DataTransfer();
-      clipboardData.setData("text/plain", "@Alice in #general :tada:");
+      clipboardData.setData("text/plain", "@Alice in #general :tada:\n---");
       dispatchPaste(clipboardData);
 
-      expect(adapter.getSnapshot().content).toEqual([{ insert: "@Alice in #general :tada:\n" }]);
+      expect(adapter.getSnapshot().content).toEqual([
+        { insert: "@Alice in #general :tada:\n---\n" },
+      ]);
 
       adapter.destroy();
     });
@@ -441,7 +463,7 @@ describe("text and inline-embed clipboard/drop policy (ADR-0006)", () => {
       adapter.destroy();
     });
 
-    it("strips block images, videos, and dividers from copy HTML and plain text without placeholder", () => {
+    it("preserves dividers in copy HTML and plain text while stripping block media (ADR-0007)", () => {
       const adapter = createMountedAdapter({
         content: [
           { insert: "Text before\n" },
@@ -464,13 +486,14 @@ describe("text and inline-embed clipboard/drop policy (ADR-0006)", () => {
 
       const text = clipboardData.getData("text/plain");
       expect(text).not.toContain("[图片]");
-      expect(text).toContain("Text before");
+      expect(text).toContain("Text before\n");
+      expect(text).toContain("---\n");
       expect(text).toContain("Text after");
 
       const html = clipboardData.getData("text/html");
       expect(html).not.toContain("<img");
       expect(html).not.toContain("<video");
-      expect(html).not.toContain("<hr");
+      expect(html).toContain("<hr");
 
       adapter.destroy();
     });
@@ -491,6 +514,34 @@ describe("text and inline-embed clipboard/drop policy (ADR-0006)", () => {
       expect(clipboardData.getData("text/plain")).toBe("@Bob");
       expect(clipboardData.getData("text/html")).toContain('class="tgg-mention" data-id="u1"');
       expect(adapter.getSnapshot().content).toEqual([{ insert: "Cut  after\n" }]);
+
+      adapter.destroy();
+    });
+
+    it("cutting a selection containing a divider deletes the divider and keeps it on clipboard (ADR-0007)", () => {
+      const adapter = createMountedAdapter({
+        content: [{ insert: "Before\n" }, { insert: { divider: "true" } }, { insert: "After\n" }],
+      });
+      // Selection covers the divider (index 7, length 1)
+      adapter.setSelection({ start: 7, end: 8 });
+
+      const clipboardData = new DataTransfer();
+      dispatchCut(clipboardData);
+
+      // Divider is copied to clipboard
+      expect(clipboardData.getData("text/html")).toContain("<hr");
+      expect(clipboardData.getData("text/plain")).toBe("---\n");
+
+      // Document no longer has the divider
+      expect(adapter.getSnapshot().content).toEqual([{ insert: "Before\nAfter\n" }]);
+
+      // Paste it back
+      dispatchPaste(clipboardData);
+      expect(adapter.getSnapshot().content).toEqual([
+        { insert: "Before\n" },
+        { insert: { divider: "true" } },
+        { insert: "After\n" },
+      ]);
 
       adapter.destroy();
     });

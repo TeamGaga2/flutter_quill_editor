@@ -11,14 +11,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * ADR-0006 / ADR-0005: The TeamGaga Editor Surface preserves body text,
+ * ADR-0007 / ADR-0006 / ADR-0005: The TeamGaga Editor Surface preserves body text,
  * supported basic formatting (bold, italic, underline, strike, link, header,
- * list, indent, blockquote), and inline embeds (mention, channel, emoji)
- * on copy, cut, paste, and drag-and-drop to caret.
+ * list, indent, blockquote), inline embeds (mention, channel, emoji), and
+ * dividers on copy, cut, paste, and drag-and-drop to caret.
  *
- * Block media embeds (image, video) and dividers are stripped on copy and
- * paste/drop, and `DataTransfer.files` is never read — no upload, no
- * local-media token, no placeholder, no error.
+ * Block media embeds (image, video) are stripped on copy and paste/drop,
+ * and `DataTransfer.files` is never read — no upload, no local-media token,
+ * no placeholder, no error.
  */
 export class ClipboardPolicy extends Clipboard {
   constructor(...args: ConstructorParameters<typeof Clipboard>) {
@@ -146,10 +146,11 @@ export function installClipboardPolicy(): void {
 }
 
 /**
- * Rewrites the semantic HTML produced for the copied range (ADR-0006):
+ * Rewrites the semantic HTML produced for the copied range (ADR-0007 / ADR-0006):
  * - Mentions and channel references remain blot DOM (<span class="tgg-mention/channel" data-*...).
  * - Emoji spans are rewritten to span text :${emojiId}: without <img>, src, or data-emoji-missing.
- * - Body media (images, videos) and dividers are stripped completely without placeholders.
+ * - Dividers remain blot DOM (<hr class="tgg-divider">).
+ * - Block media (images, videos) are stripped completely without placeholders.
  */
 export function rewriteCopyHtml(html: string): string {
   try {
@@ -164,12 +165,10 @@ export function rewriteCopyHtml(html: string): string {
       emoji.removeAttribute("data-emoji-missing");
     });
 
-    // Remove remaining block images and media / dividers
-    doc.body
-      .querySelectorAll("img, .tgg-image, video, .tgg-video, hr, .tgg-divider")
-      .forEach((node) => {
-        node.remove();
-      });
+    // Remove remaining block images and videos (dividers are preserved)
+    doc.body.querySelectorAll("img, .tgg-image, video, .tgg-video").forEach((node) => {
+      node.remove();
+    });
 
     return doc.body.innerHTML;
   } catch {
@@ -178,10 +177,10 @@ export function rewriteCopyHtml(html: string): string {
 }
 
 /**
- * Preprocesses pasted HTML before Quill converts it to Delta (ADR-0006):
+ * Preprocesses pasted HTML before Quill converts it to Delta (ADR-0007 / ADR-0006):
  * - Clears inner children of .tgg-emoji spans so inner <img> does not trigger
  *   Quill's ImageBlot (BlockEmbed) splitting during HTML conversion.
- * - Strips block images, videos, and horizontal rules while preserving surrounding text.
+ * - Strips block images and videos while preserving surrounding text, inline embeds, and dividers.
  */
 export function stripPasteHtml(html: string): string {
   try {
@@ -193,12 +192,10 @@ export function stripPasteHtml(html: string): string {
       emoji.textContent = "";
     });
 
-    // Remove block images, videos, and dividers
-    doc.body
-      .querySelectorAll("img, .tgg-image, video, .tgg-video, hr, .tgg-divider")
-      .forEach((node) => {
-        node.remove();
-      });
+    // Remove block images and videos (dividers are preserved)
+    doc.body.querySelectorAll("img, .tgg-image, video, .tgg-video").forEach((node) => {
+      node.remove();
+    });
 
     return doc.body.innerHTML;
   } catch {
@@ -207,11 +204,12 @@ export function stripPasteHtml(html: string): string {
 }
 
 /**
- * Formats Delta content into plain text (ADR-0006):
+ * Formats Delta content into plain text (ADR-0007 / ADR-0006):
  * - Mention: `@${displayText}`
  * - Channel: `#${displayText}`
  * - Emoji: `:${emojiId}:`
- * - Media/dividers/unknown embeds: ignored (no placeholder)
+ * - Divider: `---\n`
+ * - Media/unknown embeds: ignored (no placeholder)
  */
 export function extractPlainText(delta: Delta): string {
   let result = "";
@@ -252,6 +250,8 @@ export function extractPlainText(delta: Delta): string {
         if (id) {
           result += `:${id}:`;
         }
+      } else if ("divider" in op.insert) {
+        result += "---\n";
       }
     }
   }
@@ -259,12 +259,12 @@ export function extractPlainText(delta: Delta): string {
 }
 
 /**
- * Sanitizes embeds on paste/drop (ADR-0006):
- * - Whitelists valid inline embeds (mention, channel, emoji).
+ * Sanitizes embeds on paste/drop (ADR-0007 / ADR-0006):
+ * - Whitelists valid inline embeds (mention, channel, emoji) and block dividers.
  * - Degrades malformed mentions / channels with missing IDs to plain text (@displayText / #displayText).
  * - Drops malformed mentions / channels with IDs but missing displayText (no internal ID exposed).
  * - Drops malformed emojis with missing IDs.
- * - Drops block media embeds (images, videos) and dividers.
+ * - Drops block media embeds (images, videos).
  */
 export function stripEmbeds(delta: Delta): Delta {
   return delta.reduce((sanitized, op) => {
@@ -342,6 +342,14 @@ export function stripEmbeds(delta: Delta): Delta {
             return sanitized.insert({ emoji: { id } });
           }
           return sanitized;
+        }
+        return sanitized;
+      }
+
+      if ("divider" in op.insert) {
+        const divider = op.insert.divider;
+        if (divider === "true" || divider === true) {
+          return sanitized.insert({ divider: "true" });
         }
         return sanitized;
       }

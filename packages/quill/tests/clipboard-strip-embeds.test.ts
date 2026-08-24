@@ -7,9 +7,9 @@ import {
   stripPasteHtml,
 } from "../src/clipboard/clipboard-policy";
 
-describe("clipboard stripEmbeds, extractPlainText, rewriteCopyHtml, and stripPasteHtml", () => {
+describe("clipboard stripEmbeds, extractPlainText, rewriteCopyHtml, and stripPasteHtml (ADR-0007)", () => {
   describe("stripEmbeds", () => {
-    it("keeps text ops and inline embeds (mention, channel, emoji), drops block embeds", () => {
+    it("keeps text ops, inline embeds (mention, channel, emoji), and dividers, drops block media embeds", () => {
       const input = new Delta()
         .insert("hi ", { bold: true })
         .insert({ mention: { id: "u1", sign: "!", displayText: "Alice" } })
@@ -17,9 +17,9 @@ describe("clipboard stripEmbeds, extractPlainText, rewriteCopyHtml, and stripPas
         .insert({ channel: { id: "c1", displayText: "general" } })
         .insert(" ")
         .insert({ emoji: { id: "party_parrot" } })
+        .insert({ divider: "true" })
         .insert({ image: "https://example/x.png" })
         .insert({ video: "https://example/v.mp4" })
-        .insert({ divider: "true" })
         .insert("\n");
 
       const output = stripEmbeds(input);
@@ -31,6 +31,7 @@ describe("clipboard stripEmbeds, extractPlainText, rewriteCopyHtml, and stripPas
         { insert: { channel: { id: "c1", displayText: "general" } } },
         { insert: " " },
         { insert: { emoji: { id: "party_parrot" } } },
+        { insert: { divider: "true" } },
         { insert: "\n" },
       ]);
     });
@@ -78,13 +79,14 @@ describe("clipboard stripEmbeds, extractPlainText, rewriteCopyHtml, and stripPas
       ]);
     });
 
-    it("handles canonical string-based embed Delta ops", () => {
+    it("handles canonical string-based embed Delta ops including divider", () => {
       const input = new Delta()
         .insert({ mention: "u1" }, { sign: "&", displayText: "Staff" })
         .insert(" ")
         .insert({ channel: "c1" }, { displayText: "general" })
         .insert(" ")
         .insert({ emoji: "tada" })
+        .insert({ divider: "true" })
         .insert("\n");
 
       const output = stripEmbeds(input);
@@ -95,6 +97,7 @@ describe("clipboard stripEmbeds, extractPlainText, rewriteCopyHtml, and stripPas
         { insert: { channel: { id: "c1", displayText: "general" } } },
         { insert: " " },
         { insert: { emoji: { id: "tada" } } },
+        { insert: { divider: "true" } },
         { insert: "\n" },
       ]);
     });
@@ -117,7 +120,7 @@ describe("clipboard stripEmbeds, extractPlainText, rewriteCopyHtml, and stripPas
   });
 
   describe("extractPlainText", () => {
-    it("extracts formatted plain text from Delta ops and ignores block media", () => {
+    it("extracts formatted plain text from Delta ops including divider and ignores block media", () => {
       const delta = new Delta()
         .insert("Hello ")
         .insert({ mention: { id: "u1", sign: "!", displayText: "Alice" } })
@@ -125,12 +128,13 @@ describe("clipboard stripEmbeds, extractPlainText, rewriteCopyHtml, and stripPas
         .insert({ channel: { id: "c1", displayText: "dev-room" } })
         .insert(" ")
         .insert({ emoji: { id: "tada" } })
+        .insert("\n")
+        .insert({ divider: "true" })
         .insert({ image: "https://example/photo.png" })
         .insert({ video: "https://example/video.mp4" })
-        .insert({ divider: "true" })
-        .insert("\n");
+        .insert("World\n");
 
-      expect(extractPlainText(delta)).toBe("Hello @Alice in #dev-room :tada:\n");
+      expect(extractPlainText(delta)).toBe("Hello @Alice in #dev-room :tada:\n---\nWorld\n");
     });
 
     it("extracts formatted plain text from canonical string embed ops", () => {
@@ -148,7 +152,7 @@ describe("clipboard stripEmbeds, extractPlainText, rewriteCopyHtml, and stripPas
   });
 
   describe("rewriteCopyHtml", () => {
-    it("rewrites emoji spans to :id: text, removes <img> and data-emoji-missing, strips block media and dividers", () => {
+    it("rewrites emoji spans to :id: text, preserves dividers (<hr class='tgg-divider'>), strips block media", () => {
       const html =
         '<p>Hello <span class="tgg-mention" data-id="u1" data-sign="!" data-display="Alice">@Alice</span> ' +
         '<span class="tgg-emoji" data-emoji-id="tada" data-emoji-missing="true"><img src="blob:http://localhost/123" alt=":tada:"></span> ' +
@@ -163,9 +167,9 @@ describe("clipboard stripEmbeds, extractPlainText, rewriteCopyHtml, and stripPas
         'class="tgg-mention" data-id="u1" data-sign="!" data-display="Alice">@Alice</span>',
       );
       expect(rewritten).toContain('<span class="tgg-emoji" data-emoji-id="tada">:tada:</span>');
+      expect(rewritten).toContain('<hr class="tgg-divider">');
       expect(rewritten).not.toContain("<img");
       expect(rewritten).not.toContain("<video");
-      expect(rewritten).not.toContain("<hr");
       expect(rewritten).not.toContain("data-emoji-missing");
       expect(rewritten).not.toContain("blob:");
       expect(rewritten).toContain(
@@ -175,7 +179,7 @@ describe("clipboard stripEmbeds, extractPlainText, rewriteCopyHtml, and stripPas
   });
 
   describe("stripPasteHtml", () => {
-    it("clears inner children of emoji spans and strips block media/dividers", () => {
+    it("clears inner children of emoji spans, preserves dividers (<hr>), strips block media", () => {
       const html =
         '<p>Text <span class="tgg-emoji" data-emoji-id="party_parrot"><img src="https://example.com/parrot.png" alt=":parrot:"></span> ' +
         '<img src="https://example.com/bad.png">' +
@@ -185,8 +189,8 @@ describe("clipboard stripEmbeds, extractPlainText, rewriteCopyHtml, and stripPas
       const stripped = stripPasteHtml(html);
 
       expect(stripped).toContain('<span class="tgg-emoji" data-emoji-id="party_parrot"></span>');
+      expect(stripped).toContain("<hr>");
       expect(stripped).not.toContain("<img");
-      expect(stripped).not.toContain("<hr");
       expect(stripped).toContain("Text ");
       expect(stripped).toContain("End");
     });
