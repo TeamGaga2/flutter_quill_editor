@@ -5,13 +5,9 @@ import { resolveMediaUri } from "./media-uri";
 
 export interface ImageValue {
   src: string;
-
   width?: string;
-
   height?: string;
-
   mimeType?: string;
-
   fileSize?: number;
 }
 
@@ -26,30 +22,35 @@ export class ImageBlot extends BlockEmbed {
 
   static className = "tgg-image";
 
-  static create(value: ImageValue) {
+  static create(value: string | ImageValue) {
     const node = super.create() as HTMLImageElement;
+    const src = typeof value === "string" ? value : (value?.src ?? "");
+    const width = typeof value === "string" ? undefined : value?.width;
+    const height = typeof value === "string" ? undefined : value?.height;
+    const mimeType = typeof value === "string" ? undefined : value?.mimeType;
+    const fileSize = typeof value === "string" ? undefined : value?.fileSize;
 
-    node.setAttribute("data-src", value.src);
+    node.setAttribute("data-src", src);
 
-    if (value.width) {
-      node.setAttribute("width", value.width);
+    if (width) {
+      node.setAttribute("width", width);
     }
 
-    if (value.height) {
-      node.setAttribute("height", value.height);
+    if (height) {
+      node.setAttribute("height", height);
     }
 
-    if (value.mimeType) {
-      node.setAttribute("data-mime-type", value.mimeType);
+    if (mimeType) {
+      node.setAttribute("data-mime-type", mimeType);
     }
 
-    if (value.fileSize !== undefined) {
-      node.setAttribute("data-file-size", String(value.fileSize));
+    if (fileSize !== undefined) {
+      node.setAttribute("data-file-size", String(fileSize));
     }
 
-    applyMediaDisplaySize(node, value.width, value.height);
+    applyMediaDisplaySize(node, width, height);
     bindImageLoadFallback(node);
-    node.src = resolveMediaUri(value.src);
+    node.src = resolveMediaUri(src);
 
     return node;
   }
@@ -72,5 +73,40 @@ export class ImageBlot extends BlockEmbed {
     }
 
     return value;
+  }
+
+  format(name: string, value: unknown) {
+    const domNode = this.domNode as HTMLImageElement;
+    if (name === "width") {
+      if (typeof value === "string" || typeof value === "number") {
+        const valStr = String(value);
+        domNode.setAttribute("width", valStr);
+        applyMediaDisplaySize(domNode, valStr, domNode.getAttribute("height") ?? undefined);
+      } else {
+        domNode.removeAttribute("width");
+      }
+    } else if (name === "height") {
+      if (typeof value === "string" || typeof value === "number") {
+        const valStr = String(value);
+        domNode.setAttribute("height", valStr);
+        applyMediaDisplaySize(domNode, domNode.getAttribute("width") ?? undefined, valStr);
+      } else {
+        domNode.removeAttribute("height");
+      }
+    } else if (name === "mimeType") {
+      if (typeof value === "string") {
+        domNode.setAttribute("data-mime-type", value);
+      } else {
+        domNode.removeAttribute("data-mime-type");
+      }
+    } else if (name === "fileSize") {
+      if (typeof value === "number" || typeof value === "string") {
+        domNode.setAttribute("data-file-size", String(value));
+      } else {
+        domNode.removeAttribute("data-file-size");
+      }
+    } else {
+      super.format(name, value);
+    }
   }
 }

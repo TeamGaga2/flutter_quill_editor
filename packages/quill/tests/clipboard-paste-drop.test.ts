@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vite-plus/test";
 import type { RichTextSnapshotV1 } from "@teamgaga/richtext-delta";
+import type { EditorEvent, PasteMediaPayload } from "@teamgaga/richtext-core";
 import { createQuillAdapter } from "../src/adapter";
 import { createEmojiRegistry } from "../src/emoji/registry";
 
@@ -59,7 +60,7 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-describe("text and inline-embed clipboard/drop policy (ADR-0006)", () => {
+describe("text, inline-embed, divider, and media clipboard/drop policy (ADR-0008 / ADR-0007 / ADR-0006)", () => {
   describe("Paste / Drop", () => {
     it("pastes plain text at the caret", () => {
       const adapter = createMountedAdapter();
@@ -117,14 +118,67 @@ describe("text and inline-embed clipboard/drop policy (ADR-0006)", () => {
       adapter.destroy();
     });
 
-    it("pastes HTML with mixed inline embeds and stripped block media", () => {
+    it("pastes self-produced image blot HTML into Delta with full attributes (ADR-0008)", () => {
       const adapter = createMountedAdapter({ content: [{ insert: "\n" }] });
       adapter.setSelection({ start: 0, end: 0 });
 
       const clipboardData = new DataTransfer();
       clipboardData.setData(
         "text/html",
-        '<p>Text <span class="tgg-mention" data-id="u1" data-sign="&" data-display="Staff">@Staff</span><img src="https://example.com/bad.png"><span class="tgg-emoji" data-emoji-id="tada">:tada:</span></p>',
+        '<p>Before</p><img class="tgg-image" data-src="tgg-local-media://uuid1" width="300" height="200" data-mime-type="image/png" data-file-size="4096"><p>After</p>',
+      );
+      dispatchPaste(clipboardData);
+
+      expect(adapter.getSnapshot().content).toEqual([
+        { insert: "Before\n" },
+        {
+          insert: { image: "tgg-local-media://uuid1" },
+          attributes: { width: "300", height: "200", mimeType: "image/png", fileSize: 4096 },
+        },
+        { insert: "After\n" },
+      ]);
+
+      adapter.destroy();
+    });
+
+    it("pastes self-produced video blot HTML into Delta with full attributes (ADR-0008)", () => {
+      const adapter = createMountedAdapter({ content: [{ insert: "\n" }] });
+      adapter.setSelection({ start: 0, end: 0 });
+
+      const clipboardData = new DataTransfer();
+      clipboardData.setData(
+        "text/html",
+        '<p>Video:</p><div class="tgg-video" data-src="tgg-local-media://uuid2" width="640" height="360" data-mime-type="video/mp4" data-file-size="8192" data-poster="https://example.com/p.jpg" data-duration="42"><video class="tgg-video__media"></video></div><p>Done</p>',
+      );
+      dispatchPaste(clipboardData);
+
+      expect(adapter.getSnapshot().content).toEqual([
+        { insert: "Video:\n" },
+        {
+          insert: { video: "tgg-local-media://uuid2" },
+          attributes: {
+            width: "640",
+            height: "360",
+            mimeType: "video/mp4",
+            fileSize: 8192,
+            poster: "https://example.com/p.jpg",
+            duration: 42,
+          },
+        },
+        { insert: "Done\n" },
+      ]);
+
+      adapter.destroy();
+    });
+
+    it("pastes HTML with mixed inline embeds and stripped foreign media", () => {
+      const adapter = createMountedAdapter({ content: [{ insert: "\n" }] });
+      adapter.setSelection({ start: 0, end: 0 });
+
+      const clipboardData = new DataTransfer();
+      clipboardData.setData(
+        "text/html",
+        '<p>Text <span class="tgg-mention" data-id="u1" data-sign="&" data-display="Staff">@Staff</span><img class="foreign-image" src="https://example.com/bad.png"><span class="tgg-emoji" data-emoji-id="tada">:tada:</span></p>',
       );
       dispatchPaste(clipboardData);
 
@@ -138,20 +192,21 @@ describe("text and inline-embed clipboard/drop policy (ADR-0006)", () => {
       adapter.destroy();
     });
 
-    it("pastes HTML with stripped dividers preserving paragraph structure", () => {
+    it("pastes HTML with preserved dividers (ADR-0007)", () => {
       const adapter = createMountedAdapter({ content: [{ insert: "\n" }] });
       adapter.setSelection({ start: 0, end: 0 });
 
       const clipboardData = new DataTransfer();
       clipboardData.setData(
         "text/html",
-        '<p><span class="tgg-mention" data-id="u1" data-sign="!" data-display="Alice">@Alice</span></p><hr><p><span class="tgg-channel" data-id="c1" data-display="general">#general</span></p>',
+        '<p><span class="tgg-mention" data-id="u1" data-sign="!" data-display="Alice">@Alice</span></p><hr class="tgg-divider"><p><span class="tgg-channel" data-id="c1" data-display="general">#general</span></p>',
       );
       dispatchPaste(clipboardData);
 
       expect(adapter.getSnapshot().content).toEqual([
         { insert: { mention: "u1" }, attributes: { sign: "!", displayText: "Alice" } },
         { insert: "\n" },
+        { insert: { divider: "true" } },
         { insert: { channel: "c1" }, attributes: { displayText: "general" } },
         { insert: "\n" },
       ]);
@@ -159,14 +214,31 @@ describe("text and inline-embed clipboard/drop policy (ADR-0006)", () => {
       adapter.destroy();
     });
 
-    it("drops mention, channel, and emoji inline embeds from HTML", () => {
+    it("pastes external HTML <hr> without class as a divider (ADR-0007)", () => {
+      const adapter = createMountedAdapter({ content: [{ insert: "\n" }] });
+      adapter.setSelection({ start: 0, end: 0 });
+
+      const clipboardData = new DataTransfer();
+      clipboardData.setData("text/html", "<p>Above</p><hr><p>Below</p>");
+      dispatchPaste(clipboardData);
+
+      expect(adapter.getSnapshot().content).toEqual([
+        { insert: "Above\n" },
+        { insert: { divider: "true" } },
+        { insert: "Below\n" },
+      ]);
+
+      adapter.destroy();
+    });
+
+    it("drops mention, channel, emoji, and divider embeds from HTML", () => {
       const adapter = createMountedAdapter({ content: [{ insert: "\n" }] });
       adapter.setSelection({ start: 0, end: 0 });
 
       const dataTransfer = new DataTransfer();
       dataTransfer.setData(
         "text/html",
-        '<p><span class="tgg-channel" data-id="c2" data-display="dev">#dev</span> <span class="tgg-emoji" data-emoji-id="star">:star:</span></p>',
+        '<p><span class="tgg-channel" data-id="c2" data-display="dev">#dev</span> <span class="tgg-emoji" data-emoji-id="star">:star:</span></p><hr><p>End</p>',
       );
       dispatchDrop(dataTransfer);
 
@@ -175,20 +247,24 @@ describe("text and inline-embed clipboard/drop policy (ADR-0006)", () => {
         { insert: " " },
         { insert: { emoji: "star" } },
         { insert: "\n" },
+        { insert: { divider: "true" } },
+        { insert: "End\n" },
       ]);
 
       adapter.destroy();
     });
 
-    it("does not upgrade plain text @Alice, #general, :tada: to embeds", () => {
+    it("does not upgrade plain text @Alice, #general, :tada:, or --- to embeds", () => {
       const adapter = createMountedAdapter({ content: [{ insert: "\n" }] });
       adapter.setSelection({ start: 0, end: 0 });
 
       const clipboardData = new DataTransfer();
-      clipboardData.setData("text/plain", "@Alice in #general :tada:");
+      clipboardData.setData("text/plain", "@Alice in #general :tada:\n---");
       dispatchPaste(clipboardData);
 
-      expect(adapter.getSnapshot().content).toEqual([{ insert: "@Alice in #general :tada:\n" }]);
+      expect(adapter.getSnapshot().content).toEqual([
+        { insert: "@Alice in #general :tada:\n---\n" },
+      ]);
 
       adapter.destroy();
     });
@@ -287,7 +363,7 @@ describe("text and inline-embed clipboard/drop policy (ADR-0006)", () => {
       adapter.destroy();
     });
 
-    it("strips img/video embeds from pasted HTML while keeping surrounding text", () => {
+    it("strips foreign img/video embeds from pasted HTML while keeping surrounding text", () => {
       const adapter = createMountedAdapter({ content: [{ insert: "\n" }] });
 
       const clipboardData = new DataTransfer();
@@ -299,7 +375,7 @@ describe("text and inline-embed clipboard/drop policy (ADR-0006)", () => {
       adapter.destroy();
     });
 
-    it("drops an image-only clipboard payload without inserting anything", () => {
+    it("drops a foreign image-only clipboard payload without inserting anything", () => {
       const adapter = createMountedAdapter();
       adapter.setSelection({ start: 5, end: 5 });
 
@@ -312,72 +388,68 @@ describe("text and inline-embed clipboard/drop policy (ADR-0006)", () => {
       adapter.destroy();
     });
 
-    it("ignores clipboard files entirely — no upload, no placeholder, no error", () => {
+    it("intercepts clipboard media file and emits paste-media event (ADR-0008)", async () => {
       const adapter = createMountedAdapter();
       adapter.setSelection({ start: 5, end: 5 });
 
+      let receivedPayload: PasteMediaPayload | undefined;
+      adapter.subscribe((event: EditorEvent) => {
+        if (event.type === "paste-media") {
+          receivedPayload = event.payload;
+        }
+      });
+
       const clipboardData = new DataTransfer();
-      const file = new File(["binary"], "photo.png", { type: "image/png" });
+      const file = new File(["binary-image-data"], "screenshot.png", { type: "image/png" });
       clipboardData.items.add(file);
 
-      expect(() => dispatchPaste(clipboardData)).not.toThrow();
+      const event = dispatchPaste(clipboardData);
+      expect(event.defaultPrevented).toBe(true);
+
+      // Wait a tick for async file probe
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(receivedPayload).toBeDefined();
+      const payload = receivedPayload as unknown as PasteMediaPayload;
+      expect(payload.mimeType).toBe("image/png");
+      expect(payload.fileName).toBe("screenshot.png");
+      expect(payload.isVideo).toBe(false);
+      expect(typeof payload.dataBase64).toBe("string");
+      expect(payload.selection).toEqual({ start: 5, end: 5 });
+
+      // Delta content is unchanged until host inserts
       expect(adapter.getSnapshot().content).toEqual(unchangedContent);
 
       adapter.destroy();
     });
 
-    it("keeps pasted text when the clipboard has both text and files", () => {
+    it("intercepts dropped media file and emits paste-media event (ADR-0008)", async () => {
       const adapter = createMountedAdapter();
-      adapter.setSelection({ start: 5, end: 5 });
+      adapter.setSelection({ start: 2, end: 2 });
 
-      const clipboardData = new DataTransfer();
-      clipboardData.setData("text/plain", " world");
-      const file = new File(["binary"], "photo.png", { type: "image/png" });
-      clipboardData.items.add(file);
-
-      dispatchPaste(clipboardData);
-
-      expect(adapter.getSnapshot().content).toEqual([{ insert: "Hello world\n" }]);
-
-      adapter.destroy();
-    });
-
-    it("drops plain text at the caret", () => {
-      const adapter = createMountedAdapter();
-      adapter.setSelection({ start: 5, end: 5 });
+      let receivedPayload: PasteMediaPayload | undefined;
+      adapter.subscribe((event: EditorEvent) => {
+        if (event.type === "paste-media") {
+          receivedPayload = event.payload;
+        }
+      });
 
       const dataTransfer = new DataTransfer();
-      dataTransfer.setData("text/plain", " world");
-      const event = dispatchDrop(dataTransfer);
-
-      expect(event.defaultPrevented).toBe(true);
-      expect(adapter.getSnapshot().content).toEqual([{ insert: "Hello world\n" }]);
-
-      adapter.destroy();
-    });
-
-    it("ignores dropped files entirely — no upload, no placeholder, no error", () => {
-      const adapter = createMountedAdapter();
-      adapter.setSelection({ start: 5, end: 5 });
-
-      const dataTransfer = new DataTransfer();
-      const file = new File(["binary"], "photo.png", { type: "image/png" });
+      const file = new File(["video-bytes"], "clip.mp4", { type: "video/mp4" });
       dataTransfer.items.add(file);
 
-      expect(() => dispatchDrop(dataTransfer)).not.toThrow();
-      expect(adapter.getSnapshot().content).toEqual(unchangedContent);
+      const event = dispatchDrop(dataTransfer);
+      expect(event.defaultPrevented).toBe(true);
 
-      adapter.destroy();
-    });
+      // Wait a tick for async file probe
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
-    it("strips embeds from dropped rich-text HTML while keeping surrounding text", () => {
-      const adapter = createMountedAdapter({ content: [{ insert: "\n" }] });
-
-      const dataTransfer = new DataTransfer();
-      dataTransfer.setData("text/html", '<p>Before<img src="https://example.com/a.png">After</p>');
-      dispatchDrop(dataTransfer);
-
-      expect(adapter.getSnapshot().content).toEqual([{ insert: "BeforeAfter\n" }]);
+      expect(receivedPayload).toBeDefined();
+      const payload = receivedPayload as unknown as PasteMediaPayload;
+      expect(payload.mimeType).toBe("video/mp4");
+      expect(payload.fileName).toBe("clip.mp4");
+      expect(payload.isVideo).toBe(true);
+      expect(typeof payload.dataBase64).toBe("string");
 
       adapter.destroy();
     });
@@ -403,7 +475,7 @@ describe("text and inline-embed clipboard/drop policy (ADR-0006)", () => {
   });
 
   describe("Copy / Cut", () => {
-    it("populates formatted text/plain and rich text/html without <img>, src, or data-emoji-missing on copy", () => {
+    it("populates formatted text/plain and rich text/html without <img>, src, or data-emoji-missing on copy for inline emoji", () => {
       const adapter = createMountedAdapter({
         content: [
           { insert: "Hi " },
@@ -441,17 +513,17 @@ describe("text and inline-embed clipboard/drop policy (ADR-0006)", () => {
       adapter.destroy();
     });
 
-    it("strips block images, videos, and dividers from copy HTML and plain text without placeholder", () => {
+    it("preserves self-produced image and video blots in copy HTML and outputs [图片]/[视频] in plain text (ADR-0008)", () => {
       const adapter = createMountedAdapter({
         content: [
           { insert: "Text before\n" },
           {
-            insert: { image: "https://example.com/photo.png" },
+            insert: { image: "tgg-local-media://uuid1" },
             attributes: { width: "100", height: "100", mimeType: "image/png", fileSize: 1024 },
           },
           {
-            insert: { video: "https://example.com/video.mp4" },
-            attributes: { width: "100", height: "100", mimeType: "video/mp4", fileSize: 1024 },
+            insert: { video: "tgg-local-media://uuid2" },
+            attributes: { width: "200", height: "150", mimeType: "video/mp4", fileSize: 2048 },
           },
           { insert: { divider: "true" } },
           { insert: "Text after\n" },
@@ -463,14 +535,18 @@ describe("text and inline-embed clipboard/drop policy (ADR-0006)", () => {
       dispatchCopy(clipboardData);
 
       const text = clipboardData.getData("text/plain");
-      expect(text).not.toContain("[图片]");
-      expect(text).toContain("Text before");
+      expect(text).toContain("[图片]");
+      expect(text).toContain("[视频]");
+      expect(text).toContain("Text before\n");
+      expect(text).toContain("---\n");
       expect(text).toContain("Text after");
 
       const html = clipboardData.getData("text/html");
-      expect(html).not.toContain("<img");
-      expect(html).not.toContain("<video");
-      expect(html).not.toContain("<hr");
+      expect(html).toContain('class="tgg-image"');
+      expect(html).toContain('data-src="tgg-local-media://uuid1"');
+      expect(html).toContain('class="tgg-video"');
+      expect(html).toContain('data-src="tgg-local-media://uuid2"');
+      expect(html).toContain("<hr");
 
       adapter.destroy();
     });
@@ -495,11 +571,39 @@ describe("text and inline-embed clipboard/drop policy (ADR-0006)", () => {
       adapter.destroy();
     });
 
-    it("cutting a selection containing an image deletes the image from doc with no image in clipboard (intentional gap)", () => {
+    it("cutting a selection containing a divider deletes the divider and keeps it on clipboard (ADR-0007)", () => {
+      const adapter = createMountedAdapter({
+        content: [{ insert: "Before\n" }, { insert: { divider: "true" } }, { insert: "After\n" }],
+      });
+      // Selection covers the divider (index 7, length 1)
+      adapter.setSelection({ start: 7, end: 8 });
+
+      const clipboardData = new DataTransfer();
+      dispatchCut(clipboardData);
+
+      // Divider is copied to clipboard
+      expect(clipboardData.getData("text/html")).toContain("<hr");
+      expect(clipboardData.getData("text/plain")).toBe("---\n");
+
+      // Document no longer has the divider
+      expect(adapter.getSnapshot().content).toEqual([{ insert: "Before\nAfter\n" }]);
+
+      // Paste it back
+      dispatchPaste(clipboardData);
+      expect(adapter.getSnapshot().content).toEqual([
+        { insert: "Before\n" },
+        { insert: { divider: "true" } },
+        { insert: "After\n" },
+      ]);
+
+      adapter.destroy();
+    });
+
+    it("cutting a selection containing an image deletes the image from doc and keeps it in clipboard (ADR-0008)", () => {
       const adapter = createMountedAdapter({
         content: [
           {
-            insert: { image: "https://example.com/photo.png" },
+            insert: { image: "tgg-local-media://uuid1" },
             attributes: { width: "100", height: "100", mimeType: "image/png", fileSize: 1024 },
           },
           { insert: "After\n" },
@@ -511,12 +615,22 @@ describe("text and inline-embed clipboard/drop policy (ADR-0006)", () => {
       const clipboardData = new DataTransfer();
       dispatchCut(clipboardData);
 
-      // Image is removed from clipboard HTML & text
-      expect(clipboardData.getData("text/html")).not.toContain("<img");
-      expect(clipboardData.getData("text/plain")).toBe("");
+      // Image is retained in clipboard HTML & plain text fallback
+      expect(clipboardData.getData("text/html")).toContain('class="tgg-image"');
+      expect(clipboardData.getData("text/plain")).toBe("[图片]\n");
 
       // Document no longer has the image
       expect(adapter.getSnapshot().content).toEqual([{ insert: "After\n" }]);
+
+      // Paste it back
+      dispatchPaste(clipboardData);
+      expect(adapter.getSnapshot().content).toEqual([
+        {
+          insert: { image: "tgg-local-media://uuid1" },
+          attributes: { width: "100", height: "100", mimeType: "image/png", fileSize: 1024 },
+        },
+        { insert: "After\n" },
+      ]);
 
       adapter.destroy();
     });

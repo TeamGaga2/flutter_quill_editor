@@ -54,6 +54,24 @@ class MediaResourceRegistry {
     return '$uriPrefix$token';
   }
 
+  /// Registers in-memory [bytes] (e.g. from pasted clipboard/drop media)
+  /// and returns its canonical protocol URI `tgg-local-media://<token>`.
+  Future<String> registerBytes({
+    required Uint8List bytes,
+    required String mimeType,
+    String? draftKey,
+    String? fileName,
+    Map<String, Object?> metadata = const <String, Object?>{},
+  }) async {
+    return registerBlob(
+      draftKey: draftKey ?? 'default',
+      bytes: bytes,
+      mimeType: mimeType,
+      fileName: fileName,
+      metadata: metadata,
+    );
+  }
+
   /// Persists [bytes] to IndexedDB (Web), creates an object URL, registers with
   /// the host, and returns `tgg-local-media://<token>`.
   ///

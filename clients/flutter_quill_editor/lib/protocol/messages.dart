@@ -1271,6 +1271,75 @@ final class RequestImageEvent extends ProtocolEvent {
   };
 }
 
+/// Payload for `request_paste_media` event.
+final class RequestPasteMediaPayload {
+  const RequestPasteMediaPayload({
+    required this.mimeType,
+    required this.fileSize,
+    required this.dataBase64,
+    this.width,
+    this.height,
+    this.fileName,
+    this.isVideo = false,
+    this.duration,
+    this.selection,
+  });
+
+  factory RequestPasteMediaPayload.fromJson(ProtocolJsonMap json) {
+    return RequestPasteMediaPayload(
+      mimeType: json['mimeType']! as String,
+      fileSize: json['fileSize']! as int,
+      dataBase64: json['dataBase64']! as String,
+      width: json['width'] as String?,
+      height: json['height'] as String?,
+      fileName: json['fileName'] as String?,
+      isVideo: json['isVideo'] as bool? ?? false,
+      duration: json['duration'] as int?,
+      selection: _optionalSelectionFromJson(json['selection']),
+    );
+  }
+
+  final String mimeType;
+  final int fileSize;
+  final String dataBase64;
+  final String? width;
+  final String? height;
+  final String? fileName;
+  final bool isVideo;
+  final int? duration;
+  final ProtocolSelection? selection;
+
+  ProtocolJsonMap toJson() => <String, Object?>{
+    'mimeType': mimeType,
+    'fileSize': fileSize,
+    'dataBase64': dataBase64,
+    if (width != null) 'width': width,
+    if (height != null) 'height': height,
+    if (fileName != null) 'fileName': fileName,
+    if (isVideo) 'isVideo': isVideo,
+    if (duration != null) 'duration': duration,
+    'selection': selection?.toJson(),
+  };
+}
+
+/// Web→Flutter UI intent: user pasted or dropped a media file onto the editor surface.
+final class RequestPasteMediaEvent extends ProtocolEvent {
+  RequestPasteMediaEvent({
+    required this.typedPayload,
+    this.version = kRichTextProtocolVersion,
+  });
+
+  @override
+  final int version;
+  final RequestPasteMediaPayload typedPayload;
+
+  @override
+  String get type => 'request_paste_media';
+
+  @override
+  ProtocolJsonMap get payload => typedPayload.toJson();
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------

@@ -131,6 +131,90 @@ describe("protocol events and responses", () => {
     );
   });
 
+  it("validates request_paste_media events", () => {
+    expect(
+      parseProtocolMessage({
+        version: PROTOCOL_VERSION,
+        kind: "event",
+        type: "request_paste_media",
+        payload: {
+          mimeType: "image/png",
+          fileSize: 1024,
+          dataBase64:
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+          width: "100",
+          height: "100",
+          fileName: "test.png",
+          selection: { start: 0, end: 0 },
+        },
+      }).ok,
+    ).toBe(true);
+
+    expect(
+      parseProtocolMessage({
+        version: PROTOCOL_VERSION,
+        kind: "event",
+        type: "request_paste_media",
+        payload: {
+          mimeType: "video/mp4",
+          fileSize: 2048,
+          dataBase64: "AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDE=",
+          isVideo: true,
+          duration: 10,
+          selection: null,
+        },
+      }).ok,
+    ).toBe(true);
+
+    expectError(
+      {
+        version: PROTOCOL_VERSION,
+        kind: "event",
+        type: "request_paste_media",
+        payload: {
+          mimeType: "",
+          fileSize: 1024,
+          dataBase64: "abc",
+          selection: null,
+        },
+      },
+      "invalid_payload",
+      "$.payload.mimeType",
+    );
+
+    expectError(
+      {
+        version: PROTOCOL_VERSION,
+        kind: "event",
+        type: "request_paste_media",
+        payload: {
+          mimeType: "image/png",
+          fileSize: -1,
+          dataBase64: "abc",
+          selection: null,
+        },
+      },
+      "invalid_payload",
+      "$.payload.fileSize",
+    );
+
+    expectError(
+      {
+        version: PROTOCOL_VERSION,
+        kind: "event",
+        type: "request_paste_media",
+        payload: {
+          mimeType: "image/png",
+          fileSize: 1024,
+          dataBase64: "",
+          selection: null,
+        },
+      },
+      "invalid_payload",
+      "$.payload.dataBase64",
+    );
+  });
+
   it("strictly validates events and editor state", () => {
     expectError(
       { version: PROTOCOL_VERSION, kind: "future", type: "focus", payload: {} },

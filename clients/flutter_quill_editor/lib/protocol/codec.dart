@@ -129,6 +129,7 @@ const _eventTypes = <String>{
   'request_mention',
   'request_channel',
   'request_image',
+  'request_paste_media',
 };
 
 /// Encode a protocol message to a JSON string.
@@ -503,6 +504,11 @@ ProtocolParseResult<ProtocolMessage> _parseEvent(ProtocolJsonMap map) {
         selection: selectionRaw == null
             ? null
             : ProtocolSelection.fromJson(_asJsonMap(selectionRaw as Map)),
+      );
+    case 'request_paste_media':
+      event = RequestPasteMediaEvent(
+        version: version,
+        typedPayload: RequestPasteMediaPayload.fromJson(payloadMap),
       );
     default:
       return _fail(
@@ -1111,6 +1117,8 @@ List<ProtocolValidationIssue> _validateEventPayload(
       return _validateEmptyObject(payload, r'$.payload');
     case 'state_change':
       return _validateStateContainer(payload);
+    case 'request_paste_media':
+      return _validateRequestPasteMediaPayload(payload);
     default:
       return [
         const ProtocolValidationIssue(
@@ -1120,6 +1128,124 @@ List<ProtocolValidationIssue> _validateEventPayload(
         ),
       ];
   }
+}
+
+List<ProtocolValidationIssue> _validateRequestPasteMediaPayload(
+  Object? payload,
+) {
+  if (payload is! Map) {
+    return [
+      const ProtocolValidationIssue(
+        code: ProtocolErrorCode.invalidPayload,
+        path: r'$.payload',
+        message: 'Event payload must be an object.',
+      ),
+    ];
+  }
+  final map = _asJsonMap(payload);
+  final issues = _validateRequiredAndOptionalKeys(
+    map,
+    requiredKeys: const ['mimeType', 'fileSize', 'dataBase64', 'selection'],
+    optionalKeys: const ['width', 'height', 'fileName', 'isVideo', 'duration'],
+    path: r'$.payload',
+    label: 'request_paste_media payload',
+  );
+
+  _addNonEmptyStringIssue(
+    issues,
+    map['mimeType'],
+    r'$.payload.mimeType',
+    'mimeType',
+  );
+
+  final fileSize = map['fileSize'];
+  if (!_isSafeNonNegativeInteger(fileSize)) {
+    issues.add(
+      const ProtocolValidationIssue(
+        code: ProtocolErrorCode.invalidPayload,
+        path: r'$.payload.fileSize',
+        message: 'fileSize must be a non-negative integer.',
+      ),
+    );
+  }
+
+  _addNonEmptyStringIssue(
+    issues,
+    map['dataBase64'],
+    r'$.payload.dataBase64',
+    'dataBase64',
+  );
+
+  if (map.containsKey('width')) {
+    final width = map['width'];
+    if (width is! String || !_decimalDimensionPattern.hasMatch(width)) {
+      issues.add(
+        const ProtocolValidationIssue(
+          code: ProtocolErrorCode.invalidPayload,
+          path: r'$.payload.width',
+          message: 'width must be a decimal integer string.',
+        ),
+      );
+    }
+  }
+
+  if (map.containsKey('height')) {
+    final height = map['height'];
+    if (height is! String || !_decimalDimensionPattern.hasMatch(height)) {
+      issues.add(
+        const ProtocolValidationIssue(
+          code: ProtocolErrorCode.invalidPayload,
+          path: r'$.payload.height',
+          message: 'height must be a decimal integer string.',
+        ),
+      );
+    }
+  }
+
+  if (map.containsKey('fileName')) {
+    final fileName = map['fileName'];
+    if (fileName is! String) {
+      issues.add(
+        const ProtocolValidationIssue(
+          code: ProtocolErrorCode.invalidPayload,
+          path: r'$.payload.fileName',
+          message: 'fileName must be a string.',
+        ),
+      );
+    }
+  }
+
+  if (map.containsKey('isVideo')) {
+    final isVideo = map['isVideo'];
+    if (isVideo is! bool) {
+      issues.add(
+        const ProtocolValidationIssue(
+          code: ProtocolErrorCode.invalidPayload,
+          path: r'$.payload.isVideo',
+          message: 'isVideo must be a boolean.',
+        ),
+      );
+    }
+  }
+
+  if (map.containsKey('duration')) {
+    final duration = map['duration'];
+    if (!_isSafeNonNegativeInteger(duration)) {
+      issues.add(
+        const ProtocolValidationIssue(
+          code: ProtocolErrorCode.invalidPayload,
+          path: r'$.payload.duration',
+          message: 'duration must be a non-negative integer.',
+        ),
+      );
+    }
+  }
+
+  final selection = map['selection'];
+  if (selection != null) {
+    issues.addAll(_validateSelection(selection, r'$.payload.selection'));
+  }
+  return issues;
 }
 
 List<ProtocolValidationIssue> _validateSuccessValue(

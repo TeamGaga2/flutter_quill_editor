@@ -10,6 +10,7 @@ import type {
   LinkInsert,
   ListType,
   MentionInsert,
+  PasteMediaPayload,
   VideoInsert,
 } from "@teamgaga/richtext-core";
 import {
@@ -360,9 +361,14 @@ export function createQuillAdapter(options: QuillAdapterOptions): QuillAdapter {
     }
   };
 
+  const handlePasteMedia = (payload: PasteMediaPayload): void => {
+    emit({ type: "paste-media", payload });
+  };
+
   quill.on("text-change", handleTextChange);
   quill.on("selection-change", handleSelectionChange);
   quill.on("editor-change", handleEditorChange);
+  quill.on("paste-media", handlePasteMedia);
 
   const emojiRegistry = options.emojiRegistry;
   const emojiObserver = emojiRegistry ? createEmojiObserver(quill.root, emojiRegistry) : undefined;
@@ -1029,6 +1035,7 @@ export function createQuillAdapter(options: QuillAdapterOptions): QuillAdapter {
       quill.off("text-change", handleTextChange);
       quill.off("selection-change", handleSelectionChange);
       quill.off("editor-change", handleEditorChange);
+      quill.off("paste-media", handlePasteMedia);
       quill.scrollRectIntoView = nativeScrollRectIntoView;
       listeners.clear();
       emojiObserver?.disconnect();

@@ -5,17 +5,11 @@ import { resolveMediaUri } from "./media-uri";
 
 export interface VideoValue {
   src: string;
-
   width?: string;
-
   height?: string;
-
   mimeType?: string;
-
   fileSize?: number;
-
   poster?: string;
-
   duration?: number;
 }
 
@@ -34,47 +28,55 @@ export class VideoBlot extends BlockEmbed {
 
   static className = "tgg-video";
 
-  static create(value: VideoValue) {
+  static create(value: string | VideoValue) {
     const node = super.create() as HTMLDivElement;
     node.setAttribute("contenteditable", "false");
 
-    node.setAttribute("data-src", value.src);
+    const src = typeof value === "string" ? value : (value?.src ?? "");
+    const width = typeof value === "string" ? undefined : value?.width;
+    const height = typeof value === "string" ? undefined : value?.height;
+    const mimeType = typeof value === "string" ? undefined : value?.mimeType;
+    const fileSize = typeof value === "string" ? undefined : value?.fileSize;
+    const poster = typeof value === "string" ? undefined : value?.poster;
+    const duration = typeof value === "string" ? undefined : value?.duration;
 
-    if (value.width) {
-      node.setAttribute("width", value.width);
+    node.setAttribute("data-src", src);
+
+    if (width) {
+      node.setAttribute("width", width);
     }
 
-    if (value.height) {
-      node.setAttribute("height", value.height);
+    if (height) {
+      node.setAttribute("height", height);
     }
 
-    if (value.mimeType) {
-      node.setAttribute("data-mime-type", value.mimeType);
+    if (mimeType) {
+      node.setAttribute("data-mime-type", mimeType);
     }
 
-    if (value.fileSize !== undefined) {
-      node.setAttribute("data-file-size", String(value.fileSize));
+    if (fileSize !== undefined) {
+      node.setAttribute("data-file-size", String(fileSize));
     }
 
-    if (value.poster) {
-      node.setAttribute("data-poster", value.poster);
+    if (poster) {
+      node.setAttribute("data-poster", poster);
     }
 
-    if (value.duration !== undefined) {
-      node.setAttribute("data-duration", String(value.duration));
+    if (duration !== undefined) {
+      node.setAttribute("data-duration", String(duration));
     }
 
-    applyMediaDisplaySize(node, value.width, value.height);
+    applyMediaDisplaySize(node, width, height);
 
     const media = document.createElement("video");
     media.className = "tgg-video__media";
     media.setAttribute("playsinline", "");
     media.setAttribute("preload", "metadata");
     media.controls = false;
-    media.src = resolveMediaUri(value.src);
+    media.src = resolveMediaUri(src);
 
-    if (value.poster) {
-      media.poster = resolveMediaUri(value.poster);
+    if (poster) {
+      media.poster = resolveMediaUri(poster);
     }
 
     bindVideoLoadFallback(media);
@@ -106,7 +108,7 @@ export class VideoBlot extends BlockEmbed {
 
     // Prefer canonical poster from data-poster so a fallback data-URI never leaks
     // into snapshots after a load failure.
-    const poster = node.dataset.poster;
+    const poster = node.dataset.poster ?? node.getAttribute("data-poster");
     if (poster) {
       value.poster = poster;
     }
@@ -117,5 +119,54 @@ export class VideoBlot extends BlockEmbed {
     }
 
     return value;
+  }
+
+  format(name: string, value: unknown) {
+    const domNode = this.domNode as HTMLDivElement;
+    if (name === "width") {
+      if (typeof value === "string" || typeof value === "number") {
+        const valStr = String(value);
+        domNode.setAttribute("width", valStr);
+        applyMediaDisplaySize(domNode, valStr, domNode.getAttribute("height") ?? undefined);
+      } else {
+        domNode.removeAttribute("width");
+      }
+    } else if (name === "height") {
+      if (typeof value === "string" || typeof value === "number") {
+        const valStr = String(value);
+        domNode.setAttribute("height", valStr);
+        applyMediaDisplaySize(domNode, domNode.getAttribute("width") ?? undefined, valStr);
+      } else {
+        domNode.removeAttribute("height");
+      }
+    } else if (name === "mimeType") {
+      if (typeof value === "string") {
+        domNode.setAttribute("data-mime-type", value);
+      } else {
+        domNode.removeAttribute("data-mime-type");
+      }
+    } else if (name === "fileSize") {
+      if (typeof value === "number" || typeof value === "string") {
+        domNode.setAttribute("data-file-size", String(value));
+      } else {
+        domNode.removeAttribute("data-file-size");
+      }
+    } else if (name === "poster") {
+      if (typeof value === "string") {
+        domNode.setAttribute("data-poster", value);
+        const media = domNode.querySelector<HTMLVideoElement>(".tgg-video__media");
+        if (media) media.poster = resolveMediaUri(value);
+      } else {
+        domNode.removeAttribute("data-poster");
+      }
+    } else if (name === "duration") {
+      if (typeof value === "number" || typeof value === "string") {
+        domNode.setAttribute("data-duration", String(value));
+      } else {
+        domNode.removeAttribute("data-duration");
+      }
+    } else {
+      super.format(name, value);
+    }
   }
 }

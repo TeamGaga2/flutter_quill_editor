@@ -84,6 +84,7 @@ const EVENT_TYPES = new Set([
   "request_mention",
   "request_channel",
   "request_image",
+  "request_paste_media",
 ]);
 const ERROR_CODES = new Set<ProtocolErrorCode>([
   "invalid_json",
@@ -341,6 +342,8 @@ function validateEventPayload(type: string, payload: unknown): ProtocolValidatio
       return validateEmptyObject(payload, "$.payload");
     case "state_change":
       return validateStateContainer(payload);
+    case "request_paste_media":
+      return validateRequestPasteMediaPayload(payload);
     default:
       return [issue("invalid_message", "$.type", "Unknown editor event type.")];
   }
@@ -830,6 +833,85 @@ function validateFormats(input: unknown, path: string): ProtocolValidationIssue[
     issues.push(
       issue("invalid_payload", `${path}.list`, "list must be false, ordered, or bullet."),
     );
+  }
+
+  return issues;
+}
+
+function validateRequestPasteMediaPayload(payload: unknown): ProtocolValidationIssue[] {
+  if (!isRecord(payload)) {
+    return [issue("invalid_payload", "$.payload", "Event payload must be an object.")];
+  }
+
+  const issues = validateExactKeysWithOptional(
+    payload,
+    ["mimeType", "fileSize", "dataBase64", "selection"],
+    ["width", "height", "fileName", "isVideo", "duration"],
+    "$.payload",
+    "request_paste_media payload",
+  );
+
+  if (typeof payload.mimeType !== "string" || payload.mimeType.trim().length === 0) {
+    issues.push(
+      issue("invalid_payload", "$.payload.mimeType", "mimeType must be a non-empty string."),
+    );
+  }
+
+  if (!isNonNegativeInteger(payload.fileSize)) {
+    issues.push(
+      issue("invalid_payload", "$.payload.fileSize", "fileSize must be a non-negative integer."),
+    );
+  }
+
+  if (typeof payload.dataBase64 !== "string" || payload.dataBase64.length === 0) {
+    issues.push(
+      issue("invalid_payload", "$.payload.dataBase64", "dataBase64 must be a non-empty string."),
+    );
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(payload, "width") &&
+    !isDecimalDimension(payload.width)
+  ) {
+    issues.push(
+      issue("invalid_payload", "$.payload.width", "width must be a decimal integer string."),
+    );
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(payload, "height") &&
+    !isDecimalDimension(payload.height)
+  ) {
+    issues.push(
+      issue("invalid_payload", "$.payload.height", "height must be a decimal integer string."),
+    );
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(payload, "fileName") &&
+    typeof payload.fileName !== "string"
+  ) {
+    issues.push(issue("invalid_payload", "$.payload.fileName", "fileName must be a string."));
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(payload, "isVideo") &&
+    typeof payload.isVideo !== "boolean"
+  ) {
+    issues.push(issue("invalid_payload", "$.payload.isVideo", "isVideo must be a boolean."));
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(payload, "duration") &&
+    !isNonNegativeInteger(payload.duration)
+  ) {
+    issues.push(
+      issue("invalid_payload", "$.payload.duration", "duration must be a non-negative integer."),
+    );
+  }
+
+  if (payload.selection !== null) {
+    issues.push(...validateSelection(payload.selection, "$.payload.selection"));
   }
 
   return issues;

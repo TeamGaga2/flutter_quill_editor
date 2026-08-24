@@ -10,6 +10,8 @@ import {
   type RequestEmojiEvent,
   type RequestImageEvent,
   type RequestMentionEvent,
+  type RequestPasteMediaEvent,
+  type RequestPasteMediaPayload,
 } from "@teamgaga/richtext-protocol";
 import { createHostError, type RichTextHostError } from "../errors";
 
@@ -118,6 +120,23 @@ export function bindEditorEventBridge(
     }),
   );
 
+  unsubscribers.push(
+    editor.on("paste-media", (event) => {
+      try {
+        publish({
+          version: PROTOCOL_VERSION,
+          kind: "event",
+          type: "request_paste_media",
+          payload: event.payload,
+        });
+      } catch {
+        onError(
+          createHostError("event", "event_failed", "Failed to publish request_paste_media event."),
+        );
+      }
+    }),
+  );
+
   // Core "ready" is intentionally NOT subscribed — Host lifecycle owns Protocol ready.
 
   return {
@@ -198,5 +217,17 @@ export function createProtocolRequestImageEvent(
     kind: "event",
     type: "request_image",
     payload: { selection },
+  };
+}
+
+/** Web→Flutter UI intent: user pasted/dropped a media file onto the editor surface. */
+export function createProtocolRequestPasteMediaEvent(
+  payload: RequestPasteMediaPayload,
+): RequestPasteMediaEvent {
+  return {
+    version: PROTOCOL_VERSION,
+    kind: "event",
+    type: "request_paste_media",
+    payload,
   };
 }
