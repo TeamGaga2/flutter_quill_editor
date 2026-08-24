@@ -1,10 +1,10 @@
 {
   "protocolVersion": 2,
   "hostEnvelopeVersion": 1,
-  "buildId": "5b102852ad2fe38c3e6344c4605745dabe498ba3",
-  "builtAt": "2026-08-24T14:35:15+08:00",
+  "buildId": "bdebf085d52890b81aced8f3b07f3a7f386f862d",
+  "builtAt": "2026-08-24T18:11:49+08:00",
   "package": "webview-runtime",
-  "sourceCommit": "5b102852ad2fe38c3e6344c4605745dabe498ba3",
-  "webEntry": "iframe.2e95785d9e513362.html",
-  "webEntrySha256": "2e95785d9e513362bebddda66ce5ffcdf96d07efcc907444e0e7cf258e62dfe1"
+  "sourceCommit": "bdebf085d52890b81aced8f3b07f3a7f386f862d",
+  "webEntry": "iframe.b97e713901e3fd74.html",
+  "webEntrySha256": "b97e713901e3fd74f40c561e84b1d3906218be301034cbd15800a6c3dc56345d"
 }
