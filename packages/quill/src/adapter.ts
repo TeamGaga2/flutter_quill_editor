@@ -442,14 +442,25 @@ export function createQuillAdapter(options: QuillAdapterOptions): QuillAdapter {
 
     runWithSuppressedSelectionSync(() => {
       try {
-        quill.setSelection(range.index, range.length, Quill.sources.SILENT);
-        operation(range);
+        // Quill's selection restoration can call root.focus() from inside
+        // setNativeRange(). Keep the root non-editable for the whole format
+        // operation so iOS does not promote the WebView back to an IME host.
+        quill.disable();
+        quill.editReadOnly(() => {
+          quill.setSelection(range.index, range.length, Quill.sources.SILENT);
+          operation(range);
+        });
+        quill.blur();
       } finally {
         try {
           rememberSelection(range.index, range.index + range.length);
           document.getSelection()?.removeAllRanges();
         } finally {
           root.focus = nativeFocus;
+          quill.enable();
+          if (quill.hasFocus()) {
+            quill.blur();
+          }
         }
       }
     });

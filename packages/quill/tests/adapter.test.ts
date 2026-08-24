@@ -541,6 +541,36 @@ describe("QuillAdapter block formats", () => {
     adapter.destroy();
   });
 
+  it("isolates blurred inline formatting from native editing focus", async () => {
+    const adapter = createMountedAdapter(defaultSnapshot, { start: 0, end: 5 });
+    const root = document.querySelector<HTMLElement>(".ql-editor");
+    if (!root) throw new Error("Missing Quill editor root");
+
+    const contenteditableBeforeChanges: Array<string | null> = [];
+    const observer = new MutationObserver((records) => {
+      for (const record of records) {
+        contenteditableBeforeChanges.push(record.oldValue);
+      }
+    });
+    observer.observe(root, {
+      attributes: true,
+      attributeFilter: ["contenteditable"],
+      attributeOldValue: true,
+    });
+
+    adapter.blur();
+    await Promise.resolve();
+    adapter.execute({ type: "toggle-inline-format", format: "bold" });
+    await Promise.resolve();
+    observer.disconnect();
+
+    expect(contenteditableBeforeChanges).toContain("true");
+    expect(root.getAttribute("contenteditable")).toBe("true");
+    expect(document.activeElement).not.toBe(root);
+
+    adapter.destroy();
+  });
+
   it("preserves collapsed inline formats across blurred commands and later focus", async () => {
     const adapter = createMountedAdapter(defaultSnapshot, { start: 5, end: 5 });
     const root = document.querySelector<HTMLElement>(".ql-editor");
