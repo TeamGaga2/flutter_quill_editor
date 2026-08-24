@@ -47,6 +47,21 @@ export type RequestChannelEvent = ProtocolEvent<"request_channel", RequestInsert
 /** Web→Flutter UI intent: request host to open media picker. */
 export type RequestImageEvent = ProtocolEvent<"request_image", RequestInsertSelectionPayload>;
 
+export interface RequestPasteMediaPayload {
+  mimeType: string;
+  fileSize: number;
+  width?: string;
+  height?: string;
+  dataBase64: string;
+  fileName?: string;
+  isVideo?: boolean;
+  duration?: number;
+  selection: ProtocolSelection | null;
+}
+
+/** Web→Flutter UI intent: user pasted or dropped a media file onto the editor surface. */
+export type RequestPasteMediaEvent = ProtocolEvent<"request_paste_media", RequestPasteMediaPayload>;
+
 export type EditorEventMessage =
   | ReadyEvent
   | ChangeEvent
@@ -60,6 +75,7 @@ export type EditorEventMessage =
   | RequestEmojiEvent
   | RequestMentionEvent
   | RequestChannelEvent
-  | RequestImageEvent;
+  | RequestImageEvent
+  | RequestPasteMediaEvent;
 
 export type EditorEventType = EditorEventMessage["type"];

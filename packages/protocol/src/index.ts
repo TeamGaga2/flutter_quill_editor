@@ -58,6 +58,8 @@ export type {
   RequestImageEvent,
   RequestInsertSelectionPayload,
   RequestMentionEvent,
+  RequestPasteMediaEvent,
+  RequestPasteMediaPayload,
   SelectionChangeEvent,
   StateChangeEvent,
 } from "./events";

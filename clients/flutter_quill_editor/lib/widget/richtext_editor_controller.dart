@@ -43,6 +43,8 @@ class RichTextEditorController {
   final _requestMentionController = StreamController<RequestMentionEvent>.broadcast();
   final _requestChannelController = StreamController<RequestChannelEvent>.broadcast();
   final _requestImageController = StreamController<RequestImageEvent>.broadcast();
+  final _requestPasteMediaController =
+      StreamController<RequestPasteMediaEvent>.broadcast();
 
   StreamSubscription<String>? _inboundSub;
   ProtocolEditorState? _latestState;
@@ -80,6 +82,10 @@ class RichTextEditorController {
 
   /// Host should open media picker (Web→Flutter UI intent).
   Stream<RequestImageEvent> get onRequestImage => _requestImageController.stream;
+
+  /// User pasted or dropped media file onto editor surface (Web→Flutter UI intent).
+  Stream<RequestPasteMediaEvent> get onRequestPasteMedia =>
+      _requestPasteMediaController.stream;
 
   /// All protocol events (including ready/focus/blur/request_close/request_*).
   Stream<ProtocolEvent> get onEvent => _eventController.stream;
@@ -387,6 +393,7 @@ class RichTextEditorController {
     await _requestMentionController.close();
     await _requestChannelController.close();
     await _requestImageController.close();
+    await _requestPasteMediaController.close();
   }
 
   // ---------------------------------------------------------------------------
@@ -518,6 +525,10 @@ class RichTextEditorController {
       case RequestImageEvent():
         if (!_requestImageController.isClosed) {
           _requestImageController.add(event);
+        }
+      case RequestPasteMediaEvent():
+        if (!_requestPasteMediaController.isClosed) {
+          _requestPasteMediaController.add(event);
         }
       case FocusEvent():
       case BlurEvent():

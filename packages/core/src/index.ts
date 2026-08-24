@@ -21,6 +21,7 @@ export type {
   EditorEvent,
   EditorEventListener,
   EditorEventType,
+  PasteMediaPayload,
   Unsubscribe,
 } from "./events";
 export type { CreateEditorOptions, RichTextEditor } from "./editor";

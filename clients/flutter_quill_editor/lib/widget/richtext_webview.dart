@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_quill_editor/async_bool_reconciler.dart';
 import 'package:flutter_quill_editor/bridge/transport_bootstrap.dart';
@@ -187,6 +188,7 @@ class RichTextWebViewState extends State<RichTextWebView> {
   StreamSubscription<void>? _readySub;
   StreamSubscription<ChangeEvent>? _changeSub;
   StreamSubscription<SelectionChangeEvent>? _selectionSub;
+  StreamSubscription<RequestPasteMediaEvent>? _pasteMediaSub;
   NativeRuntimeLoader? _runtimeLoader;
   late final LocalMediaRegistry _mediaRegistry;
   final _pointerGateDom = AsyncBoolReconciler();
@@ -389,6 +391,8 @@ class RichTextWebViewState extends State<RichTextWebView> {
     _changeSub = null;
     await _selectionSub?.cancel();
     _selectionSub = null;
+    await _pasteMediaSub?.cancel();
+    _pasteMediaSub = null;
     await _editorController?.dispose();
     _editorController = null;
     await _transport?.dispose();
@@ -488,6 +492,43 @@ class RichTextWebViewState extends State<RichTextWebView> {
     _selectionSub = controller.onSelectionChange.listen((event) {
       if (!_isCurrentGeneration(generation)) return;
       _lastKnownSelection = event.selection;
+    });
+    _pasteMediaSub = controller.onRequestPasteMedia.listen((event) async {
+      if (!_isCurrentGeneration(generation)) return;
+      try {
+        final payload = event.typedPayload;
+        final bytes = base64Decode(payload.dataBase64);
+        final uri = await _mediaRegistry.registerBytes(
+          bytes: bytes,
+          mimeType: payload.mimeType,
+          draftKey: 'clipboard',
+          fileName: payload.fileName,
+        );
+        final width = payload.width ?? '300';
+        final height = payload.height ?? '200';
+        if (payload.isVideo) {
+          await controller.insertVideo(
+            src: uri,
+            width: width,
+            height: height,
+            mimeType: payload.mimeType,
+            fileSize: payload.fileSize,
+            duration: payload.duration,
+            selection: payload.selection,
+          );
+        } else {
+          await controller.insertImage(
+            src: uri,
+            width: width,
+            height: height,
+            mimeType: payload.mimeType,
+            fileSize: payload.fileSize,
+            selection: payload.selection,
+          );
+        }
+      } catch (error) {
+        debugPrint('Failed to handle paste media: $error');
+      }
     });
   }
 

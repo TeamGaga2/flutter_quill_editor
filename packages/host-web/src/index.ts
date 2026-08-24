@@ -37,4 +37,5 @@ export {
   createProtocolRequestEmojiEvent,
   createProtocolRequestImageEvent,
   createProtocolRequestMentionEvent,
+  createProtocolRequestPasteMediaEvent,
 } from "./events/editor-event-bridge";
