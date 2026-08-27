@@ -269,9 +269,6 @@ body {
   line-height: 28px;
   letter-spacing: 0;
   vertical-align: middle;
-  /* Match Flutter ScrollbarThemeData(thickness: 6, radius: 3, thumb: fill10). */
-  scrollbar-width: thin;
-  scrollbar-color: var(--tgg-fill10) transparent;
 }
 
 .tg-webview-title-input::placeholder {
@@ -632,9 +629,6 @@ body {
   background: transparent;
   /* Keep caret clear of the Flutter toolbar when this host is the scrollport. */
   scroll-padding-bottom: 16px;
-  /* Match Flutter ScrollbarThemeData(thickness: 6, radius: 3, thumb: fill10). */
-  scrollbar-width: thin;
-  scrollbar-color: var(--tgg-fill10) transparent;
 }
 
 /* Mobile body platform compensation (ADR 0002): the desktop card's 10px
@@ -670,6 +664,7 @@ body {
 
 /* Hide scrollbar stepper buttons (arrow triangles) globally and on editor components */
 ::-webkit-scrollbar-button,
+*::-webkit-scrollbar-button,
 .tg-webview-editor-root .tg-richtext-host-editor::-webkit-scrollbar-button,
 .tg-webview-title-input::-webkit-scrollbar-button {
   display: none;
