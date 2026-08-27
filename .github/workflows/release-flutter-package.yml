@@ -249,7 +249,7 @@ jobs:
         if: steps.existing_pr.outputs.found != 'true'
         uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          flutter-version-file: clients/flutter_quill_editor/.fvmrc
           cache: true
 
       - name: Resolve Flutter dependencies
