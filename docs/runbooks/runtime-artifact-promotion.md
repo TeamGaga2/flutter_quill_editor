@@ -5,6 +5,42 @@
 > runtime CI no longer publishes Releases, and Flutter consumes only the
 > committed exact lock.
 
+日常 Flutter package 发布现在由
+`.github/workflows/release-flutter-package.yml` 编排。下面的 exact promotion、
+远端证据、pin/vendor 和 rollback 规则仍是底层强制边界；手工 promotion 命令
+保留用于 runtime 单独晋升、恢复和故障排查。
+
+## 一键发布入口
+
+一次性配置 GitHub App、`RELEASE_APP_ID` variable、
+`RELEASE_APP_PRIVATE_KEY` repository/Environment secret、`main` 与
+`dart-v*` 保护、GitHub Environment `pub.dev`（无 reviewer、仅允许
+`dart-v*` tag）以及 pub.dev Admin 的同名 OIDC 绑定后，发布人只需在 `main` 上运行：
+
+```text
+Release Flutter package → bump: patch | minor | major → Run workflow
+```
+
+工作流会锁定 dispatch 时的 `main` SHA。它从当前 package version 和上一个
+`dart-v*` tag 计算下一版本，依据提交生成 Changelog，并检测 lock source
+commit 之后是否命中 runtime input 路径。命中时通过本文件第 2 节描述的同一
+promotion workflow（`workflow_call`）创建/复用 immutable exact Release；未命中
+时复用当前 lock 的 exact tag，不产生重复 runtime Release。
+
+随后 exact-tag update、offline verify、Vite+ 和 Flutter 检查在临时 release
+分支上完成，工作流生成包含 source/tag/hash/asset/命令证据的 PR。受限 App
+token 创建 PR，工作流等待 PR checks，重新确认 `main` 和 PR head 未变化后
+自动 squash merge；若 `main` 变化，则关闭旧自动 PR、删除 release branch，并
+通过带有 `bump` 与 `attempt` 的内部 `repository_dispatch` 以相同 bump 自动
+重新 dispatch，attempt 从 0 开始且最多三次；手动 workflow_dispatch UI 只显示
+bump。合并后的 finalizer 只接受工具生成的允许文件集合和稳定的
+单步版本升级，创建 annotated `dart-vX.Y.Z` 与 GitHub Release；该 tag 再触发
+官方 pub.dev OIDC publisher。
+
+首个 `flutter_quill_editor` 版本必须先手动登录并发布现有 `0.1.1`，因为
+pub.dev 不允许 OIDC 自动创建新 package。启用 OIDC 后不要配置或恢复
+`PUB_ACCESS_TOKEN`。
+
 This runbook covers the three explicit maintenance actions in the target
 model:
 
@@ -33,15 +69,21 @@ runtime-artifact-promotion
 
 The Environment must have all of the following:
 
-- required reviewers who are independent of the person starting the run;
 - deployment branch/tag restrictions that allow only the trusted protected
   branch carrying the promotion workflow (for example, the repository's
   protected `dev`/`main` policy), and do not allow arbitrary pull-request refs;
 - the repository's normal protected-branch and required-check rules in force.
 
+For the one-click package flow, do not configure required reviewers on this
+Environment: the workflow dispatch is the explicit human authorization and
+the machine gates replace a second interactive approval. A repository may
+still keep an independently reviewed standalone `workflow_dispatch` path if
+its policy requires it, but that manual path must not add an approval that the
+one-click workflow cannot complete.
+
 The workflow intentionally gives the build job `contents: read` only. The
-publish job receives `contents: write` only after the Environment approval.
-Do not work around a missing Environment, missing reviewer, or branch-rule
+publish job receives `contents: write` only inside the promotion job. Do not
+work around a missing Environment, branch restriction, or required-check
 failure by running the publisher locally with a personal token. Stop and ask a
 repository administrator to complete the configuration.
 

@@ -13,7 +13,7 @@ on:
       - clients/flutter_quill_editor/**
       - .github/workflows/flutter-client.yml
     tags:
-      - dart-v*
+      - "dart-v[0-9]+.[0-9]+.[0-9]+"
 
 permissions:
   contents: read
@@ -45,22 +45,16 @@ jobs:
           cd example
           flutter pub get
           flutter build web
+      - run: flutter pub publish --dry-run
 
   publish:
     name: Publish to pub.dev
     if: startsWith(github.ref, 'refs/tags/dart-v')
     needs: analyze-and-test
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: clients/flutter_quill_editor
-    steps:
-      - uses: actions/checkout@v7
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-      - run: dart pub get
-      - name: Publish
-        env:
-          PUB_ACCESS_TOKEN: ${{ secrets.PUB_ACCESS_TOKEN }}
-        run: dart pub publish --force
+    permissions:
+      contents: read
+      id-token: write
+    uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1
+    with:
+      environment: pub.dev
+      working-directory: clients/flutter_quill_editor

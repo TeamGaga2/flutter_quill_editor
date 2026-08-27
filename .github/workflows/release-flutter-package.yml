@@ -1,0 +1,759 @@
+name: Release Flutter package
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Version bump to apply to flutter_quill_editor"
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+  repository_dispatch:
+    # Internal-only restart event; client_payload is validated by the plan job.
+    types:
+      - flutter-release-restart
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: flutter-package-release-main
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    name: Plan package release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      bump: ${{ steps.plan.outputs.bump }}
+      attempt: ${{ steps.plan.outputs.attempt }}
+      source_commit: ${{ steps.plan.outputs.source_commit }}
+      runtime_changed: ${{ steps.plan.outputs.runtime_changed }}
+      runtime_tag: ${{ steps.plan.outputs.runtime_tag }}
+      package_tag: ${{ steps.plan.outputs.package_tag }}
+      release_branch: ${{ steps.plan.outputs.release_branch }}
+      next_version: ${{ steps.plan.outputs.next_version }}
+    steps:
+      - name: Require the main branch
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "Release Flutter package must be dispatched from main" >&2
+          exit 1
+
+      - name: Resolve and validate release trigger
+        id: trigger
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_ACTION: ${{ github.event.action }}
+          EVENT_ACTOR: ${{ github.actor }}
+          MANUAL_BUMP: ${{ inputs.bump }}
+          RESTART_BUMP: ${{ github.event.client_payload.bump }}
+          RESTART_ATTEMPT: ${{ github.event.client_payload.attempt }}
+        run: |
+          set -euo pipefail
+          trigger_json=$(jq -nc \
+            --arg eventName "$EVENT_NAME" \
+            --arg action "$EVENT_ACTION" \
+            --arg actor "$EVENT_ACTOR" \
+            --arg manualBump "$MANUAL_BUMP" \
+            --arg restartBump "$RESTART_BUMP" \
+            --arg restartAttempt "$RESTART_ATTEMPT" \
+            '{eventName: $eventName, action: $action, actor: $actor, manualBump: $manualBump, restartBump: $restartBump, restartAttempt: $restartAttempt}')
+          RELEASE_TRIGGER_JSON="$trigger_json" node --input-type=module -e '
+            import { parseReleaseTrigger } from "./scripts/release-plan.mjs";
+            const trigger = parseReleaseTrigger(JSON.parse(process.env.RELEASE_TRIGGER_JSON));
+            process.stdout.write(`bump=${trigger.bump}\nattempt=${trigger.attempt}\n`);
+          ' >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Plan release
+        id: plan
+        env:
+          BUMP: ${{ steps.trigger.outputs.bump }}
+          PLAN_FILE: ${{ runner.temp }}/flutter-release-plan.json
+        run: |
+          node scripts/release-plan.mjs plan --bump "$BUMP" --output "$PLAN_FILE"
+          echo "bump=$BUMP" >> "$GITHUB_OUTPUT"
+          echo "attempt=${{ steps.trigger.outputs.attempt }}" >> "$GITHUB_OUTPUT"
+          echo "source_commit=$(jq -r '.sourceCommit' "$PLAN_FILE")" >> "$GITHUB_OUTPUT"
+          echo "runtime_changed=$(jq -r '.runtimeChanged' "$PLAN_FILE")" >> "$GITHUB_OUTPUT"
+          echo "runtime_tag=$(jq -r '.runtimeArtifactTag' "$PLAN_FILE")" >> "$GITHUB_OUTPUT"
+          echo "package_tag=$(jq -r '.packageTag' "$PLAN_FILE")" >> "$GITHUB_OUTPUT"
+          echo "release_branch=$(jq -r '.releaseBranch' "$PLAN_FILE")" >> "$GITHUB_OUTPUT"
+          echo "next_version=$(jq -r '.nextVersion' "$PLAN_FILE")" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: flutter-release-plan-${{ github.run_id }}
+          path: ${{ runner.temp }}/flutter-release-plan.json
+          if-no-files-found: error
+          retention-days: 1
+
+  promote_runtime:
+    name: Promote changed runtime exactly once
+    needs: plan
+    if: needs.plan.outputs.runtime_changed == 'true'
+    uses: ./.github/workflows/runtime-artifact-promotion.yml
+    with:
+      sourceCommit: ${{ needs.plan.outputs.source_commit }}
+    permissions:
+      contents: write
+      actions: read
+
+  prepare_release:
+    name: Prepare and open release PR
+    needs:
+      - plan
+      - promote_runtime
+    if: >-
+      always() &&
+      needs.plan.result == 'success' &&
+      (needs.promote_runtime.result == 'success' || needs.promote_runtime.result == 'skipped')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment:
+      name: release-automation
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: read
+    outputs:
+      superseded: ${{ steps.release_pr.outputs.superseded }}
+      pr_number: ${{ steps.release_pr.outputs.pr_number }}
+      pr_url: ${{ steps.release_pr.outputs.pr_url }}
+      head_sha: ${{ steps.release_pr.outputs.head_sha }}
+    steps:
+      - name: Create repository-scoped release App token
+        id: app_token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.plan.outputs.source_commit }}
+          token: ${{ steps.app_token.outputs.token }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: flutter-release-plan-${{ github.run_id }}
+          path: ${{ runner.temp }}/flutter-release-plan
+
+      - name: Reuse a matching open release PR
+        id: existing_pr
+        env:
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
+          APP_SLUG: ${{ steps.app_token.outputs.app-slug }}
+          RELEASE_BRANCH: ${{ needs.plan.outputs.release_branch }}
+          NEXT_VERSION: ${{ needs.plan.outputs.next_version }}
+          SOURCE_COMMIT: ${{ needs.plan.outputs.source_commit }}
+        run: |
+          set -euo pipefail
+          [[ "$APP_SLUG" =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$ ]]
+          expected_title="chore(release): prepare flutter_quill_editor $NEXT_VERSION"
+          expected_bot="${APP_SLUG}[bot]"
+          bot_json=$(gh api "/users/${expected_bot}")
+          [[ "$(jq -r '.login' <<<"$bot_json")" == "$expected_bot" ]]
+          [[ "$(jq -r '.type' <<<"$bot_json")" == "Bot" ]]
+          bot_id=$(jq -er '.id | select(type == "number")' <<<"$bot_json")
+          echo "app_slug=$APP_SLUG" >> "$GITHUB_OUTPUT"
+          echo "bot_id=$bot_id" >> "$GITHUB_OUTPUT"
+          open_prs=$(gh pr list \
+            --repo "$GITHUB_REPOSITORY" \
+            --head "${GITHUB_REPOSITORY_OWNER}:${RELEASE_BRANCH}" \
+            --base main \
+            --state open \
+            --limit 100 \
+            --json number \
+            )
+          open_count=$(jq 'length' <<<"$open_prs")
+          if (( open_count > 1 )); then
+            echo "multiple open release PRs share the generated branch" >&2
+            exit 1
+          fi
+          if (( open_count == 0 )); then
+            branch_ref="repos/$GITHUB_REPOSITORY/git/ref/heads/$RELEASE_BRANCH"
+            if gh api "$branch_ref" >/dev/null 2>&1; then
+              echo "release branch exists without a matching open PR" >&2
+              exit 1
+            fi
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          existing_number=$(jq -er '.[0].number' <<<"$open_prs")
+          pr_json=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$existing_number")
+          head_sha=$(jq -er '.head.sha' <<<"$pr_json")
+          commit_json=$(gh api "repos/$GITHUB_REPOSITORY/commits/$head_sha")
+          commit_subject=$(jq -er '.commit.message | split("\n")[0]' <<<"$commit_json")
+          commit_parents=$(jq -c '[.parents[]?.sha]' <<<"$commit_json")
+          changed_paths=$(gh api --paginate \
+            "repos/$GITHUB_REPOSITORY/pulls/$existing_number/files?per_page=100" \
+            --jq '.[] | if .previous_filename then [.filename, .previous_filename][] else .filename end' \
+            | jq -R -s 'split("\n") | map(select(length > 0))')
+          validation_file="$RUNNER_TEMP/release-pr-validation.json"
+          jq -n \
+            --argjson pullRequest "$pr_json" \
+            --argjson botUser "$bot_json" \
+            --arg appSlug "$APP_SLUG" \
+            --arg repository "$GITHUB_REPOSITORY" \
+            --arg sourceCommit "$SOURCE_COMMIT" \
+            --arg nextVersion "$NEXT_VERSION" \
+            --arg headCommit "$head_sha" \
+            --arg commitSubject "$commit_subject" \
+            --argjson commitParents "$commit_parents" \
+            --argjson changedPaths "$changed_paths" \
+            '{pullRequest: $pullRequest, botUser: $botUser, appSlug: $appSlug, repository: $repository, sourceCommit: $sourceCommit, nextVersion: $nextVersion, headCommit: $headCommit, commitSubject: $commitSubject, commitParents: $commitParents, changedPaths: $changedPaths}' \
+            > "$validation_file"
+          RELEASE_VALIDATION_FILE="$validation_file" node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            import { validateOpenReleasePullRequest } from "./scripts/finalize-release.mjs";
+            validateOpenReleasePullRequest(JSON.parse(readFileSync(process.env.RELEASE_VALIDATION_FILE, "utf8")));
+          '
+          echo "found=true" >> "$GITHUB_OUTPUT"
+          echo "number=$existing_number" >> "$GITHUB_OUTPUT"
+          echo "url=$(jq -er '.html_url' <<<"$pr_json")" >> "$GITHUB_OUTPUT"
+
+      - name: Install Vite+ dependencies
+        if: steps.existing_pr.outputs.found != 'true'
+        uses: voidzero-dev/setup-vp@v1.17.0
+        with:
+          node-version: "24"
+          cache: true
+
+      - name: Install Vite+ dependencies from the lockfile
+        if: steps.existing_pr.outputs.found != 'true'
+        run: vp install --frozen-lockfile --prefer-offline
+
+      - name: Validate runtime contract tooling
+        if: steps.existing_pr.outputs.found != 'true'
+        run: |
+          vp check
+          vp test scripts/runtime-artifact.test.mjs scripts/release-plan.test.mjs scripts/finalize-release.test.mjs --run
+
+      - name: Set up Flutter
+        if: steps.existing_pr.outputs.found != 'true'
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Resolve Flutter dependencies
+        if: steps.existing_pr.outputs.found != 'true'
+        working-directory: clients/flutter_quill_editor
+        run: flutter pub get
+
+      - name: Update runtime from the promoted exact Release
+        if: steps.existing_pr.outputs.found != 'true' && needs.plan.outputs.runtime_changed == 'true'
+        working-directory: clients/flutter_quill_editor
+        env:
+          TG_RICHTEXT_GITHUB_API_URL: ${{ github.api_url }}
+          TG_RICHTEXT_GITHUB_TOKEN: ${{ steps.app_token.outputs.token }}
+        run: dart run tool/richtext_runtime_prepare.dart --update --release-tag "${{ needs.plan.outputs.runtime_tag }}"
+
+      - name: Apply the planned version and Changelog
+        if: steps.existing_pr.outputs.found != 'true'
+        env:
+          PLAN_FILE: ${{ runner.temp }}/flutter-release-plan/release-plan.json
+        run: node scripts/release-plan.mjs apply --plan "$PLAN_FILE"
+
+      - name: Verify the package and runtime offline
+        if: steps.existing_pr.outputs.found != 'true'
+        working-directory: clients/flutter_quill_editor
+        run: |
+          dart run tool/richtext_runtime_prepare.dart --verify
+          flutter analyze
+          flutter test
+          (cd example && flutter pub get && flutter build web)
+          flutter pub publish --dry-run
+
+      - name: Collect exact Release evidence
+        if: steps.existing_pr.outputs.found != 'true'
+        env:
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
+          PLAN_FILE: ${{ runner.temp }}/flutter-release-plan/release-plan.json
+          EVIDENCE_DIR: ${{ runner.temp }}/flutter-release-evidence
+        run: |
+          set -euo pipefail
+          mkdir -p "$EVIDENCE_DIR/assets"
+          runtime_tag=$(jq -r '.runtimeArtifactTag' "$PLAN_FILE")
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$runtime_tag" > "$EVIDENCE_DIR/release.json"
+          gh release download "$runtime_tag" \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern 'runtime-artifact.json' \
+            --pattern 'webview-runtime.tar.gz' \
+            --pattern 'webview-runtime.tar.gz.sha256' \
+            --dir "$EVIDENCE_DIR/assets" \
+            --clobber
+          EXPECTED_SOURCE=$(jq -r '.runtimeSourceCommit' "$PLAN_FILE") \
+            EVIDENCE_ARTIFACT_DIR="$EVIDENCE_DIR/assets" \
+            node --input-type=module -e \
+            'import { validateRuntimeArtifact } from "./scripts/runtime-release.mjs"; validateRuntimeArtifact(process.env.EVIDENCE_ARTIFACT_DIR, process.env.EXPECTED_SOURCE);'
+          metadata_archive_sha=$(jq -r '.archiveSha256' "$EVIDENCE_DIR/assets/runtime-artifact.json")
+          metadata_source=$(jq -r '.sourceCommit' "$EVIDENCE_DIR/assets/runtime-artifact.json")
+          lock_source=$(jq -r '.runtime.sourceCommit' clients/flutter_quill_editor/richtext-runtime.lock.json)
+          lock_archive_sha=$(jq -r '.artifact.archiveSha256' clients/flutter_quill_editor/richtext-runtime.lock.json)
+          [[ "$metadata_source" == "$EXPECTED_SOURCE" ]]
+          [[ "$metadata_source" == "$lock_source" ]]
+          [[ "$metadata_archive_sha" == "$lock_archive_sha" ]]
+          : > "$EVIDENCE_DIR/assets.tsv"
+          for name in runtime-artifact.json webview-runtime.tar.gz webview-runtime.tar.gz.sha256; do
+            id=$(jq -er --arg name "$name" '.assets[] | select(.name == $name) | .id' "$EVIDENCE_DIR/release.json")
+            size=$(jq -er --arg name "$name" '.assets[] | select(.name == $name) | .size' "$EVIDENCE_DIR/release.json")
+            url=$(jq -er --arg name "$name" '.assets[] | select(.name == $name) | .browser_download_url' "$EVIDENCE_DIR/release.json")
+            hash=$(sha256sum "$EVIDENCE_DIR/assets/$name" | awk '{print $1}')
+            printf '%s\t%s\t%s\t%s\t%s\n' "$name" "$id" "$size" "$hash" "$url" >> "$EVIDENCE_DIR/assets.tsv"
+          done
+          archive_sha=$(awk -F '\t' '$1 == "webview-runtime.tar.gz" {print $4}' "$EVIDENCE_DIR/assets.tsv")
+          [[ "$archive_sha" == "$metadata_archive_sha" ]]
+          printf '%s  webview-runtime.tar.gz\n' "$archive_sha" | cmp -s - "$EVIDENCE_DIR/assets/webview-runtime.tar.gz.sha256"
+          node scripts/release-plan.mjs evidence \
+            --plan "$PLAN_FILE" \
+            --lock-after clients/flutter_quill_editor/richtext-runtime.lock.json \
+            --release-json "$EVIDENCE_DIR/release.json" \
+            --asset-evidence "$EVIDENCE_DIR/assets.tsv" \
+            --promotion-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            --output "$EVIDENCE_DIR/release-evidence.md"
+
+      - name: Commit and open the generated release PR
+        id: create_pr
+        if: steps.existing_pr.outputs.found != 'true'
+        env:
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
+          PLAN_FILE: ${{ runner.temp }}/flutter-release-plan/release-plan.json
+          EVIDENCE_FILE: ${{ runner.temp }}/flutter-release-evidence/release-evidence.md
+          APP_SLUG: ${{ steps.existing_pr.outputs.app_slug }}
+          APP_BOT_ID: ${{ steps.existing_pr.outputs.bot_id }}
+        run: |
+          set -euo pipefail
+          branch=$(jq -r '.releaseBranch' "$PLAN_FILE")
+          next_version=$(jq -r '.nextVersion' "$PLAN_FILE")
+          source_commit=$(jq -r '.sourceCommit' "$PLAN_FILE")
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "${APP_BOT_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
+          git add \
+            clients/flutter_quill_editor/pubspec.yaml \
+            clients/flutter_quill_editor/CHANGELOG.md \
+            clients/flutter_quill_editor/richtext-runtime.lock.json \
+            clients/flutter_quill_editor/lib/host/runtime_manifest.dart \
+            clients/flutter_quill_editor/assets/richtext_webview_runtime
+          mapfile -t changed < <(git diff --cached --name-only)
+          [[ "${#changed[@]}" -gt 0 ]]
+          for path in "${changed[@]}"; do
+            case "$path" in
+              clients/flutter_quill_editor/pubspec.yaml|clients/flutter_quill_editor/CHANGELOG.md|clients/flutter_quill_editor/richtext-runtime.lock.json|clients/flutter_quill_editor/lib/host/runtime_manifest.dart|clients/flutter_quill_editor/assets/richtext_webview_runtime/*) ;;
+              *) echo "unexpected release PR path: $path" >&2; exit 1 ;;
+            esac
+          done
+          git diff --cached --check
+          git diff --cached --quiet && { echo "release plan produced no changes" >&2; exit 1; }
+          main_sha=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')
+          if [[ "$main_sha" != "$source_commit" ]]; then
+            echo "main changed after planning; this release run is superseded" >&2
+            echo "superseded=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git commit -m "chore(release): prepare flutter_quill_editor $next_version"
+          [[ "$(git show -s --format=%an HEAD)" == "${APP_SLUG}[bot]" ]]
+          [[ "$(git show -s --format=%ae HEAD)" == "${APP_BOT_ID}+${APP_SLUG}[bot]@users.noreply.github.com" ]]
+          [[ "$(git show -s --format=%cn HEAD)" == "${APP_SLUG}[bot]" ]]
+          [[ "$(git show -s --format=%ce HEAD)" == "${APP_BOT_ID}+${APP_SLUG}[bot]@users.noreply.github.com" ]]
+          head_sha=$(git rev-parse HEAD)
+          auth_header=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 | tr -d '\n')
+          git -c "http.extraheader=AUTHORIZATION: basic $auth_header" push origin "HEAD:refs/heads/$branch"
+          gh api --method POST "repos/$GITHUB_REPOSITORY/pulls" \
+            -f title="chore(release): prepare flutter_quill_editor $next_version" \
+            -f head="$branch" \
+            -f base=main \
+            -F body="@$EVIDENCE_FILE" > "$RUNNER_TEMP/release-pr.json"
+          echo "pr_number=$(jq -r '.number' "$RUNNER_TEMP/release-pr.json")" >> "$GITHUB_OUTPUT"
+          echo "pr_url=$(jq -r '.html_url' "$RUNNER_TEMP/release-pr.json")" >> "$GITHUB_OUTPUT"
+          echo "head_sha=$head_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Select the release PR
+        id: release_pr
+        if: success()
+        env:
+          CREATED_SUPERSEDED: ${{ steps.create_pr.outputs.superseded }}
+          EXISTING_FOUND: ${{ steps.existing_pr.outputs.found }}
+          EXISTING_NUMBER: ${{ steps.existing_pr.outputs.number }}
+          EXISTING_URL: ${{ steps.existing_pr.outputs.url }}
+          CREATED_NUMBER: ${{ steps.create_pr.outputs.pr_number }}
+          CREATED_URL: ${{ steps.create_pr.outputs.pr_url }}
+          CREATED_HEAD_SHA: ${{ steps.create_pr.outputs.head_sha }}
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
+        run: |
+          set -euo pipefail
+          if [[ "$CREATED_SUPERSEDED" == "true" ]]; then
+            echo "superseded=true" >> "$GITHUB_OUTPUT"
+            echo "Release run superseded before its PR was created"
+            exit 0
+          fi
+          if [[ "$EXISTING_FOUND" == "true" ]]; then
+            echo "pr_number=$EXISTING_NUMBER" >> "$GITHUB_OUTPUT"
+            echo "pr_url=$EXISTING_URL" >> "$GITHUB_OUTPUT"
+            echo "head_sha=$(gh pr view "$EXISTING_NUMBER" --repo "$GITHUB_REPOSITORY" --json headRefOid --jq '.headRefOid')" >> "$GITHUB_OUTPUT"
+          else
+            [[ -n "$CREATED_NUMBER" && -n "$CREATED_URL" && -n "$CREATED_HEAD_SHA" ]]
+            echo "pr_number=$CREATED_NUMBER" >> "$GITHUB_OUTPUT"
+            echo "pr_url=$CREATED_URL" >> "$GITHUB_OUTPUT"
+            echo "head_sha=$CREATED_HEAD_SHA" >> "$GITHUB_OUTPUT"
+          fi
+          echo "superseded=false" >> "$GITHUB_OUTPUT"
+
+  wait_and_merge:
+    name: Wait for checks and merge release PR
+    needs:
+      - plan
+      - prepare_release
+    if: needs.prepare_release.outputs.superseded != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment:
+      name: release-automation
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: read
+    outputs:
+      superseded: ${{ steps.checks.outputs.superseded == 'true' || steps.gate.outputs.superseded == 'true' || steps.merge.outputs.superseded == 'true' }}
+      merge_sha: ${{ steps.merge.outputs.merge_sha }}
+    steps:
+      - name: Create repository-scoped release App token
+        id: app_token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
+      - name: Wait for PR checks while watching main
+        id: checks
+        env:
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
+          PR_NUMBER: ${{ needs.prepare_release.outputs.pr_number }}
+          EXPECTED_BASE: ${{ needs.plan.outputs.source_commit }}
+          EXPECTED_HEAD: ${{ needs.prepare_release.outputs.head_sha }}
+          EXPECTED_BRANCH: ${{ needs.plan.outputs.release_branch }}
+        run: |
+          set -euo pipefail
+          for attempt in {1..170}; do
+            main_sha=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')
+            if [[ "$main_sha" != "$EXPECTED_BASE" ]]; then
+              echo "main changed while release checks were pending; superseding this run"
+              echo "superseded=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            pr_json=$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" \
+              --json state,baseRefName,baseRefOid,headRefName,headRefOid)
+            [[ "$(jq -r '.state' <<<"$pr_json")" == "OPEN" ]]
+            [[ "$(jq -r '.baseRefName' <<<"$pr_json")" == "main" ]]
+            [[ "$(jq -r '.headRefName' <<<"$pr_json")" == "$EXPECTED_BRANCH" ]]
+            [[ "$(jq -r '.baseRefOid' <<<"$pr_json")" == "$EXPECTED_BASE" ]]
+            [[ "$(jq -r '.headRefOid' <<<"$pr_json")" == "$EXPECTED_HEAD" ]]
+            check_json=$(gh pr checks "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json bucket 2>/dev/null || true)
+            [[ -n "$check_json" ]] || check_json='[]'
+            failed=$(jq '[.[] | select(.bucket == "fail" or .bucket == "cancel" or .bucket == "error")] | length' <<<"$check_json")
+            if (( failed > 0 )); then
+              latest_main_sha=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')
+              if [[ "$latest_main_sha" != "$EXPECTED_BASE" ]]; then
+                echo "main changed while checks failed; superseding this run"
+                echo "superseded=true" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+              echo "release PR checks failed" >&2
+              exit 1
+            fi
+            if jq -e 'length > 0 and all(.[]; .bucket == "pass" or .bucket == "skipping" or .bucket == "neutral")' <<<"$check_json" >/dev/null; then
+              echo "checks_ready=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            sleep 20
+          done
+          echo "timed out waiting for release PR checks" >&2
+          exit 1
+
+      - name: Confirm the base and head did not move
+        id: gate
+        if: steps.checks.outputs.superseded != 'true'
+        env:
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
+          PR_NUMBER: ${{ needs.prepare_release.outputs.pr_number }}
+          EXPECTED_BASE: ${{ needs.plan.outputs.source_commit }}
+          EXPECTED_HEAD: ${{ needs.prepare_release.outputs.head_sha }}
+          EXPECTED_BRANCH: ${{ needs.plan.outputs.release_branch }}
+        run: |
+          set -euo pipefail
+          pr_json=$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json state,baseRefName,baseRefOid,headRefName,headRefOid,mergeStateStatus)
+          [[ "$(jq -r '.state' <<<"$pr_json")" == "OPEN" ]]
+          [[ "$(jq -r '.baseRefName' <<<"$pr_json")" == "main" ]]
+          [[ "$(jq -r '.headRefName' <<<"$pr_json")" == "$EXPECTED_BRANCH" ]]
+          [[ "$(jq -r '.baseRefOid' <<<"$pr_json")" == "$EXPECTED_BASE" ]]
+          [[ "$(jq -r '.headRefOid' <<<"$pr_json")" == "$EXPECTED_HEAD" ]]
+          main_sha=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')
+          if [[ "$main_sha" != "$EXPECTED_BASE" ]]; then
+            echo "main changed while release checks ran; superseding this run"
+            echo "superseded=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          for attempt in {1..12}; do
+            state=$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json mergeStateStatus --jq '.mergeStateStatus')
+            case "$state" in
+              CLEAN) echo "merge_ready=true" >> "$GITHUB_OUTPUT"; exit 0 ;;
+              DIRTY|BLOCKED|BEHIND|UNSTABLE) echo "PR cannot be safely merged: $state" >&2; exit 1 ;;
+              *)
+                main_sha=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')
+                if [[ "$main_sha" != "$EXPECTED_BASE" ]]; then
+                  echo "main changed while merge state settled; superseding this run"
+                  echo "superseded=true" >> "$GITHUB_OUTPUT"
+                  exit 0
+                fi
+                sleep 10
+                ;;
+            esac
+          done
+          echo "merge state did not become CLEAN" >&2
+          exit 1
+
+      - name: Merge the checked release PR
+        id: merge
+        if: steps.checks.outputs.superseded != 'true' && steps.gate.outputs.superseded != 'true'
+        env:
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
+          PR_NUMBER: ${{ needs.prepare_release.outputs.pr_number }}
+          EXPECTED_HEAD: ${{ needs.prepare_release.outputs.head_sha }}
+          NEXT_VERSION: ${{ needs.plan.outputs.next_version }}
+          EXPECTED_BASE: ${{ needs.plan.outputs.source_commit }}
+        run: |
+          set -euo pipefail
+          commit_title="chore(release): prepare flutter_quill_editor $NEXT_VERSION"
+          main_sha=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')
+          if [[ "$main_sha" != "$EXPECTED_BASE" ]]; then
+            echo "main changed immediately before merge; superseding this run"
+            echo "superseded=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          result=$(gh api --method PUT "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/merge" \
+            -f sha="$EXPECTED_HEAD" \
+            -f merge_method=squash \
+            -f commit_title="$commit_title" \
+            -f commit_message="Automated release for flutter_quill_editor $NEXT_VERSION")
+          [[ "$(jq -r '.merged' <<<"$result")" == "true" ]] || { echo "GitHub did not merge the release PR" >&2; exit 1; }
+          merge_sha=$(jq -er '.sha' <<<"$result")
+          [[ "$merge_sha" =~ ^[0-9a-f]{40}$ ]]
+          echo "merge_sha=$merge_sha" >> "$GITHUB_OUTPUT"
+          echo "merged release PR #$PR_NUMBER at $merge_sha"
+
+  restart_superseded:
+    name: Restart superseded release
+    needs:
+      - plan
+      - prepare_release
+      - wait_and_merge
+    if: >-
+      always() &&
+      needs.plan.result == 'success' &&
+      needs.prepare_release.result == 'success' &&
+      (
+        needs.prepare_release.outputs.superseded == 'true' ||
+        (needs.wait_and_merge.result == 'success' && needs.wait_and_merge.outputs.superseded == 'true')
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: release-automation
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    steps:
+      - name: Create repository-scoped release App token
+        id: app_token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
+      - name: Close the superseded PR and restart once within the limit
+        env:
+          APP_TOKEN: ${{ steps.app_token.outputs.token }}
+          APP_SLUG: ${{ steps.app_token.outputs.app-slug }}
+          DISPATCH_TOKEN: ${{ github.token }}
+          BUMP: ${{ needs.plan.outputs.bump }}
+          ATTEMPT: ${{ needs.plan.outputs.attempt }}
+          RELEASE_BRANCH: ${{ needs.plan.outputs.release_branch }}
+          NEXT_VERSION: ${{ needs.plan.outputs.next_version }}
+        run: |
+          set -euo pipefail
+          [[ "$APP_SLUG" =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$ ]]
+          case "$ATTEMPT" in
+            0|1|2) ;;
+            3)
+              echo "automatic release restart limit reached; failing closed" >&2
+              exit 1
+              ;;
+            *)
+              echo "invalid release restart attempt: $ATTEMPT" >&2
+              exit 1
+              ;;
+          esac
+          [[ "$RELEASE_BRANCH" == "automation/flutter-release-v$NEXT_VERSION" ]]
+          expected_title="chore(release): prepare flutter_quill_editor $NEXT_VERSION"
+          expected_bot="${APP_SLUG}[bot]"
+          open_prs=$(GH_TOKEN="$APP_TOKEN" gh pr list \
+            --repo "$GITHUB_REPOSITORY" \
+            --head "${GITHUB_REPOSITORY_OWNER}:${RELEASE_BRANCH}" \
+            --base main \
+            --state open \
+            --limit 100 \
+            --json number,title,author,baseRefName,headRefName)
+          open_prs=$(jq -c --arg title "$expected_title" --arg bot "$expected_bot" --arg branch "$RELEASE_BRANCH" \
+            '[.[] | if (.title == $title and .author.login == $bot and .baseRefName == "main" and .headRefName == $branch) then . else error("unexpected open release PR") end]'
+            <<<"$open_prs")
+          open_count=$(jq 'length' <<<"$open_prs")
+          if (( open_count > 1 )); then
+            echo "multiple open release PRs share the generated branch" >&2
+            exit 1
+          fi
+          if (( open_count == 1 )); then
+            pr_number=$(jq -r '.[0].number' <<<"$open_prs")
+            GH_TOKEN="$APP_TOKEN" gh pr close "$pr_number" \
+              --repo "$GITHUB_REPOSITORY" \
+              --comment "Superseded because main changed; release workflow is restarting (attempt $((ATTEMPT + 1)) of 3)."
+            [[ "$(GH_TOKEN="$APP_TOKEN" gh pr view "$pr_number" --repo "$GITHUB_REPOSITORY" --json state --jq '.state')" == "CLOSED" ]]
+          fi
+          branch_ref="repos/$GITHUB_REPOSITORY/git/ref/heads/$RELEASE_BRANCH"
+          if GH_TOKEN="$APP_TOKEN" gh api "$branch_ref" >/dev/null 2>&1; then
+            GH_TOKEN="$APP_TOKEN" gh api --method DELETE "$branch_ref"
+          fi
+          if GH_TOKEN="$APP_TOKEN" gh api "$branch_ref" >/dev/null 2>&1; then
+            echo "superseded release branch still exists" >&2
+            exit 1
+          fi
+          NEXT_ATTEMPT=$((ATTEMPT + 1))
+          jq -nc \
+            --arg bump "$BUMP" \
+            --argjson attempt "$NEXT_ATTEMPT" \
+            '{event_type: "flutter-release-restart", client_payload: {bump: $bump, attempt: $attempt}}' \
+            | GH_TOKEN="$DISPATCH_TOKEN" gh api --method POST "repos/$GITHUB_REPOSITORY/dispatches" --input -
+          {
+            echo "### Release run superseded"
+            echo "main changed before merge; the generated PR and branch were closed/deleted."
+            echo "A new internal repository_dispatch was queued for bump `$BUMP` (restart $NEXT_ATTEMPT of 3)."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  wait_for_finalizer:
+    name: Wait for tag finalizer
+    needs: wait_and_merge
+    if: >-
+      always() &&
+      needs.wait_and_merge.result == 'success' &&
+      needs.wait_and_merge.outputs.superseded != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment:
+      name: release-automation
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Create repository-scoped release App token
+        id: app_token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
+      - name: Wait for finalizer and fail on its conclusion
+        env:
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
+          MERGE_SHA: ${{ needs.wait_and_merge.outputs.merge_sha }}
+        run: |
+          set -euo pipefail
+          for attempt in {1..90}; do
+            run=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow release-finalizer.yml --limit 100 --json databaseId,headSha,status,conclusion,url | jq -c --arg sha "$MERGE_SHA" '[.[] | select(.headSha == $sha)] | sort_by(.databaseId) | last // empty')
+            if [[ -n "$run" ]]; then
+              status=$(jq -r '.status' <<<"$run")
+              conclusion=$(jq -r '.conclusion // empty' <<<"$run")
+              url=$(jq -r '.url' <<<"$run")
+              echo "finalizer: $url ($status${conclusion:+, $conclusion})"
+              if [[ "$status" == "completed" ]]; then
+                [[ "$conclusion" == "success" ]] || { echo "release finalizer failed" >&2; exit 1; }
+                exit 0
+              fi
+            fi
+            sleep 20
+          done
+          echo "timed out waiting for release finalizer" >&2
+          exit 1
+
+  wait_for_publish:
+    name: Wait for pub.dev publishing
+    needs:
+      - plan
+      - wait_for_finalizer
+      - wait_and_merge
+    if: >-
+      always() &&
+      needs.wait_and_merge.result == 'success' &&
+      needs.wait_and_merge.outputs.superseded != 'true' &&
+      needs.wait_for_finalizer.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment:
+      name: release-automation
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Create repository-scoped release App token
+        id: app_token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
+      - name: Wait for the tag-triggered OIDC publish workflow
+        env:
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
+          PACKAGE_TAG: ${{ needs.plan.outputs.package_tag }}
+          MERGE_SHA: ${{ needs.wait_and_merge.outputs.merge_sha }}
+        run: |
+          set -euo pipefail
+          for attempt in {1..120}; do
+            run=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow flutter-client.yml --limit 100 --json databaseId,headSha,headBranch,status,conclusion,url | jq -c --arg tag "$PACKAGE_TAG" --arg sha "$MERGE_SHA" '[.[] | select((.headBranch == $tag or .headBranch == null) and .headSha == $sha)] | sort_by(.databaseId) | last // empty')
+            if [[ -n "$run" ]]; then
+              status=$(jq -r '.status' <<<"$run")
+              conclusion=$(jq -r '.conclusion // empty' <<<"$run")
+              url=$(jq -r '.url' <<<"$run")
+              echo "pub.dev workflow: $url ($status${conclusion:+, $conclusion})"
+              if [[ "$status" == "completed" ]]; then
+                [[ "$conclusion" == "success" ]] || { echo "pub.dev publish workflow failed" >&2; exit 1; }
+                exit 0
+              fi
+            fi
+            sleep 20
+          done
+          echo "timed out waiting for pub.dev publish workflow" >&2
+          exit 1
