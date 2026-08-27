@@ -7,6 +7,16 @@ on:
         description: "Full 40-character commit SHA to build and promote"
         required: true
         type: string
+  workflow_call:
+    inputs:
+      sourceCommit:
+        description: "Full 40-character commit SHA to build and promote"
+        required: true
+        type: string
+    outputs:
+      release_tag:
+        description: "The immutable runtime artifact tag"
+        value: ${{ jobs.publish.outputs.release_tag }}
 
 concurrency:
   group: webview-runtime-promotion-${{ inputs.sourceCommit }}
@@ -95,6 +105,8 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     environment: runtime-artifact-promotion
+    outputs:
+      release_tag: ${{ steps.promote.outputs.release_tag }}
     permissions:
       contents: write
       actions: read
@@ -116,10 +128,13 @@ jobs:
           path: runtime-artifact
 
       - name: Promote exact artifact
+        id: promote
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_API_URL: ${{ github.api_url }}
           TG_SOURCE_COMMIT: ${{ inputs.sourceCommit }}
           TG_ARTIFACT_DIR: runtime-artifact
-        run: node scripts/promote-runtime-artifact.mjs
+        run: |
+          node scripts/promote-runtime-artifact.mjs
+          echo "release_tag=webview-runtime-artifact-${TG_SOURCE_COMMIT}" >> "$GITHUB_OUTPUT"

@@ -1,0 +1,12 @@
+# Release automation is security-sensitive. Changes to these paths are assigned
+# to both release owners; GitHub's default CODEOWNERS rule requires one listed
+# owner to approve unless branch protection adds stricter requirements.
+.github/CODEOWNERS @LazyBoppy @hyzmm
+.github/workflows/release-flutter-package.yml @LazyBoppy @hyzmm
+.github/workflows/release-finalizer.yml @LazyBoppy @hyzmm
+.github/workflows/runtime-artifact-promotion.yml @LazyBoppy @hyzmm
+.github/workflows/flutter-client.yml @LazyBoppy @hyzmm
+scripts/release-plan.mjs @LazyBoppy @hyzmm
+scripts/release-plan.test.mjs @LazyBoppy @hyzmm
+scripts/finalize-release.mjs @LazyBoppy @hyzmm
+scripts/finalize-release.test.mjs @LazyBoppy @hyzmm

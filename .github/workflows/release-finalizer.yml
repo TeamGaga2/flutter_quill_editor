@@ -1,0 +1,95 @@
+name: Finalize Flutter package release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - clients/flutter_quill_editor/pubspec.yaml
+      - clients/flutter_quill_editor/CHANGELOG.md
+      - clients/flutter_quill_editor/richtext-runtime.lock.json
+      - clients/flutter_quill_editor/lib/host/runtime_manifest.dart
+      - clients/flutter_quill_editor/assets/richtext_webview_runtime/**
+      - .github/workflows/release-finalizer.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flutter-package-finalizer-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  detect:
+    name: Validate release commit shape
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      release_required: ${{ steps.detect.outputs.release_required }}
+      version: ${{ steps.detect.outputs.version }}
+      package_tag: ${{ steps.detect.outputs.package_tag }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Detect an automated release commit
+        id: detect
+        run: |
+          set -euo pipefail
+          node scripts/finalize-release.mjs --detect > "$RUNNER_TEMP/release-detection.json"
+          cat "$RUNNER_TEMP/release-detection.json"
+          echo "release_required=$(jq -r '.release' "$RUNNER_TEMP/release-detection.json")" >> "$GITHUB_OUTPUT"
+          echo "version=$(jq -r '.version // empty' "$RUNNER_TEMP/release-detection.json")" >> "$GITHUB_OUTPUT"
+          echo "package_tag=$(jq -r '.packageTag // empty' "$RUNNER_TEMP/release-detection.json")" >> "$GITHUB_OUTPUT"
+
+  verify_and_finalize:
+    name: Verify and finalize immutable package tag
+    needs: detect
+    if: needs.detect.outputs.release_required == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: release-automation
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Create repository-scoped release App token
+        id: app_token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          token: ${{ steps.app_token.outputs.token }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version-file: clients/flutter_quill_editor/.fvmrc
+          cache: true
+
+      - name: Verify the committed runtime offline
+        working-directory: clients/flutter_quill_editor
+        run: |
+          flutter pub get
+          dart run tool/richtext_runtime_prepare.dart --verify
+          flutter pub publish --dry-run
+
+      - name: Create the annotated package tag and GitHub Release
+        env:
+          GITHUB_API_URL: ${{ github.api_url }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SHA: ${{ github.sha }}
+          RELEASE_APP_SLUG: ${{ steps.app_token.outputs.app-slug }}
+          RELEASE_GITHUB_TOKEN: ${{ steps.app_token.outputs.token }}
+        run: node scripts/finalize-release.mjs
