@@ -22,8 +22,55 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
+  /* Reset standard scrollbar properties so Chromium uses WebKit pseudo-elements without Windows arrow buttons */
+  scrollbar-width: auto;
+  scrollbar-color: auto;
+}
+
+/* Custom scrollbar styling across Windows / Chrome / WebKit without stepper buttons (triangles) */
+::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+  background: transparent;
+}
+
+::-webkit-scrollbar-button,
+*::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+::-webkit-scrollbar-track,
+*::-webkit-scrollbar-track,
+::-webkit-scrollbar-track-piece,
+*::-webkit-scrollbar-track-piece,
+::-webkit-scrollbar-corner,
+*::-webkit-scrollbar-corner {
+  background: transparent;
+  border: none;
+}
+
+::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-thumb {
+  background: var(--tgg-fill10, #c7c7c7);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover,
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--tgg-icon04, #acacac);
+}
+
+.tg-webview-editor-root .tg-richtext-host-editor,
+.tg-webview-title-input {
+  scrollbar-width: auto;
+  scrollbar-color: auto;
 }
 
 button,
@@ -320,8 +367,6 @@ html.dark .snapshot {
   flex: 1 1 auto;
   overflow-y: auto;
   max-height: 360px;
-  scrollbar-width: thin;
-  scrollbar-color: var(--tgg-fill10, #c7c7c7) transparent;
 }
 
 /* --- Emoji Keyboard (7 columns, 32px icons, 20px space) --- */
@@ -580,8 +625,6 @@ html.dark .tgg-picker-footer {
   overflow-y: auto;
   max-height: 240px;
   padding: 4px 0;
-  scrollbar-width: thin;
-  scrollbar-color: var(--tgg-fill10, #c7c7c7) transparent;
 }
 
 .tgg-trigger-group-title {

@@ -278,7 +278,11 @@ void main() {
   group('ownership (ADR 0002)', () {
     test('bundle keeps the stable chrome the bootstrap dropped', () {
       // Scrollbar chrome was migrated from the Flutter inject into the bundle.
-      expect(css, contains('scrollbar-width:thin'));
+      // The runtime now hides Windows stepper buttons instead of relying on
+      // the cross-engine scrollbar-width fallback.
+      expect(css, isNot(contains('scrollbar-width')));
+      expect(css, contains('::-webkit-scrollbar-button'));
+      expect(css, contains('display:none'));
       expect(css, contains('::-webkit-scrollbar-track'));
     });
   });
