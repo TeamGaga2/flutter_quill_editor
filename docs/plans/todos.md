@@ -9,19 +9,19 @@
 
 ## 计划文档状态
 
-| 文档                                     | 状态                          | 说明                                                                             |
-| ---------------------------------------- | ----------------------------- | -------------------------------------------------------------------------------- |
-| `richtext-host-web-lifecycle.md`         | 已完成                        | Host 生命周期、事件桥、webview-runtime 壳、浏览器开发闭环                        |
-| `richtext-host-web.md`                   | Flutter 接入完成 / 真机未完   | Channel adapter、runtime 加载、Host ready 已落地；iOS/Android 人工联调待做       |
-| `richtext-flutter-bridge.md`             | 契约与客户端基线完成          | `webview_flutter`、inject 顺序、`TgRichTextBridge` adapter 已落地                |
-| `richtext-protocol.md`                   | TS / Dart 对齐完成            | Protocol v2；含 Link/Divider、`open_link_form`、插入操作 `request_*`             |
-| `richtext-solid-toolbar.md`              | 拆包完成 / 插入操作第一刀完成 | Desktop Toolbar 可独立使用；插入操作按钮已落地，选择器仍归宿主（ADR 0005）       |
-| `richtext-insert-actions.md`             | 第一刀已完成                  | Solid 工具栏插入操作 + 协议事件；`teamgaga-client` 接线仍待做                    |
-| `richtext-link-popover.md`               | 运行时已落地                  | 链接浮层在 WebView 内（ADR 0004）；宿主仓清理以 teamgaga-client 为准             |
-| `richtext-solid-toolbar-tooltip-i18n.md` | 代码已落地                    | 自定义 Tooltip + zh/en labels；文末完成定义仍作验收清单                          |
-| `richtext-inline-embed-clipboard.md`     | 已完成                        | 内联嵌入复制/粘贴/拖放（ADR 0006）；保住提及/频道/表情实体，剔除正文媒体与分割线 |
-| `richtext-divider-clipboard.md`          | **已完成**                    | 正文分隔线复制/粘贴/拖放（ADR 0007）；保住分隔线，维持正文媒体隔离               |
-| Flutter 专项计划                         | 客户端基线完成                | `teamgaga-client` 已接入正文、原生 Toolbar、草稿和发送；完整 SDK 文档可扩展      |
+| 文档                                     | 状态                          | 说明                                                                                 |
+| ---------------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------ |
+| `richtext-host-web-lifecycle.md`         | 已完成                        | Host 生命周期、事件桥、webview-runtime 壳、浏览器开发闭环                            |
+| `richtext-host-web.md`                   | Flutter 接入完成 / 真机未完   | Channel adapter、runtime 加载、Host ready 已落地；iOS/Android 人工联调待做           |
+| `richtext-flutter-bridge.md`             | 契约与客户端基线完成          | `webview_flutter`、inject 顺序、`TgRichTextBridge` adapter 已落地                    |
+| `richtext-protocol.md`                   | TS / Dart 对齐完成            | Protocol v2；含 Link/Divider、`open_link_form`、插入操作 `request_*`                 |
+| `richtext-solid-toolbar.md`              | 拆包完成 / 插入操作第一刀完成 | Desktop Toolbar 可独立使用；插入操作按钮已落地，选择器仍归宿主（ADR 0005）           |
+| `richtext-insert-actions.md`             | 第一刀已完成                  | Solid 工具栏插入操作 + 协议事件；`teamgaga-client` 接线仍待做                        |
+| `richtext-link-popover.md`               | 运行时已落地                  | 链接浮层在 WebView 内（ADR 0004）；宿主仓清理以 teamgaga-client 为准                 |
+| `richtext-solid-toolbar-tooltip-i18n.md` | 代码已落地                    | 自定义 Tooltip + zh/en labels；文末完成定义仍作验收清单                              |
+| `richtext-inline-embed-clipboard.md`     | 已完成                        | 内联嵌入复制/粘贴/拖放（ADR 0006）；保住提及/频道/表情实体，剔除正文媒体与正文分隔线 |
+| `richtext-divider-clipboard.md`          | **已完成**                    | 正文分隔线复制/粘贴/拖放（ADR 0007）；保住分隔线，维持正文媒体隔离                   |
+| Flutter 专项计划                         | 客户端基线完成                | `teamgaga-client` 已接入正文、原生 Toolbar、草稿和发送；完整 SDK 文档可扩展          |
 
 ---
 
@@ -87,12 +87,12 @@
 
 来源：`richtext-inline-embed-clipboard.md`
 
-| ID        | 任务                                                           | 优先级     | 备注                                               |
-| --------- | -------------------------------------------------------------- | ---------- | -------------------------------------------------- |
-| `CLIP-01` | 复制 HTML 重写：表情为 `:id:` 文本 span，剥离媒体/分割线/`src` | **已完成** | `rewriteCopyHtml` + `extractPlainText` 落地        |
-| `CLIP-02` | 粘贴/拖放 matcher + `stripEmbeds` 对齐残缺表                   | **已完成** | `ClipboardPolicy` + `stripEmbeds` 对齐残缺与降级表 |
-| `CLIP-03` | 纯文本不升格、未注册表情保留、剪切丢图有意缺口                 | **已完成** | 单测与 DOM 契约全量覆盖                            |
-| `CLIP-04` | `vp check` / `vp test` / runtime 构建与客户端同步              | **已完成** | 自动化测试与构建产物通过                           |
+| ID        | 任务                                                               | 优先级     | 备注                                               |
+| --------- | ------------------------------------------------------------------ | ---------- | -------------------------------------------------- |
+| `CLIP-01` | 复制 HTML 重写：表情为 `:id:` 文本 span，剥离媒体/正文分隔线/`src` | **已完成** | `rewriteCopyHtml` + `extractPlainText` 落地        |
+| `CLIP-02` | 粘贴/拖放 matcher + `stripEmbeds` 对齐残缺表                       | **已完成** | `ClipboardPolicy` + `stripEmbeds` 对齐残缺与降级表 |
+| `CLIP-03` | 纯文本不升格、未注册表情保留、剪切丢图有意缺口                     | **已完成** | 单测与 DOM 契约全量覆盖                            |
+| `CLIP-04` | `vp check` / `vp test` / runtime 构建与客户端同步                  | **已完成** | 自动化测试与构建产物通过                           |
 
 ### F. 正文分隔线剪贴板（ADR 0007）
 
@@ -171,7 +171,7 @@ Flutter App（已接入）
 
 8. 内联嵌入剪贴板 — 已完成
    见 `richtext-inline-embed-clipboard.md` / ADR 0006
-   复制/粘贴/拖放保住提及、频道引用、表情实体；继续剔除正文媒体与分割线
+   复制/粘贴/拖放保住提及、频道引用、表情实体；继续剔除正文媒体与正文分隔线
 
 9. Android 焦点与键盘稳定性修复 — 挂起
    标题聚焦时允许 WebView 滚动但不抢焦点
@@ -234,6 +234,6 @@ Flutter App（已接入）
 5. ~~**Flutter 原生 Toolbar 接入 Mention / Channel / 图片 / 视频**~~ → **已完成**，现有样式与面板保持不变。
 6. ~~**Link / Divider 全链路 + runtime 同步**~~ → **已完成**（exact promotion + lock/vendor）。
 7. ~~**桌面插入操作第一刀**~~ → **已完成**（ADR 0005；Circle 接线仍在 teamgaga-client）。
-8. ~~**内联嵌入剪贴板**~~（`docs/plans/richtext-inline-embed-clipboard.md`，ADR 0006） → **已完成**：保住提及/频道/表情实体，剔除正文媒体与分割线。
+8. ~~**内联嵌入剪贴板**~~（`docs/plans/richtext-inline-embed-clipboard.md`，ADR 0006） → **已完成**：保住提及/频道/表情实体，剔除正文媒体与正文分隔线。
 9. **挂起：Android 标题 / WebView 焦点与滑动抖动**。
 10. **挂起：iOS / Android 真机联调 `VERIFY-06`**（恢复时一并验证 Link / Divider / 剪贴板往返）。

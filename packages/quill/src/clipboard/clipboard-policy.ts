@@ -292,7 +292,11 @@ export function stripPasteHtml(html: string): string {
       }
       const src = img.dataset.src || img.getAttribute("data-src") || img.getAttribute("src");
       const mime = img.dataset.mimeType || img.getAttribute("data-mime-type");
-      if (!src || !mime) {
+      const width = img.getAttribute("width") || img.dataset.width;
+      const height = img.getAttribute("height") || img.dataset.height;
+      const fileSizeStr = img.dataset.fileSize || img.getAttribute("data-file-size");
+      const fileSize = fileSizeStr ? Number(fileSizeStr) : Number.NaN;
+      if (!src || !mime || !width || !height || Number.isNaN(fileSize) || fileSize < 0) {
         img.remove();
       }
     });
@@ -308,7 +312,11 @@ export function stripPasteHtml(html: string): string {
     doc.body.querySelectorAll<HTMLElement>(".tgg-video").forEach((video) => {
       const src = video.getAttribute("data-src") || video.dataset.src;
       const mime = video.getAttribute("data-mime-type") || video.dataset.mimeType;
-      if (!src || !mime) {
+      const width = video.getAttribute("width") || video.dataset.width;
+      const height = video.getAttribute("height") || video.dataset.height;
+      const fileSizeStr = video.dataset.fileSize || video.getAttribute("data-file-size");
+      const fileSize = fileSizeStr ? Number(fileSizeStr) : Number.NaN;
+      if (!src || !mime || !width || !height || Number.isNaN(fileSize) || fileSize < 0) {
         video.remove();
       }
     });
@@ -477,125 +485,144 @@ export function stripEmbeds(delta: Delta): Delta {
       }
 
       if ("image" in op.insert) {
-        const image = op.insert.image;
-        if (isRecord(image)) {
-          const src = typeof image.src === "string" ? image.src.trim() : "";
-          const width =
-            typeof image.width === "string"
-              ? image.width.trim()
-              : typeof image.width === "number"
-                ? String(image.width)
-                : "";
-          const height =
-            typeof image.height === "string"
-              ? image.height.trim()
-              : typeof image.height === "number"
-                ? String(image.height)
-                : "";
-          const mimeType = typeof image.mimeType === "string" ? image.mimeType.trim() : "";
-          const fileSize =
-            typeof image.fileSize === "number" ? image.fileSize : Number(image.fileSize);
-          if (src && width && height && mimeType && Number.isFinite(fileSize) && fileSize >= 0) {
-            return sanitized.insert({ image: { src, width, height, mimeType, fileSize } });
-          }
-        } else if (typeof image === "string" && image.trim() && isRecord(op.attributes)) {
-          const src = image.trim();
-          const attrs = op.attributes;
-          const width =
-            typeof attrs.width === "string"
-              ? attrs.width.trim()
-              : typeof attrs.width === "number"
-                ? String(attrs.width)
-                : "";
-          const height =
-            typeof attrs.height === "string"
-              ? attrs.height.trim()
-              : typeof attrs.height === "number"
-                ? String(attrs.height)
-                : "";
-          const mimeType = typeof attrs.mimeType === "string" ? attrs.mimeType.trim() : "";
-          const fileSize =
-            typeof attrs.fileSize === "number" ? attrs.fileSize : Number(attrs.fileSize);
-          if (src && width && height && mimeType && Number.isFinite(fileSize) && fileSize >= 0) {
-            return sanitized.insert({ image: { src, width, height, mimeType, fileSize } });
-          }
+        const imageVal = sanitizeImageOp(op.insert.image, op.attributes);
+        if (imageVal) {
+          return sanitized.insert({ image: imageVal });
         }
         return sanitized;
       }
 
       if ("video" in op.insert) {
-        const video = op.insert.video;
-        if (isRecord(video)) {
-          const src = typeof video.src === "string" ? video.src.trim() : "";
-          const width =
-            typeof video.width === "string"
-              ? video.width.trim()
-              : typeof video.width === "number"
-                ? String(video.width)
-                : "";
-          const height =
-            typeof video.height === "string"
-              ? video.height.trim()
-              : typeof video.height === "number"
-                ? String(video.height)
-                : "";
-          const mimeType = typeof video.mimeType === "string" ? video.mimeType.trim() : "";
-          const fileSize =
-            typeof video.fileSize === "number" ? video.fileSize : Number(video.fileSize);
-          if (src && width && height && mimeType && Number.isFinite(fileSize) && fileSize >= 0) {
-            const videoVal: Record<string, unknown> = { src, width, height, mimeType, fileSize };
-            if (typeof video.poster === "string" && video.poster.trim()) {
-              videoVal.poster = video.poster.trim();
-            }
-            if (typeof video.duration === "number" && video.duration >= 0) {
-              videoVal.duration = video.duration;
-            } else if (
-              typeof video.duration === "string" &&
-              !Number.isNaN(Number(video.duration))
-            ) {
-              videoVal.duration = Number(video.duration);
-            }
-            return sanitized.insert({ video: videoVal });
-          }
-        } else if (typeof video === "string" && video.trim() && isRecord(op.attributes)) {
-          const src = video.trim();
-          const attrs = op.attributes;
-          const width =
-            typeof attrs.width === "string"
-              ? attrs.width.trim()
-              : typeof attrs.width === "number"
-                ? String(attrs.width)
-                : "";
-          const height =
-            typeof attrs.height === "string"
-              ? attrs.height.trim()
-              : typeof attrs.height === "number"
-                ? String(attrs.height)
-                : "";
-          const mimeType = typeof attrs.mimeType === "string" ? attrs.mimeType.trim() : "";
-          const fileSize =
-            typeof attrs.fileSize === "number" ? attrs.fileSize : Number(attrs.fileSize);
-          if (src && width && height && mimeType && Number.isFinite(fileSize) && fileSize >= 0) {
-            const videoVal: Record<string, unknown> = { src, width, height, mimeType, fileSize };
-            if (typeof attrs.poster === "string" && attrs.poster.trim()) {
-              videoVal.poster = attrs.poster.trim();
-            }
-            if (typeof attrs.duration === "number" && attrs.duration >= 0) {
-              videoVal.duration = attrs.duration;
-            } else if (
-              typeof attrs.duration === "string" &&
-              !Number.isNaN(Number(attrs.duration))
-            ) {
-              videoVal.duration = Number(attrs.duration);
-            }
-            return sanitized.insert({ video: videoVal });
-          }
+        const videoVal = sanitizeVideoOp(op.insert.video, op.attributes);
+        if (videoVal) {
+          return sanitized.insert({ video: videoVal });
         }
         return sanitized;
       }
     }
     return sanitized;
   }, new Delta());
+}
+
+function sanitizeImageOp(
+  raw: unknown,
+  attrs?: Record<string, unknown>,
+): { src: string; width: string; height: string; mimeType: string; fileSize: number } | null {
+  let src = "";
+  let width = "";
+  let height = "";
+  let mimeType = "";
+  let fileSize = Number.NaN;
+
+  if (isRecord(raw)) {
+    src = typeof raw.src === "string" ? raw.src.trim() : "";
+    width =
+      typeof raw.width === "string"
+        ? raw.width.trim()
+        : typeof raw.width === "number"
+          ? String(raw.width)
+          : "";
+    height =
+      typeof raw.height === "string"
+        ? raw.height.trim()
+        : typeof raw.height === "number"
+          ? String(raw.height)
+          : "";
+    mimeType = typeof raw.mimeType === "string" ? raw.mimeType.trim() : "";
+    fileSize = typeof raw.fileSize === "number" ? raw.fileSize : Number(raw.fileSize);
+  } else if (typeof raw === "string" && raw.trim() && isRecord(attrs)) {
+    src = raw.trim();
+    width =
+      typeof attrs.width === "string"
+        ? attrs.width.trim()
+        : typeof attrs.width === "number"
+          ? String(attrs.width)
+          : "";
+    height =
+      typeof attrs.height === "string"
+        ? attrs.height.trim()
+        : typeof attrs.height === "number"
+          ? String(attrs.height)
+          : "";
+    mimeType = typeof attrs.mimeType === "string" ? attrs.mimeType.trim() : "";
+    fileSize = typeof attrs.fileSize === "number" ? attrs.fileSize : Number(attrs.fileSize);
+  }
+
+  if (src && width && height && mimeType && Number.isFinite(fileSize) && fileSize >= 0) {
+    return { src, width, height, mimeType, fileSize };
+  }
+  return null;
+}
+
+function sanitizeVideoOp(
+  raw: unknown,
+  attrs?: Record<string, unknown>,
+): Record<string, unknown> | null {
+  let src = "";
+  let width = "";
+  let height = "";
+  let mimeType = "";
+  let fileSize = Number.NaN;
+  let poster: string | undefined;
+  let duration: number | undefined;
+
+  if (isRecord(raw)) {
+    src = typeof raw.src === "string" ? raw.src.trim() : "";
+    width =
+      typeof raw.width === "string"
+        ? raw.width.trim()
+        : typeof raw.width === "number"
+          ? String(raw.width)
+          : "";
+    height =
+      typeof raw.height === "string"
+        ? raw.height.trim()
+        : typeof raw.height === "number"
+          ? String(raw.height)
+          : "";
+    mimeType = typeof raw.mimeType === "string" ? raw.mimeType.trim() : "";
+    fileSize = typeof raw.fileSize === "number" ? raw.fileSize : Number(raw.fileSize);
+    if (typeof raw.poster === "string" && raw.poster.trim()) {
+      poster = raw.poster.trim();
+    }
+    if (typeof raw.duration === "number" && raw.duration >= 0) {
+      duration = raw.duration;
+    } else if (typeof raw.duration === "string" && !Number.isNaN(Number(raw.duration))) {
+      duration = Number(raw.duration);
+    }
+  } else if (typeof raw === "string" && raw.trim() && isRecord(attrs)) {
+    src = raw.trim();
+    width =
+      typeof attrs.width === "string"
+        ? attrs.width.trim()
+        : typeof attrs.width === "number"
+          ? String(attrs.width)
+          : "";
+    height =
+      typeof attrs.height === "string"
+        ? attrs.height.trim()
+        : typeof attrs.height === "number"
+          ? String(attrs.height)
+          : "";
+    mimeType = typeof attrs.mimeType === "string" ? attrs.mimeType.trim() : "";
+    fileSize = typeof attrs.fileSize === "number" ? attrs.fileSize : Number(attrs.fileSize);
+    if (typeof attrs.poster === "string" && attrs.poster.trim()) {
+      poster = attrs.poster.trim();
+    }
+    if (typeof attrs.duration === "number" && attrs.duration >= 0) {
+      duration = attrs.duration;
+    } else if (typeof attrs.duration === "string" && !Number.isNaN(Number(attrs.duration))) {
+      duration = Number(attrs.duration);
+    }
+  }
+
+  if (src && width && height && mimeType && Number.isFinite(fileSize) && fileSize >= 0) {
+    const videoVal: Record<string, unknown> = { src, width, height, mimeType, fileSize };
+    if (poster) videoVal.poster = poster;
+    if (duration !== undefined && duration >= 0) videoVal.duration = duration;
+    return videoVal;
+  }
+  return null;
 }
 
 function normalizeUriList(uriList: string): string {
@@ -734,94 +761,95 @@ async function readFileAsBase64(file: File): Promise<string> {
   });
 }
 
-function probeImageDimensions(file: File): Promise<{ width: number; height: number } | null> {
+export const MEDIA_PROBE_TIMEOUT_MS = 500;
+
+function probeWithObjectUrl<T>(
+  file: File,
+  executor: (url: string, done: (result: T | null) => void) => void,
+  timeoutMs = MEDIA_PROBE_TIMEOUT_MS,
+): Promise<T | null> {
   return new Promise((resolve) => {
-    if (
-      typeof URL === "undefined" ||
-      typeof URL.createObjectURL !== "function" ||
-      typeof Image === "undefined"
-    ) {
+    if (typeof URL === "undefined" || typeof URL.createObjectURL !== "function") {
       resolve(null);
       return;
     }
+
+    let url: string | null = null;
     try {
-      let settled = false;
-      const done = (result: { width: number; height: number } | null) => {
-        if (settled) return;
-        settled = true;
+      url = URL.createObjectURL(file);
+    } catch {
+      resolve(null);
+      return;
+    }
+
+    let settled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const done = (result: T | null) => {
+      if (settled) return;
+      settled = true;
+      if (timer !== null) {
+        clearTimeout(timer);
+        timer = null;
+      }
+      if (url) {
         try {
           URL.revokeObjectURL(url);
         } catch {}
-        resolve(result);
-      };
+      }
+      resolve(result);
+    };
 
-      const timer = setTimeout(() => done(null), 20);
+    timer = setTimeout(() => done(null), timeoutMs);
 
-      const url = URL.createObjectURL(file);
-      const img = new Image();
-      img.onload = () => {
-        clearTimeout(timer);
-        const width = img.naturalWidth;
-        const height = img.naturalHeight;
-        done(width && height ? { width, height } : null);
-      };
-      img.onerror = () => {
-        clearTimeout(timer);
-        done(null);
-      };
-      img.src = url;
+    try {
+      executor(url, done);
     } catch {
-      resolve(null);
+      done(null);
     }
+  });
+}
+
+function probeImageDimensions(file: File): Promise<{ width: number; height: number } | null> {
+  if (typeof Image === "undefined") {
+    return Promise.resolve(null);
+  }
+  return probeWithObjectUrl(file, (url, done) => {
+    const img = new Image();
+    img.onload = () => {
+      const width = img.naturalWidth;
+      const height = img.naturalHeight;
+      done(width && height ? { width, height } : null);
+    };
+    img.onerror = () => {
+      done(null);
+    };
+    img.src = url;
   });
 }
 
 function probeVideoMetadata(
   file: File,
 ): Promise<{ width?: number; height?: number; duration?: number } | null> {
-  return new Promise((resolve) => {
-    if (
-      typeof document === "undefined" ||
-      typeof URL === "undefined" ||
-      typeof URL.createObjectURL !== "function"
-    ) {
-      resolve(null);
-      return;
-    }
-    try {
-      let settled = false;
-      const done = (result: { width?: number; height?: number; duration?: number } | null) => {
-        if (settled) return;
-        settled = true;
-        try {
-          URL.revokeObjectURL(url);
-        } catch {}
-        resolve(result);
-      };
-
-      const timer = setTimeout(() => done(null), 20);
-
-      const url = URL.createObjectURL(file);
-      const video = document.createElement("video");
-      video.preload = "metadata";
-      video.onloadedmetadata = () => {
-        clearTimeout(timer);
-        const width = video.videoWidth;
-        const height = video.videoHeight;
-        const duration = Math.round(video.duration);
-        done({
-          width: width || undefined,
-          height: height || undefined,
-          duration: Number.isFinite(duration) ? duration : undefined,
-        });
-      };
-      video.onerror = () => {
-        clearTimeout(timer);
-        done(null);
-      };
-      video.src = url;
-    } catch {
-      resolve(null);
-    }
+  if (typeof document === "undefined") {
+    return Promise.resolve(null);
+  }
+  return probeWithObjectUrl(file, (url, done) => {
+    const video = document.createElement("video");
+    video.preload = "metadata";
+    video.onloadedmetadata = () => {
+      const width = video.videoWidth;
+      const height = video.videoHeight;
+      const duration = Math.round(video.duration);
+      done({
+        width: width || undefined,
+        height: height || undefined,
+        duration: Number.isFinite(duration) ? duration : undefined,
+      });
+    };
+    video.onerror = () => {
+      done(null);
+    };
+    video.src = url;
   });
 }

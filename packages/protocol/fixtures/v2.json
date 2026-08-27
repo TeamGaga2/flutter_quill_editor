@@ -212,6 +212,33 @@
       "kind": "event",
       "type": "request_image",
       "payload": { "selection": { "start": 2, "end": 2 } }
+    },
+    {
+      "version": 2,
+      "kind": "event",
+      "type": "request_paste_media",
+      "payload": {
+        "mimeType": "image/png",
+        "fileSize": 1024,
+        "dataBase64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+        "width": "100",
+        "height": "100",
+        "fileName": "sample.png",
+        "selection": { "start": 0, "end": 0 }
+      }
+    },
+    {
+      "version": 2,
+      "kind": "event",
+      "type": "request_paste_media",
+      "payload": {
+        "mimeType": "video/mp4",
+        "fileSize": 2048,
+        "dataBase64": "AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDE=",
+        "isVideo": true,
+        "duration": 10,
+        "selection": null
+      }
     }
   ],
   "responses": [
