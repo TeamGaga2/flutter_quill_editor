@@ -393,10 +393,13 @@ describe("text, inline-embed, divider, and media clipboard/drop policy (ADR-0008
       adapter.setSelection({ start: 5, end: 5 });
 
       let receivedPayload: PasteMediaPayload | undefined;
-      adapter.subscribe((event: EditorEvent) => {
-        if (event.type === "paste-media") {
-          receivedPayload = event.payload;
-        }
+      const receivedPromise = new Promise<PasteMediaPayload>((resolve) => {
+        adapter.subscribe((event: EditorEvent) => {
+          if (event.type === "paste-media") {
+            receivedPayload = event.payload;
+            resolve(event.payload);
+          }
+        });
       });
 
       const clipboardData = new DataTransfer();
@@ -406,11 +409,9 @@ describe("text, inline-embed, divider, and media clipboard/drop policy (ADR-0008
       const event = dispatchPaste(clipboardData);
       expect(event.defaultPrevented).toBe(true);
 
-      // Wait a tick for async file probe
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      const payload = await receivedPromise;
 
       expect(receivedPayload).toBeDefined();
-      const payload = receivedPayload as unknown as PasteMediaPayload;
       expect(payload.mimeType).toBe("image/png");
       expect(payload.fileName).toBe("screenshot.png");
       expect(payload.isVideo).toBe(false);
@@ -428,10 +429,13 @@ describe("text, inline-embed, divider, and media clipboard/drop policy (ADR-0008
       adapter.setSelection({ start: 2, end: 2 });
 
       let receivedPayload: PasteMediaPayload | undefined;
-      adapter.subscribe((event: EditorEvent) => {
-        if (event.type === "paste-media") {
-          receivedPayload = event.payload;
-        }
+      const receivedPromise = new Promise<PasteMediaPayload>((resolve) => {
+        adapter.subscribe((event: EditorEvent) => {
+          if (event.type === "paste-media") {
+            receivedPayload = event.payload;
+            resolve(event.payload);
+          }
+        });
       });
 
       const dataTransfer = new DataTransfer();
@@ -441,11 +445,9 @@ describe("text, inline-embed, divider, and media clipboard/drop policy (ADR-0008
       const event = dispatchDrop(dataTransfer);
       expect(event.defaultPrevented).toBe(true);
 
-      // Wait a tick for async file probe
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      const payload = await receivedPromise;
 
       expect(receivedPayload).toBeDefined();
-      const payload = receivedPayload as unknown as PasteMediaPayload;
       expect(payload.mimeType).toBe("video/mp4");
       expect(payload.fileName).toBe("clip.mp4");
       expect(payload.isVideo).toBe(true);

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vite-plus/test";
 
 import type { RichTextSnapshotV1 } from "@teamgaga/richtext-delta";
+import { applyMediaBlotFormat } from "../src/blots/media-display-size";
+import { VideoBlot } from "../src/blots/video-blot";
 import { quillDeltaToSnapshot, snapshotToQuillDelta } from "../src/converters";
 
 const videoAttributes = {
@@ -99,5 +101,31 @@ describe("video conversion", () => {
     };
 
     expect(quillDeltaToSnapshot(snapshotToQuillDelta(snapshot))).toEqual(snapshot);
+  });
+
+  it("updates DOM attributes and styles via applyMediaBlotFormat()", () => {
+    const node = VideoBlot.create({
+      src: "tgg-local-media://test-video",
+      width: "100",
+      height: "100",
+      mimeType: "video/mp4",
+      fileSize: 2048,
+    });
+
+    applyMediaBlotFormat(node, "width", "640");
+    expect(node.getAttribute("width")).toBe("640");
+    applyMediaBlotFormat(node, "height", "480");
+    expect(node.getAttribute("height")).toBe("480");
+    applyMediaBlotFormat(node, "mimeType", "video/webm");
+    expect(node.getAttribute("data-mime-type")).toBe("video/webm");
+    applyMediaBlotFormat(node, "fileSize", 4096);
+    expect(node.getAttribute("data-file-size")).toBe("4096");
+    applyMediaBlotFormat(node, "poster", "https://example.com/poster.jpg");
+    expect(node.getAttribute("data-poster")).toBe("https://example.com/poster.jpg");
+    applyMediaBlotFormat(node, "duration", 60);
+    expect(node.getAttribute("data-duration")).toBe("60");
+
+    applyMediaBlotFormat(node, "width", null);
+    expect(node.hasAttribute("width")).toBe(false);
   });
 });

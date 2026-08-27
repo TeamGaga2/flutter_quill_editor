@@ -118,3 +118,75 @@ export function applyMediaDisplaySize(
   node.style.display = "block";
   node.dataset.mediaAspect = aspectType;
 }
+
+/**
+ * Applies Parchment format mutations to an image or video blot DOM node.
+ * Returns `true` if the attribute was handled, `false` otherwise.
+ */
+export function applyMediaBlotFormat(domNode: HTMLElement, name: string, value: unknown): boolean {
+  if (name === "width") {
+    if (typeof value === "string" || typeof value === "number") {
+      const valStr = String(value);
+      domNode.setAttribute("width", valStr);
+      applyMediaDisplaySize(domNode, valStr, domNode.getAttribute("height") ?? undefined);
+    } else {
+      domNode.removeAttribute("width");
+      applyMediaDisplaySize(domNode, undefined, domNode.getAttribute("height") ?? undefined);
+    }
+    return true;
+  }
+
+  if (name === "height") {
+    if (typeof value === "string" || typeof value === "number") {
+      const valStr = String(value);
+      domNode.setAttribute("height", valStr);
+      applyMediaDisplaySize(domNode, domNode.getAttribute("width") ?? undefined, valStr);
+    } else {
+      domNode.removeAttribute("height");
+      applyMediaDisplaySize(domNode, domNode.getAttribute("width") ?? undefined, undefined);
+    }
+    return true;
+  }
+
+  if (name === "mimeType") {
+    if (typeof value === "string") {
+      domNode.setAttribute("data-mime-type", value);
+    } else {
+      domNode.removeAttribute("data-mime-type");
+    }
+    return true;
+  }
+
+  if (name === "fileSize") {
+    if (typeof value === "number" || typeof value === "string") {
+      domNode.setAttribute("data-file-size", String(value));
+    } else {
+      domNode.removeAttribute("data-file-size");
+    }
+    return true;
+  }
+
+  if (name === "poster") {
+    if (typeof value === "string") {
+      domNode.setAttribute("data-poster", value);
+      const media = domNode.querySelector<HTMLVideoElement>(".tgg-video__media");
+      if (media) {
+        media.poster = value;
+      }
+    } else {
+      domNode.removeAttribute("data-poster");
+    }
+    return true;
+  }
+
+  if (name === "duration") {
+    if (typeof value === "number" || typeof value === "string") {
+      domNode.setAttribute("data-duration", String(value));
+    } else {
+      domNode.removeAttribute("data-duration");
+    }
+    return true;
+  }
+
+  return false;
+}

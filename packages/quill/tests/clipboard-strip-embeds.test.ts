@@ -245,5 +245,21 @@ describe("clipboard stripEmbeds, extractPlainText, rewriteCopyHtml, and stripPas
       expect(stripped).toContain("Text ");
       expect(stripped).toContain("End");
     });
+
+    it("strips malformed self-produced media missing width/height/fileSize in stripPasteHtml", () => {
+      const html =
+        '<p><img class="tgg-image" data-src="tgg-local-media://uuid1" data-mime-type="image/png">' +
+        '<img class="tgg-image" data-src="tgg-local-media://uuid2" width="100" height="100" data-mime-type="image/png" data-file-size="invalid">' +
+        '<div class="tgg-video" data-src="tgg-local-media://uuid3" data-mime-type="video/mp4"></div>' +
+        '<img class="tgg-image" data-src="tgg-local-media://valid" width="100" height="100" data-mime-type="image/png" data-file-size="1024">' +
+        "Valid</p>";
+
+      const stripped = stripPasteHtml(html);
+      expect(stripped).not.toContain("uuid1");
+      expect(stripped).not.toContain("uuid2");
+      expect(stripped).not.toContain("uuid3");
+      expect(stripped).toContain("tgg-local-media://valid");
+      expect(stripped).toContain("Valid");
+    });
   });
 });

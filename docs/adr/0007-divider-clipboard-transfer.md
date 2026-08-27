@@ -4,7 +4,7 @@
 
 TeamGaga 编辑器之间靠系统剪贴板上的 HTML 往返：
 
-- 复制与剪切：`text/html` 保留 `<hr class="tgg-divider">`，不被 `rewriteCopyHtml` 剥离；`text/plain` 给人读降级为 `---\n`。剪切带分割线的选区时，原处分割线被删除，剪贴板带走分割线并在粘贴时能完整还原。
+- 复制与剪切：`text/html` 保留 `<hr class="tgg-divider">`，不被 `rewriteCopyHtml` 剥离；`text/plain` 给人读降级为 `---\n`。剪切带正文分隔线的选区时，原处正文分隔线被删除，剪贴板带走正文分隔线并在粘贴时能完整还原。
 - 粘贴与拖放：`stripPasteHtml` 放行 `<hr>` 节点；Quill Blot 认领所有标准 HTML `<hr>`（含外源 `<hr>` 及带有 `tgg-divider` 类名的自产 `<hr>`），转为 `{ insert: { divider: "true" } }` 顶层内容块。`stripEmbeds` 白名单放行 `{ divider: "true" }`。
 - 纯文本契约保持不变：纯文本中的 `---` 或 `***` 不推断升格为正文分隔线实体，仅作为普通文本粘贴。
 

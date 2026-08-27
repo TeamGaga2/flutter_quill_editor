@@ -30,6 +30,15 @@ const String kRichTextWebViewRuntimeAssetPath = 'packages/flutter_quill_editor/a
 /// loopback server bind; those have their own stages and deadlines.
 const Duration kRichTextWebViewProtocolReadyTimeout = Duration(seconds: 15);
 
+/// Default fallback width when pasted media metadata probe cannot resolve dimensions.
+const String kDefaultPasteMediaWidth = '300';
+
+/// Default fallback height when pasted media metadata probe cannot resolve dimensions.
+const String kDefaultPasteMediaHeight = '200';
+
+/// Draft namespace key for temporary clipboard-pasted media in `MediaResourceRegistry`.
+const String kClipboardDraftKey = 'clipboard';
+
 /// Lifecycle of the shared [RichTextWebView] orchestration (plan §5.6):
 ///
 /// ```text
@@ -501,11 +510,11 @@ class RichTextWebViewState extends State<RichTextWebView> {
         final uri = await _mediaRegistry.registerBytes(
           bytes: bytes,
           mimeType: payload.mimeType,
-          draftKey: 'clipboard',
+          draftKey: kClipboardDraftKey,
           fileName: payload.fileName,
         );
-        final width = payload.width ?? '300';
-        final height = payload.height ?? '200';
+        final width = payload.width ?? kDefaultPasteMediaWidth;
+        final height = payload.height ?? kDefaultPasteMediaHeight;
         if (payload.isVideo) {
           await controller.insertVideo(
             src: uri,
