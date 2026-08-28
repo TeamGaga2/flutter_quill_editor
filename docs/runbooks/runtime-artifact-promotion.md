@@ -12,7 +12,7 @@
 
 ## 一键发布入口
 
-一次性配置 GitHub App、`RELEASE_APP_ID` variable、
+一次性配置 GitHub App、`RELEASE_APP_CLIENT_ID` variable、
 `RELEASE_APP_PRIVATE_KEY` repository/Environment secret、`main` 与
 `dart-v*` 保护、GitHub Environment `pub.dev`（无 reviewer、仅允许
 `dart-v*` tag）以及 pub.dev Admin 的同名 OIDC 绑定后，发布人只需在 `main` 上运行：
