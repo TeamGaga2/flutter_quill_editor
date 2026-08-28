@@ -13,7 +13,7 @@ machine-readable, fail-closed checks.
 - The first package version must still be published manually with `dart pub
 publish` because pub.dev does not allow OIDC to create a package. For this
   repository that bootstrap version is `0.1.1`; later versions are automated.
-- `RELEASE_APP_ID` is a repository Actions variable, not a secret.
+- `RELEASE_APP_CLIENT_ID` is a repository Actions variable, not a secret.
 - `RELEASE_APP_PRIVATE_KEY` is a repository or `release-automation` Environment
   secret. No real value may be committed, placed in workflow YAML, or printed
   in evidence.

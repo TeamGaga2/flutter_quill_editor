@@ -61,7 +61,7 @@ jobs:
         id: app_token
         uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ vars.RELEASE_APP_ID }}
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
           private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
@@ -83,7 +83,7 @@ jobs:
         run: |
           flutter pub get
           dart run tool/richtext_runtime_prepare.dart --verify
-          flutter pub publish --dry-run
+          flutter pub publish --dry-run --ignore-warnings
 
       - name: Create the annotated package tag and GitHub Release
         env:

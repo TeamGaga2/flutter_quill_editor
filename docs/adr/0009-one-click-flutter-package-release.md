@@ -29,7 +29,7 @@ pub.dev OIDC reusable workflow。发布不使用 `PUB_ACCESS_TOKEN`。
 ## 安全边界
 
 - workflow dispatch 是唯一的人为发布授权；机器门禁替代第二次人工审批。
-- `RELEASE_APP_ID` 使用 Actions variable；`RELEASE_APP_PRIVATE_KEY` 使用
+- `RELEASE_APP_CLIENT_ID` 使用 Actions variable；`RELEASE_APP_PRIVATE_KEY` 使用
   repository 或 `release-automation` Environment secret，真实值不进仓库。
 - App 仅授予 Contents/PR/Issues read/write、Checks/Actions read-only 与
   Metadata read-only，且只安装到本仓库；Checks/Actions 只用于观察检查和
