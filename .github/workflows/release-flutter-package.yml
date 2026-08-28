@@ -300,7 +300,8 @@ jobs:
             --pattern 'webview-runtime.tar.gz.sha256' \
             --dir "$EVIDENCE_DIR/assets" \
             --clobber
-          EXPECTED_SOURCE=$(jq -r '.runtimeSourceCommit' "$PLAN_FILE") \
+          expected_source=$(jq -r '.runtimeSourceCommit' "$PLAN_FILE")
+          EXPECTED_SOURCE="$expected_source" \
             EVIDENCE_ARTIFACT_DIR="$EVIDENCE_DIR/assets" \
             node --input-type=module -e \
             'import { validateRuntimeArtifact } from "./scripts/runtime-release.mjs"; validateRuntimeArtifact(process.env.EVIDENCE_ARTIFACT_DIR, process.env.EXPECTED_SOURCE);'
@@ -308,7 +309,7 @@ jobs:
           metadata_source=$(jq -r '.sourceCommit' "$EVIDENCE_DIR/assets/runtime-artifact.json")
           lock_source=$(jq -r '.runtime.sourceCommit' clients/flutter_quill_editor/richtext-runtime.lock.json)
           lock_archive_sha=$(jq -r '.artifact.archiveSha256' clients/flutter_quill_editor/richtext-runtime.lock.json)
-          [[ "$metadata_source" == "$EXPECTED_SOURCE" ]]
+          [[ "$metadata_source" == "$expected_source" ]]
           [[ "$metadata_source" == "$lock_source" ]]
           [[ "$metadata_archive_sha" == "$lock_archive_sha" ]]
           : > "$EVIDENCE_DIR/assets.tsv"
