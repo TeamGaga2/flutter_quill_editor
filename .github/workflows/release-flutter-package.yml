@@ -45,6 +45,12 @@ jobs:
           echo "Release Flutter package must be dispatched from main" >&2
           exit 1
 
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
       - name: Resolve and validate release trigger
         id: trigger
         env:
@@ -69,12 +75,6 @@ jobs:
             const trigger = parseReleaseTrigger(JSON.parse(process.env.RELEASE_TRIGGER_JSON));
             process.stdout.write(`bump=${trigger.bump}\nattempt=${trigger.attempt}\n`);
           ' >> "$GITHUB_OUTPUT"
-
-      - uses: actions/checkout@v7
-        with:
-          ref: ${{ github.sha }}
-          fetch-depth: 0
-          persist-credentials: false
 
       - name: Plan release
         id: plan
