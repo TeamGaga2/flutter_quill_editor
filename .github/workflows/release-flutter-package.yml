@@ -242,6 +242,7 @@ jobs:
       - name: Validate runtime contract tooling
         if: steps.existing_pr.outputs.found != 'true'
         run: |
+          vp run --filter './packages/*' build
           vp check
           vp test scripts/runtime-artifact.test.mjs scripts/release-plan.test.mjs scripts/finalize-release.test.mjs --run
 
