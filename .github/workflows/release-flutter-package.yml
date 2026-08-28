@@ -269,7 +269,7 @@ jobs:
       - name: Apply the planned version and Changelog
         if: steps.existing_pr.outputs.found != 'true'
         env:
-          PLAN_FILE: ${{ runner.temp }}/flutter-release-plan/release-plan.json
+          PLAN_FILE: ${{ runner.temp }}/flutter-release-plan/flutter-release-plan.json
         run: node scripts/release-plan.mjs apply --plan "$PLAN_FILE"
 
       - name: Verify the package and runtime offline
@@ -286,7 +286,7 @@ jobs:
         if: steps.existing_pr.outputs.found != 'true'
         env:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
-          PLAN_FILE: ${{ runner.temp }}/flutter-release-plan/release-plan.json
+          PLAN_FILE: ${{ runner.temp }}/flutter-release-plan/flutter-release-plan.json
           EVIDENCE_DIR: ${{ runner.temp }}/flutter-release-evidence
         run: |
           set -euo pipefail
@@ -335,7 +335,7 @@ jobs:
         if: steps.existing_pr.outputs.found != 'true'
         env:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
-          PLAN_FILE: ${{ runner.temp }}/flutter-release-plan/release-plan.json
+          PLAN_FILE: ${{ runner.temp }}/flutter-release-plan/flutter-release-plan.json
           EVIDENCE_FILE: ${{ runner.temp }}/flutter-release-evidence/release-evidence.md
           APP_SLUG: ${{ steps.existing_pr.outputs.app_slug }}
           APP_BOT_ID: ${{ steps.existing_pr.outputs.bot_id }}
