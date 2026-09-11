@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.3
+
+### Fixes
+
+- fix(flutter): restore Android WebView IME focus (#17) (e52038a)
+
+### Other changes
+
+- docs: document build and release workflows (#16) (0173917)
+
 ## 0.1.2
 
 ### Fixes
