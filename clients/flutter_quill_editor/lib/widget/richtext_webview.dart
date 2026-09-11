@@ -10,6 +10,7 @@ import 'package:flutter_quill_editor/host/hosted_richtext_transport.dart';
 import 'package:flutter_quill_editor/host/richtext_webview_host.dart';
 import 'package:flutter_quill_editor/host/richtext_webview_host_factory.dart';
 import 'package:flutter_quill_editor/host/runtime_manifest.dart';
+import 'package:flutter_quill_editor/host/web_asset_resolver.dart';
 import 'package:flutter_quill_editor/host/web_browser_preflight.dart';
 import 'package:flutter_quill_editor/media/local_media_registry.dart';
 import 'package:flutter_quill_editor/protocol/messages.dart';
@@ -1011,7 +1012,7 @@ class RichTextWebViewState extends State<RichTextWebView> {
     await Future<void>.delayed(Duration.zero);
     if (!_isCurrentGeneration(generation) || !mounted) return;
 
-    final entryUrl = Uri.base.resolve(kRichTextRuntimeManifest.webEntryAssetPath);
+    final entryUrl = resolveWebAssetUri(kRichTextRuntimeManifest.webEntryAssetPath);
     try {
       await host.loadUrl(entryUrl);
       await host.whenSurfaceReady.timeout(kRichTextWebViewHostSurfaceReadyTimeout);
@@ -1052,7 +1053,7 @@ class RichTextWebViewState extends State<RichTextWebView> {
         if (definition.id.isNotEmpty)
           <String, String>{
             'id': definition.id,
-            'src': Uri.base.resolve('assets/${definition.assetPath}').toString(),
+            'src': resolveWebAssetUri('assets/${definition.assetPath}').toString(),
           },
     ];
     final config = <String, Object?>{
