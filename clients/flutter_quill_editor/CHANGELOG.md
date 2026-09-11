@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.4
+
+### Fixes
+
+- fix(web): resolve web runtime assets against document baseURI instead of route URI (#25) (8628365)
+
+### Other changes
+
+- chore(ci): remove temporary v0.1.3 recovery workflow (14f93bc)
+- chore(ci): temporarily republish flutter_quill_editor 0.1.3 (53827c7)
+
 ## 0.1.3
 
 ### Fixes
