@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 /// Request keyboard focus for a [RichTextWebView] surface [FocusNode].
@@ -65,3 +66,33 @@ FocusNode? firstFocusableFocusDescendant(FocusNode node) {
   }
   return null;
 }
+
+/// Method channel for Flutter Quill Editor native WebView IME control.
+const MethodChannel kFlutterQuillEditorImeChannel = MethodChannel(
+  'com.teamgaga.flutter_quill_editor/webview_ime',
+);
+
+/// Mobile IME boost for the rich-text WebView on Android.
+///
+/// On Android, a gesture-less JS `focus()` (protocol `focus`, runtime
+/// ready-time autofocus) never opens the soft keyboard and leaves the caret
+/// invisible — the platform WebView needs a native focus request + explicit
+/// `showSoftInput` (what a real tap performs). Call after the DOM caret has
+/// been restored (link/divider/emoji inserts, entry autofocus) so the IME
+/// comes back up and the caret becomes visible.
+///
+/// No-op on desktop platforms, iOS, and Flutter Web.
+Future<void> showMobileWebViewIme() async {
+  if (kIsWeb) return;
+  if (defaultTargetPlatform != TargetPlatform.android) {
+    return;
+  }
+  try {
+    await kFlutterQuillEditorImeChannel.invokeMethod<void>('showWebViewIme');
+  } on Object catch (error) {
+    debugPrint('FlutterQuillEditor: showWebViewIme failed: $error');
+  }
+}
+
+/// Backwards-compatible alias for [showMobileWebViewIme].
+Future<void> showAndroidWebViewIme() => showMobileWebViewIme();

@@ -32,6 +32,11 @@ dev_dependencies:
   http: ^1.6.0
 
 flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.teamgaga.flutter_quill_editor
+        pluginClass: FlutterQuillEditorPlugin
   assets:
     - assets/richtext_webview_runtime/
     - assets/richtext_webview_runtime/assets/

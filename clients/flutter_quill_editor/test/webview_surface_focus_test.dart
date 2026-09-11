@@ -143,4 +143,60 @@ void main() {
 
     debugDefaultTargetPlatformOverride = null;
   });
+
+  testWidgets('showMobileWebViewIme invokes method channel on Android', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+
+    final calls = <String>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      kFlutterQuillEditorImeChannel,
+      (call) async {
+        calls.add(call.method);
+        return null;
+      },
+    );
+    addTearDown(() {
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        kFlutterQuillEditorImeChannel,
+        null,
+      );
+    });
+
+    await showMobileWebViewIme();
+    expect(calls, equals(['showWebViewIme']));
+
+    calls.clear();
+    await showAndroidWebViewIme();
+    expect(calls, equals(['showWebViewIme']));
+
+    debugDefaultTargetPlatformOverride = null;
+  });
+
+  testWidgets('showMobileWebViewIme is no-op on iOS and macOS', (tester) async {
+    final calls = <String>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      kFlutterQuillEditorImeChannel,
+      (call) async {
+        calls.add(call.method);
+        return null;
+      },
+    );
+    addTearDown(() {
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        kFlutterQuillEditorImeChannel,
+        null,
+      );
+    });
+
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    await showMobileWebViewIme();
+    expect(calls, isEmpty);
+
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    await showMobileWebViewIme();
+    expect(calls, isEmpty);
+
+    debugDefaultTargetPlatformOverride = null;
+  });
 }
