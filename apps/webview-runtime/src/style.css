@@ -154,6 +154,7 @@ html.tg-theme-dark {
 *::before,
 *::after {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
 html,
@@ -251,6 +252,7 @@ body {
   /* macOS WKWebView textarea keeps opaque chrome unless appearance is reset. */
   -webkit-appearance: none;
   appearance: none;
+  -webkit-tap-highlight-color: transparent;
   background: transparent;
   /* Text/02; Font Size/XL 20 / Semibold / Line Height/LG 28. */
   color: var(--tgg-text02);
