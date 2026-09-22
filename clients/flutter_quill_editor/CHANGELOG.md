@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.5
+
+### Fixes
+
+- fix(flutter): suppress WebView tap highlights (2e8e06c)
+
 ## 0.1.4
 
 ### Fixes
