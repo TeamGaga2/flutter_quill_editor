@@ -85,6 +85,13 @@ describe("ADR 0002 style contract", () => {
     );
   });
 
+  it("disables WebKit tap highlights for the editor and title input", () => {
+    expect(rule(["*,", "*::before,", "*::after"].join("\n"))).toContain(
+      "-webkit-tap-highlight-color: transparent;",
+    );
+    expect(rule(".tg-webview-title-input")).toContain("-webkit-tap-highlight-color: transparent;");
+  });
+
   it("keeps Figma semantics even when two tokens share a color value", () => {
     // Common Blue (Link) and Blue/Primary are both #009dff — variables must
     // not be merged across semantics.

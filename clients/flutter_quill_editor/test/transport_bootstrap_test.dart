@@ -131,7 +131,18 @@ void main() {
       );
       expect(js, contains('.tg-webview-editor-root .ql-editor{background:#ffffff!important}'));
       expect(js, contains('.tg-webview-title-wrap{background:#ffffff!important}'));
-      expect(js, contains('.tg-webview-title-input{background:#ffffff!important}'));
+      expect(
+        js,
+        contains(
+          '.tg-webview-title-input{-webkit-tap-highlight-color:transparent;background:#ffffff!important}',
+        ),
+      );
+      expect(
+        js,
+        contains(
+          '*,*::before,*::after{-webkit-tap-highlight-color:transparent}',
+        ),
+      );
 
       // No content color tokens: stable colors come from the bundle (ADR 0002).
       expect(js, isNot(contains('var(--tgg-')));

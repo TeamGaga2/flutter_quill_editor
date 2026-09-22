@@ -5,3 +5,5 @@ analyzer:
   exclude:
     - example/**
     - tool/**
+    - build/**
+    - android/**

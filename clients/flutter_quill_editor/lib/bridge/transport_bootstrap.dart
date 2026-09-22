@@ -166,13 +166,14 @@ String buildRichTextTransportBootstrapJs({
   // default white canvas in title + content padding while .ql-editor (higher
   // specificity) still shows the shell color.
   var HOST_EDITOR_STYLE = [
+    "*,*::before,*::after{-webkit-tap-highlight-color:transparent}",
     "html,body{background:$shellBg!important}",
     ".tg-webview-root{background:$shellBg!important}",
     ".tg-webview-editor-root{background:$shellBg!important}",
     ".tg-webview-editor-root .tg-richtext-host-editor{background:$shellBg!important}",
     ".tg-webview-editor-root .ql-editor{background:$shellBg!important}",
     ".tg-webview-title-wrap{background:$shellBg!important}",
-    ".tg-webview-title-input{background:$shellBg!important}"
+    ".tg-webview-title-input{-webkit-tap-highlight-color:transparent;background:$shellBg!important}"
   ].join("");
 
   function ensureHostStyle() {
